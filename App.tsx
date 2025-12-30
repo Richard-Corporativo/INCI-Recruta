@@ -4,22 +4,31 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import CreateJob from './pages/CreateJob';
 import EditJob from './pages/EditJob';
-import Roles from './pages/Roles';
-import CreateRole from './pages/CreateRole';
-import Kanban from './pages/Kanban';
-import Audit from './pages/Audit';
 import Jobs from './pages/Jobs';
 import JobDetail from './pages/JobDetail';
+import Kanban from './pages/Kanban';
+import Audit from './pages/Audit';
+import Roles from './pages/Roles';
+import CreateRole from './pages/CreateRole';
+import EditRole from './pages/EditRole';
 import Settings from './pages/Settings';
 import EditUser from './pages/EditUser';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import RequestAccess from './pages/RequestAccess';
 import TwoFactorAuth from './pages/TwoFactorAuth';
+import Login from './pages/Login';
+import { StorageService } from './lib/storage';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
-// Componente para proteção de rotas (Autenticação desativada conforme solicitação de remoção da área de login)
+// Componente para proteção de rotas
 const RequireAuth = ({ children }: { children?: React.ReactNode }) => {
-  // Pass-through direto para permitir acesso sem login
+  const { isAuthenticated } = useAuth();
+  const token = localStorage.getItem('recruitSys_token') || sessionStorage.getItem('recruitSys_token');
+
+  if (!isAuthenticated && !token) {
+    return <Navigate to="/login" replace />;
+  }
   return <>{children}</>;
 };
 
@@ -35,37 +44,44 @@ const MainLayout: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  return (
-    <Router>
-      <Routes>
-        {/* Rotas Públicas / Autenticação (Sem Sidebar) */}
-        {/* Rota de Login removida conforme solicitado */}
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/request-access" element={<RequestAccess />} />
-        <Route path="/2fa" element={<TwoFactorAuth />} />
+  React.useEffect(() => {
+    StorageService.initialize();
+  }, []);
 
-        {/* Rotas do Painel (Protegidas) */}
-        <Route element={
-          <RequireAuth>
-            <MainLayout />
-          </RequireAuth>
-        }>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/jobs" element={<Jobs />} />
-          <Route path="/jobs/new" element={<CreateJob />} />
-          <Route path="/jobs/:id" element={<JobDetail />} />
-          <Route path="/jobs/:id/edit" element={<EditJob />} />
-          <Route path="/jobs/:id/kanban" element={<Kanban />} />
-          <Route path="/kanban" element={<Kanban />} />
-          <Route path="/roles" element={<Roles />} />
-          <Route path="/roles/new" element={<CreateRole />} />
-          <Route path="/audit" element={<Audit />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/settings/users/:id/edit" element={<EditUser />} />
-        </Route>
-      </Routes>
-    </Router>
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Rotas Públicas / Autenticação (Sem Sidebar) */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/request-access" element={<RequestAccess />} />
+          <Route path="/2fa" element={<TwoFactorAuth />} />
+
+          {/* Rotas do Painel (Protegidas) */}
+          <Route element={
+            <RequireAuth>
+              <MainLayout />
+            </RequireAuth>
+          }>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/jobs" element={<Jobs />} />
+            <Route path="/jobs/new" element={<CreateJob />} />
+            <Route path="/jobs/:id" element={<JobDetail />} />
+            <Route path="/jobs/:id/edit" element={<EditJob />} />
+            <Route path="/jobs/:id/kanban" element={<Kanban />} />
+            <Route path="/kanban" element={<Kanban />} />
+            <Route path="/roles" element={<Roles />} />
+            <Route path="/roles/new" element={<CreateRole />} />
+            <Route path="/roles/:id/edit" element={<EditRole />} />
+            <Route path="/audit" element={<Audit />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/users/:id/edit" element={<EditUser />} />
+          </Route>
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 };
 

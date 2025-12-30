@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { useUsers } from '../hooks/useUsers';
 
 const EditUser: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [isLoading, setIsLoading] = useState(false);
+  const { users, updateUser } = useUsers();
 
-  // Simulação de dados iniciais (poderia vir de uma API baseada no ID)
+  const user = users.find(u => u.id === id);
+
   const [formData, setFormData] = useState({
-    name: 'Ana Silva',
-    email: 'ana.silva@company.com',
-    role: 'Admin',
-    department: 'Tecnologia',
-    status: 'active'
+    name: user?.name || '',
+    email: user?.email || '',
+    role: user?.role || 'recruiter',
+    department: user?.department || 'Tecnologia',
+    status: user?.status || 'active'
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -23,25 +26,42 @@ const EditUser: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!id) return;
     setIsLoading(true);
-    // Simulação de salvamento
+
+    updateUser(id, {
+      name: formData.name,
+      role: formData.role as any,
+      status: formData.status as 'active' | 'suspended',
+      department: formData.department
+    });
+
     setTimeout(() => {
       setIsLoading(false);
       navigate('/settings');
-    }, 1000);
+    }, 500);
   };
+
+  if (!user) {
+    return (
+      <div className="p-8 text-center bg-background-light dark:bg-background-dark h-screen text-slate-900 dark:text-white">
+        <h2 className="text-xl font-bold">Usuário não encontrado</h2>
+        <button onClick={() => navigate('/settings')} className="mt-4 text-primary underline">Voltar para configurações</button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-background-light dark:bg-background-dark overflow-hidden">
       {/* Header */}
       <header className="h-16 bg-white dark:bg-[#1a202c] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shrink-0 z-20">
         <div className="flex items-center gap-4">
-          <Breadcrumbs 
-             items={[
-               { label: 'Configurações', to: '/settings' },
-               { label: 'Usuários', to: '/settings' },
-               { label: 'Editar Usuário' }
-             ]} 
+          <Breadcrumbs
+            items={[
+              { label: 'Configurações', to: '/settings' },
+              { label: 'Usuários', to: '/settings' },
+              { label: 'Editar Usuário' }
+            ]}
           />
         </div>
       </header>
@@ -55,7 +75,7 @@ const EditUser: React.FC = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{formData.name}</h1>
-              <p className="text-slate-500 dark:text-slate-400 text-sm">ID: {id || 'USER-123'} • Último acesso: Hoje, 09:42</p>
+              <p className="text-slate-500 dark:text-slate-400 text-sm">ID: {id} • Último acesso: {user.lastAccess}</p>
             </div>
           </div>
 
@@ -67,23 +87,23 @@ const EditUser: React.FC = () => {
                   Dados de Acesso e Perfil
                 </h2>
               </div>
-              
+
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Nome Completo</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:text-white transition-all"
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">E-mail Corporativo</label>
-                  <input 
-                    type="email" 
+                  <input
+                    type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
@@ -94,16 +114,17 @@ const EditUser: React.FC = () => {
 
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Perfil de Acesso</label>
-                  <select 
+                  <select
                     name="role"
                     value={formData.role}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:text-white transition-all"
+                    className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:text-white transition-all capitalize"
                   >
-                    <option value="Admin">Admin</option>
-                    <option value="Qualidade">Qualidade</option>
-                    <option value="DP">DP</option>
-                    <option value="Gestor">Gestor</option>
+                    <option value="admin">Administrador</option>
+                    <option value="quality">Qualidade</option>
+                    <option value="dp">DP</option>
+                    <option value="manager">Gestor</option>
+                    <option value="recruiter">Recrutador</option>
                   </select>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Define as permissões e visibilidade dentro do sistema.
@@ -112,17 +133,18 @@ const EditUser: React.FC = () => {
 
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Departamento Principal</label>
-                  <select 
+                  <select
                     name="department"
                     value={formData.department}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:text-white transition-all"
                   >
-                    <option>Tecnologia</option>
-                    <option>Recursos Humanos</option>
-                    <option>Financeiro</option>
-                    <option>Produto</option>
-                    <option>Vendas</option>
+                    <option value="">Selecione...</option>
+                    <option value="Tecnologia">Tecnologia</option>
+                    <option value="Recursos Humanos">Recursos Humanos</option>
+                    <option value="Financeiro">Financeiro</option>
+                    <option value="Produto">Produto</option>
+                    <option value="Vendas">Vendas</option>
                   </select>
                 </div>
 
@@ -130,10 +152,10 @@ const EditUser: React.FC = () => {
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Status da Conta</label>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-2 p-3 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors w-full">
-                      <input 
-                        type="radio" 
-                        name="status" 
-                        value="active" 
+                      <input
+                        type="radio"
+                        name="status"
+                        value="active"
                         checked={formData.status === 'active'}
                         onChange={handleInputChange}
                         className="text-primary focus:ring-primary"
@@ -141,10 +163,10 @@ const EditUser: React.FC = () => {
                       <span className="text-sm font-medium text-slate-900 dark:text-white">Ativo</span>
                     </label>
                     <label className="flex items-center gap-2 p-3 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors w-full">
-                      <input 
-                        type="radio" 
-                        name="status" 
-                        value="suspended" 
+                      <input
+                        type="radio"
+                        name="status"
+                        value="suspended"
                         checked={formData.status === 'suspended'}
                         onChange={handleInputChange}
                         className="text-red-600 focus:ring-red-600"
@@ -157,14 +179,14 @@ const EditUser: React.FC = () => {
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-4">
-              <button 
+              <button
                 type="button"
                 onClick={() => navigate('/settings')}
                 className="px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 type="submit"
                 disabled={isLoading}
                 className="px-6 py-2.5 rounded-lg bg-primary hover:bg-primary-dark text-white font-semibold text-sm shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"

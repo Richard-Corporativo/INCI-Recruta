@@ -1,6 +1,7 @@
 import React, { useState, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Breadcrumbs from '../components/Breadcrumbs';
+import { useJobs } from '../hooks/useJobs';
 
 interface JobFormData {
   roleTitle: string;
@@ -19,7 +20,8 @@ interface JobFormData {
 const CreateJob: React.FC = () => {
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
-  
+  const { addJob } = useJobs();
+
   const [formData, setFormData] = useState<JobFormData>({
     roleTitle: 'Analista de Marketing Sênior',
     roleCode: 'MKT-SR-004',
@@ -44,19 +46,21 @@ const CreateJob: React.FC = () => {
 
   const handlePublish = () => {
     const newJob = {
-      id: Math.floor(Math.random() * 90000) + 10000,
       title: formData.roleTitle,
-      context: formData.context ? (formData.context.length > 40 ? formData.context.substring(0, 40) + '...' : formData.context) : 'Nova oportunidade',
+      context: formData.context || 'Nova oportunidade',
       department: formData.department,
-      location: `${formData.location} (${formData.model})`,
-      type: formData.contract.split(' ')[0],
-      urgency: formData.urgency,
-      status: 'Ativa',
-      created_at: new Date().toLocaleDateString('pt-BR'),
+      location: formData.location,
+      model: formData.model as any,
+      contract: formData.contract as any,
+      urgency: formData.urgency as any,
+      status: 'Ativa' as const,
+      salary_min: Number(formData.salaryMin),
+      salary_max: Number(formData.salaryMax),
+      mission: formData.mission,
+      candidates_count: 0
     };
 
-    const existingJobs = JSON.parse(localStorage.getItem('recruitSys_jobs') || '[]');
-    localStorage.setItem('recruitSys_jobs', JSON.stringify([newJob, ...existingJobs]));
+    addJob(newJob);
     navigate('/jobs');
   };
 
@@ -65,26 +69,26 @@ const CreateJob: React.FC = () => {
       {/* Header */}
       <header className="h-16 bg-white dark:bg-[#1a202c] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 shrink-0">
         <div className="flex items-center gap-4">
-          <Breadcrumbs 
+          <Breadcrumbs
             items={[
               { label: 'Vagas', to: '/jobs' },
               { label: 'Criar Nova Vaga' }
-            ]} 
+            ]}
           />
         </div>
         <div className="flex items-center gap-4">
-           <div className="text-right hidden sm:block">
-             <p className="text-sm font-semibold text-slate-900 dark:text-white">Mariana Costa</p>
-             <p className="text-xs text-slate-500 dark:text-slate-400">Gerente de RH</p>
-           </div>
-           <div className="w-10 h-10 rounded-full bg-cover bg-center ring-2 ring-white dark:ring-slate-800 shadow-sm" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBPnhm69OkfJ6JYDAQVptxP6CaG5JqDjnlTHYSgUyLXCmc5KZUhy5KdpSNnchyXvmVKbiZnE6wyqJxvaGw1cdYwY8MwZDG2pVfNYIJiQZkM8IusjTwS9qspALvwr_4vrnpW6EGAmdaAkweNToggKCvUy0WBR-Rdb2H332jiKtUtFa6G76n1GOcXrAg2mkxYOu_u2WPDh3NSa4Fc7HR0KI1Rfmvng-KcsUmWZfk82pdr0LaZMp5iKAFOVHofveqlLIk4BvdS7FyTeiw")' }}></div>
+          <div className="text-right hidden sm:block">
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">Mariana Costa</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Gerente de RH</p>
+          </div>
+          <div className="w-10 h-10 rounded-full bg-cover bg-center ring-2 ring-white dark:ring-slate-800 shadow-sm" style={{ backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBPnhm69OkfJ6JYDAQVptxP6CaG5JqDjnlTHYSgUyLXCmc5KZUhy5KdpSNnchyXvmVKbiZnE6wyqJxvaGw1cdYwY8MwZDG2pVfNYIJiQZkM8IusjTwS9qspALvwr_4vrnpW6EGAmdaAkweNToggKCvUy0WBR-Rdb2H332jiKtUtFa6G76n1GOcXrAg2mkxYOu_u2WPDh3NSa4Fc7HR0KI1Rfmvng-KcsUmWZfk82pdr0LaZMp5iKAFOVHofveqlLIk4BvdS7FyTeiw")' }}></div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto p-8">
         <div className="max-w-[1200px] mx-auto pb-24">
-          
+
           <div className="mb-8">
             <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Criar Nova Vaga</h1>
             <p className="text-slate-500 dark:text-slate-400 text-lg mt-2">Defina os detalhes da nova oportunidade.</p>
@@ -106,8 +110,8 @@ const CreateJob: React.FC = () => {
               </span>
             </div>
             <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
-              <div 
-                className="bg-primary h-2.5 rounded-full transition-all duration-500 ease-out" 
+              <div
+                className="bg-primary h-2.5 rounded-full transition-all duration-500 ease-out"
                 style={{ width: step === 1 ? '33%' : step === 2 ? '66%' : '100%' }}
               ></div>
             </div>
@@ -126,12 +130,12 @@ const CreateJob: React.FC = () => {
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                       <span className="material-symbols-outlined text-slate-400">search</span>
                     </div>
-                    <input 
-                      className="block w-full pl-11 pr-4 py-3.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all shadow-sm" 
-                      placeholder="Digite o nome do cargo ou código..." 
-                      type="text" 
+                    <input
+                      className="block w-full pl-11 pr-4 py-3.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all shadow-sm"
+                      placeholder="Digite o nome do cargo ou código..."
+                      type="text"
                       defaultValue={formData.roleTitle}
-                      onChange={(e) => setFormData(prev => ({...prev, roleTitle: e.target.value}))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, roleTitle: e.target.value }))}
                     />
                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer">
                       <span className="material-symbols-outlined text-slate-400 hover:text-slate-600 text-[20px]">close</span>
@@ -267,7 +271,7 @@ const CreateJob: React.FC = () => {
                       <div className="flex flex-col gap-2">
                         <label className="text-sm font-semibold text-slate-900 dark:text-white">Período de Inscrição</label>
                         <div className="relative">
-                          <input className="w-full h-11 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary dark:text-white" type="date"/>
+                          <input className="w-full h-11 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary dark:text-white" type="date" />
                         </div>
                       </div>
                     </div>
@@ -279,7 +283,7 @@ const CreateJob: React.FC = () => {
                         </label>
                         <div className="grid grid-cols-3 gap-4">
                           <div className="col-span-2">
-                            <input name="location" value={formData.location} onChange={handleInputChange} className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary dark:text-white" placeholder="Cidade (ex: São Paulo)" type="text"/>
+                            <input name="location" value={formData.location} onChange={handleInputChange} className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary dark:text-white" placeholder="Cidade (ex: São Paulo)" type="text" />
                           </div>
                           <div>
                             <select className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary dark:text-white">
@@ -295,9 +299,9 @@ const CreateJob: React.FC = () => {
                       <div className="flex flex-col gap-2">
                         <label className="text-sm font-semibold text-slate-900 dark:text-white">Nível de Urgência</label>
                         <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                          <button onClick={() => setFormData(prev => ({...prev, urgency: 'Baixa'}))} className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${formData.urgency === 'Baixa' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400'}`} type="button">Baixa</button>
-                          <button onClick={() => setFormData(prev => ({...prev, urgency: 'Média'}))} className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${formData.urgency === 'Média' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400'}`} type="button">Média</button>
-                          <button onClick={() => setFormData(prev => ({...prev, urgency: 'Alta'}))} className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${formData.urgency === 'Alta' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400'}`} type="button">Alta</button>
+                          <button onClick={() => setFormData(prev => ({ ...prev, urgency: 'Baixa' }))} className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${formData.urgency === 'Baixa' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400'}`} type="button">Baixa</button>
+                          <button onClick={() => setFormData(prev => ({ ...prev, urgency: 'Média' }))} className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${formData.urgency === 'Média' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400'}`} type="button">Média</button>
+                          <button onClick={() => setFormData(prev => ({ ...prev, urgency: 'Alta' }))} className={`flex-1 py-1.5 text-xs font-medium rounded transition-colors ${formData.urgency === 'Alta' ? 'bg-white dark:bg-slate-700 text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400'}`} type="button">Alta</button>
                         </div>
                       </div>
                       <div className="flex flex-col gap-2">
@@ -307,12 +311,12 @@ const CreateJob: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <div className="relative flex-1">
                             <span className="absolute left-3 top-2.5 text-slate-500 text-sm">R$</span>
-                            <input name="salaryMin" value={formData.salaryMin} onChange={handleInputChange} className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 pl-9 pr-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary dark:text-white" type="text"/>
+                            <input name="salaryMin" value={formData.salaryMin} onChange={handleInputChange} className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 pl-9 pr-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary dark:text-white" type="text" />
                           </div>
                           <span className="text-slate-400">-</span>
                           <div className="relative flex-1">
                             <span className="absolute left-3 top-2.5 text-slate-500 text-sm">R$</span>
-                            <input name="salaryMax" value={formData.salaryMax} onChange={handleInputChange} className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 pl-9 pr-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary dark:text-white" type="text"/>
+                            <input name="salaryMax" value={formData.salaryMax} onChange={handleInputChange} className="w-full h-10 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 pl-9 pr-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary dark:text-white" type="text" />
                           </div>
                         </div>
                       </div>
@@ -403,7 +407,7 @@ const CreateJob: React.FC = () => {
 
       {/* Footer Actions */}
       <footer className="bg-white dark:bg-[#1a202c] border-t border-slate-200 dark:border-slate-800 p-4 md:px-12 md:py-5 flex items-center justify-end gap-4 z-20 shrink-0">
-        <button 
+        <button
           onClick={() => step === 1 ? navigate('/jobs') : setStep(step - 1)}
           className="flex items-center justify-center gap-2 px-5 h-10 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-transparent text-slate-900 dark:text-white font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
@@ -412,21 +416,21 @@ const CreateJob: React.FC = () => {
         </button>
         <div className="flex items-center gap-3">
           {step === 3 ? (
-             <>
-               <button className="hidden sm:flex items-center justify-center gap-2 px-5 h-10 rounded-lg text-slate-500 dark:text-slate-400 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                 <span className="material-symbols-outlined text-xl">save</span>
-                 Salvar como rascunho
-               </button>
-               <button onClick={handlePublish} className="flex items-center justify-center gap-2 px-6 h-10 rounded-lg bg-primary text-white font-medium hover:bg-blue-600 shadow-md transition-colors">
-                 <span className="material-symbols-outlined text-xl">publish</span>
-                 Salvar vaga
-               </button>
-             </>
+            <>
+              <button className="hidden sm:flex items-center justify-center gap-2 px-5 h-10 rounded-lg text-slate-500 dark:text-slate-400 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <span className="material-symbols-outlined text-xl">save</span>
+                Salvar como rascunho
+              </button>
+              <button onClick={handlePublish} className="flex items-center justify-center gap-2 px-6 h-10 rounded-lg bg-primary text-white font-medium hover:bg-blue-600 shadow-md transition-colors">
+                <span className="material-symbols-outlined text-xl">publish</span>
+                Salvar vaga
+              </button>
+            </>
           ) : (
-             <button onClick={() => setStep(step + 1)} className="flex items-center justify-center gap-2 px-6 h-10 rounded-lg bg-primary hover:bg-blue-600 text-white font-medium shadow-md shadow-blue-500/20 transition-all">
-                {step === 1 ? 'Continuar' : 'Revisar e publicar'}
-                <span className="material-symbols-outlined text-lg">arrow_forward</span>
-             </button>
+            <button onClick={() => setStep(step + 1)} className="flex items-center justify-center gap-2 px-6 h-10 rounded-lg bg-primary hover:bg-blue-600 text-white font-medium shadow-md shadow-blue-500/20 transition-all">
+              {step === 1 ? 'Continuar' : 'Revisar e publicar'}
+              <span className="material-symbols-outlined text-lg">arrow_forward</span>
+            </button>
           )}
         </div>
       </footer>
