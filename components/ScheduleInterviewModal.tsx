@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAudit } from '../hooks/useAudit';
 import { useAuth } from '../hooks/useAuth';
+import BaseModal from './BaseModal';
 
 interface ScheduleInterviewModalProps {
   isOpen: boolean;
@@ -21,8 +22,6 @@ const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen,
     notes: ''
   });
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     addLog({
@@ -36,10 +35,9 @@ const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen,
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
-      <div className="relative w-full max-w-lg transform rounded-xl bg-white dark:bg-[#1a2632] shadow-2xl transition-all flex flex-col max-h-[90vh] ring-1 ring-slate-900/5 dark:ring-white/10" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/50 px-6 py-4 shrink-0 bg-slate-50/50 dark:bg-slate-800/30 rounded-t-xl">
+    <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="max-w-lg">
+      <div className="flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/50 px-6 py-4 shrink-0 bg-slate-50/50 dark:bg-slate-800/30">
           <div className="flex flex-col gap-0.5">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-none">Agendar Entrevista</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">Candidato: {candidateName}</p>
@@ -133,7 +131,7 @@ const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen,
             </div>
           </form>
         </div>
-        <div className="flex items-center justify-end gap-3 border-t border-slate-200 dark:border-slate-700/50 px-6 py-4 bg-slate-50/50 dark:bg-slate-800/30 rounded-b-xl shrink-0">
+        <div className="flex items-center justify-end gap-3 border-t border-slate-200 dark:border-slate-700/50 px-6 py-4 bg-slate-50/50 dark:bg-slate-800/30 shrink-0">
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-transparent border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors"
@@ -150,7 +148,7 @@ const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen,
           </button>
         </div>
       </div>
-    </div>
+    </BaseModal>
   );
 };
 

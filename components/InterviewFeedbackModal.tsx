@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAudit } from '../hooks/useAudit';
 import { useAuth } from '../hooks/useAuth';
+import BaseModal from './BaseModal';
 
 interface InterviewFeedbackModalProps {
   isOpen: boolean;
@@ -24,8 +25,6 @@ const InterviewFeedbackModal: React.FC<InterviewFeedbackModalProps> = ({
   const [strengths, setStrengths] = useState('');
   const [weaknesses, setWeaknesses] = useState('');
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     addLog({
@@ -39,9 +38,8 @@ const InterviewFeedbackModal: React.FC<InterviewFeedbackModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px] transition-opacity" onClick={onClose}></div>
-      <div className="relative w-full max-w-2xl transform overflow-hidden rounded-xl bg-white dark:bg-[#1a2632] shadow-2xl transition-all flex flex-col max-h-[90vh]">
+    <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="max-w-2xl">
+      <div className="flex flex-col max-h-[90vh]">
         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-white dark:bg-[#1a2632] shrink-0">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">Registrar Feedback de Entrevista</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-500 dark:hover:text-slate-300 transition-colors">
@@ -148,7 +146,7 @@ const InterviewFeedbackModal: React.FC<InterviewFeedbackModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </BaseModal>
   );
 };
 

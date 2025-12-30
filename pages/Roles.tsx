@@ -3,11 +3,13 @@ import { Role } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useRoles } from '../hooks/useRoles';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const Roles: React.FC = () => {
   const { roles, deleteRole } = useRoles();
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
 
   const filteredRoles = roles.filter(role =>
     role.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -15,9 +17,7 @@ const Roles: React.FC = () => {
   );
 
   const handleDelete = (id: string, title: string) => {
-    if (window.confirm(`Tem certeza que deseja excluir o cargo "${title}"? esta ação não pode ser desfeita.`)) {
-      deleteRole(id);
-    }
+    setDeleteConfirm({ id, title });
   };
 
   return (
@@ -142,6 +142,16 @@ const Roles: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => deleteConfirm && deleteRole(deleteConfirm.id)}
+        title="Excluir Cargo"
+        message={`Tem certeza que deseja excluir o cargo "${deleteConfirm?.title}"? esta ação não pode ser desfeita.`}
+        confirmLabel="Excluir"
+        type="danger"
+      />
     </div>
   );
 };

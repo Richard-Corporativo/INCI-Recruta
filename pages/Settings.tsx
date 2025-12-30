@@ -4,7 +4,8 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import { useUsers } from '../hooks/useUsers';
 import { useAudit } from '../hooks/useAudit';
 import { useAuth } from '../hooks/useAuth';
-import InviteUserModal from '../components/InviteUserModal';
+import UserModal from '../components/UserModal';
+import Toast from '../components/Toast';
 
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState('users');
@@ -13,6 +14,7 @@ const Settings: React.FC = () => {
   const { logs } = useAudit();
   const { user: currentUser } = useAuth();
   const [selectedManagerId, setSelectedManagerId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Initialize selected manager
   React.useEffect(() => {
@@ -612,10 +614,19 @@ const Settings: React.FC = () => {
       </div>
 
       {/* Invite Modal */}
-      <InviteUserModal
+      <UserModal
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}
+        onSuccess={(message) => setToast({ message, type: 'success' })}
       />
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };

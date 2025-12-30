@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { KanbanColumnId } from '../types';
 import { useCandidates } from '../hooks/useCandidates';
+import BaseModal from './BaseModal';
 
 interface MoveStageModalProps {
   isOpen: boolean;
@@ -26,8 +27,6 @@ const MoveStageModal: React.FC<MoveStageModalProps> = ({ isOpen, onClose, candid
   const [selectedStage, setSelectedStage] = useState<KanbanColumnId | ''>('');
   const { moveCandidate } = useCandidates();
 
-  if (!isOpen) return null;
-
   const initials = candidateInitials || candidateName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
 
   const handleConfirm = () => {
@@ -38,12 +37,11 @@ const MoveStageModal: React.FC<MoveStageModalProps> = ({ isOpen, onClose, candid
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 sm:px-6" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
-      <div className="relative w-full max-w-md transform rounded-xl bg-white dark:bg-[#1a2632] p-6 text-left shadow-2xl transition-all border border-slate-200 dark:border-slate-700">
+    <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="max-w-md">
+      <div className="p-6">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-500 dark:hover:text-slate-300 transition-colors"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-500 dark:hover:text-slate-300 transition-colors z-10"
         >
           <span className="material-symbols-outlined">close</span>
         </button>
@@ -107,7 +105,7 @@ const MoveStageModal: React.FC<MoveStageModalProps> = ({ isOpen, onClose, candid
           </button>
         </div>
       </div>
-    </div>
+    </BaseModal>
   );
 };
 
