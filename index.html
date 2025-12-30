@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RecruitSys</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Rethink+Sans:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <style>
+      :root {
+        --background: #f6f7f8;
+        --foreground: #0f1419;
+        --card: #ffffff;
+        --card-foreground: #0f1419;
+        --popover: #ffffff;
+        --popover-foreground: #0f1419;
+        --primary: #197fe6;
+        --primary-foreground: #ffffff;
+        --secondary: #0f1419;
+        --secondary-foreground: #ffffff;
+        --muted: #e5e5e6;
+        --muted-foreground: #0f1419;
+        --accent: #ebedef;
+        --accent-foreground: #032135;
+        --destructive: #f4212e;
+        --destructive-foreground: #ffffff;
+        --border: #e1eaef;
+        --input: #f7f9fa;
+        --ring: #1da1f2;
+        --chart-1: #1e9df1;
+        --chart-2: #00b87a;
+        --chart-3: #f7b928;
+        --chart-4: #17bf63;
+        --chart-5: #e0245e;
+        --sidebar: #ffffff;
+        --sidebar-foreground: #0f1419;
+        --sidebar-primary: #1e9df1;
+        --sidebar-primary-foreground: #ffffff;
+        --sidebar-accent: #e3ecf6;
+        --sidebar-accent-foreground: #1e9df1;
+        --sidebar-border: #e1e8ed;
+        --sidebar-ring: #1da1f2;
+        --font-sans: 'Inter', ui-sans-serif, sans-serif, system-ui;
+        --radius: 0.775rem;
+        --shadow-sm: 0px 1px 2px rgba(0, 0, 0, 0.05);
+        --shadow: 0px 1px 3px rgba(0, 0, 0, 0.1), 0px 1px 2px rgba(0, 0, 0, 0.06);
+        --shadow-md: 0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -2px rgba(0, 0, 0, 0.05);
+        --shadow-xl: 0px 20px 25px -5px rgba(0, 0, 0, 0.1), 0px 10px 10px -5px rgba(0, 0, 0, 0.04);
+        --shadow-2xl: 0px 25px 50px -12px rgba(0, 0, 0, 0.25);
+      }
+
+      .dark {
+        --background: #111921;
+        --foreground: #e7e9ea;
+        --card: #1a2632;
+        --card-foreground: #d9d9d9;
+        --popover: #1a2632;
+        --popover-foreground: #e7e9ea;
+        --primary: #197fe6;
+        --primary-foreground: #ffffff;
+        --secondary: #ef9600;
+        --secondary-foreground: #0f1419;
+        --muted: #181818;
+        --muted-foreground: #72767a;
+        --accent: #041420;
+        --accent-foreground: #bdccd6;
+        --destructive: #f4212e;
+        --destructive-foreground: #ffffff;
+        --border: #242628;
+        --input: #22303c;
+        --ring: #009dff;
+        --chart-1: #1e9df1;
+        --chart-2: #00b87a;
+        --chart-3: #f7b928;
+        --chart-4: #17bf63;
+        --chart-5: #e0245e;
+        --sidebar: #1a2632;
+        --sidebar-foreground: #d9d9d9;
+        --sidebar-primary: #1da1f2;
+        --sidebar-primary-foreground: #ffffff;
+        --sidebar-accent: #061622;
+        --sidebar-accent-foreground: #1c9cf0;
+        --sidebar-border: #38444d;
+        --sidebar-ring: #1da1f2;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        background-color: var(--background);
+        color: var(--foreground);
+      }
+
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .material-symbols-outlined.filled {
+        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: var(--muted-foreground);
+        border-radius: 3px;
+        opacity: 0.3;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: var(--muted-foreground);
+        opacity: 0.8;
+      }
+
+      /* Kanban specific scrollbars */
+      .kanban-scroll::-webkit-scrollbar {
+          height: 8px;
+          width: 8px;
+      }
+      .kanban-scroll::-webkit-scrollbar-track {
+          background: transparent;
+      }
+      .kanban-scroll::-webkit-scrollbar-thumb {
+          background-color: var(--border);
+          border-radius: 4px;
+      }
+      .kanban-column-scroll::-webkit-scrollbar {
+          width: 4px;
+      }
+      .kanban-column-scroll::-webkit-scrollbar-thumb {
+          background-color: var(--border);
+          border-radius: 4px;
+      }
+      
+      /* Drawer specific scrollbar */
+      .drawer-scroll::-webkit-scrollbar {
+          width: 6px;
+      }
+      .drawer-scroll::-webkit-scrollbar-track {
+          background: transparent;
+      }
+      .drawer-scroll::-webkit-scrollbar-thumb {
+          background-color: var(--border);
+          border-radius: 3px;
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              display: ['Inter', 'sans-serif'],
+              body: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              border: "var(--border)",
+              input: "var(--input)",
+              ring: "var(--ring)",
+              background: "var(--background)",
+              foreground: "var(--foreground)",
+              primary: {
+                DEFAULT: "var(--primary)",
+                foreground: "var(--primary-foreground)",
+                dark: "var(--primary)", 
+                light: "var(--accent)"
+              },
+              secondary: {
+                DEFAULT: "var(--secondary)",
+                foreground: "var(--secondary-foreground)",
+              },
+              destructive: {
+                DEFAULT: "var(--destructive)",
+                foreground: "var(--destructive-foreground)",
+              },
+              muted: {
+                DEFAULT: "var(--muted)",
+                foreground: "var(--muted-foreground)",
+              },
+              accent: {
+                DEFAULT: "var(--accent)",
+                foreground: "var(--accent-foreground)",
+              },
+              popover: {
+                DEFAULT: "var(--popover)",
+                foreground: "var(--popover-foreground)",
+              },
+              card: {
+                DEFAULT: "var(--card)",
+                foreground: "var(--card-foreground)",
+              },
+              sidebar: {
+                DEFAULT: "var(--sidebar)",
+                foreground: "var(--sidebar-foreground)",
+                primary: "var(--sidebar-primary)",
+                "primary-foreground": "var(--sidebar-primary-foreground)",
+                accent: "var(--sidebar-accent)",
+                "accent-foreground": "var(--sidebar-accent-foreground)",
+                border: "var(--sidebar-border)",
+                ring: "var(--sidebar-ring)",
+              },
+              // Semantic mappings for older code compatibility
+              "background-light": "var(--background)",
+              "background-dark": "var(--background)",
+              "surface-light": "var(--card)",
+              "surface-dark": "var(--card)",
+              "border-light": "var(--border)",
+              "border-dark": "var(--border)",
+              "text-main-light": "var(--foreground)",
+              "text-main-dark": "var(--foreground)",
+              "text-sec-light": "var(--muted-foreground)",
+              "text-sec-dark": "var(--muted-foreground)",
+              "primary-dark": "var(--primary)",
+            },
+            borderRadius: {
+              lg: "var(--radius)",
+              md: "calc(var(--radius) - 2px)",
+              sm: "calc(var(--radius) - 4px)",
+              xl: "calc(var(--radius) + 4px)",
+              "2xl": "calc(var(--radius) + 8px)",
+              DEFAULT: "0.25rem",
+              "full": "9999px"
+            },
+            boxShadow: {
+               sm: "var(--shadow-sm)",
+               DEFAULT: "var(--shadow)",
+               md: "var(--shadow-md)",
+               lg: "var(--shadow-lg)",
+               xl: "var(--shadow-xl)",
+               "2xl": "var(--shadow-2xl)",
+            },
+            keyframes: {
+              'slide-in-right': {
+                '0%': { transform: 'translateX(100%)' },
+                '100%': { transform: 'translateX(0)' },
+              }
+            },
+            animation: {
+              'slide-in-right': 'slide-in-right 0.3s ease-out forwards',
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0"
+  }
+}
+</script>
+</head>
+  <body class="font-display bg-background text-foreground antialiased overflow-x-hidden">
+    <div id="root"></div>
+  </body>
+</html>
