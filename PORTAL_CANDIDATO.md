@@ -72,16 +72,16 @@ O objetivo é entregar um fluxo completo de ponta a ponta:
 ## 🛠️ Checklist de Desenvolvimento (Frontend First)
 
 - [ ] **Setup**
-    - [ ] Criar `PublicLayout.tsx` e `CandidateLayout.tsx`.
-    - [ ] Configurar rotas no React Router (`vagas/*`, `candidate/*`).
+    - [x] Criar `PublicLayout.tsx` e `CandidateLayout.tsx`.
+    - [x] Configurar rotas no React Router (`vagas/*`, `candidate/*`).
 
 - [ ] **Componentes Base (UI)**
-    - [ ] `JobCardPublic`: Versão "marketável" do card de vaga.
+    - [x] `JobCardPublic`: Versão "marketável" do card de vaga.
     - [ ] `StatusStepper`: Componente visual de etapas (bolinhas conectadas por linha).
     - [ ] `ResumeUploader`: Área de dropzone estilizada.
 
 - [ ] **Páginas**
-    - [ ] `/vagas` (Grid com dados mockados).
+    - [x] `/vagas` (Grid com dados mockados).
     - [ ] `/vagas/:id` (Página de vendas da vaga).
     - [ ] `/login` & `/cadastro` (Formulários validados).
     - [ ] `/dashboard` (Visualização do status).

@@ -23,6 +23,10 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const RequestAccess = lazy(() => import('./pages/RequestAccess'));
 const TwoFactorAuth = lazy(() => import('./pages/TwoFactorAuth'));
 
+// Rotas do Candidato
+const PublicLayout = lazy(() => import('./layouts/PublicLayout'));
+const JobsList = lazy(() => import('./pages/public/JobsList'));
+
 // Componente para proteção de rotas
 const RequireAuth = ({ children }: { children?: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -70,6 +74,11 @@ const App: React.FC = () => {
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/request-access" element={<RequestAccess />} />
             <Route path="/2fa" element={<TwoFactorAuth />} />
+
+            {/* Rotas Públicas do Portal do Candidato */}
+            <Route element={<PublicLayout />}>
+              <Route path="/vagas" element={<JobsList />} />
+            </Route>
 
             {/* Rotas do Painel (Protegidas) */}
             <Route element={

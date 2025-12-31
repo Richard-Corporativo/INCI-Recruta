@@ -1,239 +1,285 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RecruitSys</title>
-    <link href="https://fonts.googleapis.com" rel="preconnect"/>
-    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Rethink+Sans:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <style>
-      @layer base {
-        :root {
-          --radius: 0.775rem;
+<html lang="pt-BR" class="light">
 
-          /* Base */
-          --background: 240 5% 96%;
-          --foreground: 222.2 84% 4.9%;
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RecruitSys</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans:wght@400;500;700&family=Rethink+Sans:ital,wght@0,400..800;1,400..800&display=swap"
+    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <style>
+    @layer base {
+      :root {
+        --radius: 0.775rem;
 
-          /* Card / Popover */
-          --card: 0 0% 100%;
-          --card-foreground: 222.2 84% 4.9%;
-          --popover: 0 0% 100%;
-          --popover-foreground: 0 0% 3.9%;
+        /* Base */
+        --background: 240 5% 96%;
+        --foreground: 222.2 84% 4.9%;
 
-          /* Primary / Secondary */
-          --primary: 231 84% 30%;
-          --primary-foreground: 0 0% 98%;
-          --secondary: 210 40% 98%;
-          --secondary-foreground: 222.2 47.4% 11.2%;
+        /* Card / Popover */
+        --card: 0 0% 100%;
+        --card-foreground: 222.2 84% 4.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 0 0% 3.9%;
 
-          /* Muted / Accent */
-          --muted: 210 40% 96.1%;
-          --muted-foreground: 215.4 16.3% 46.9%;
-          --accent: 210 40% 96.1%;
-          --accent-foreground: 222.2 47.4% 11.2%;
+        /* Primary / Secondary */
+        --primary: 231 84% 30%;
+        --primary-foreground: 0 0% 98%;
+        --secondary: 210 40% 98%;
+        --secondary-foreground: 222.2 47.4% 11.2%;
 
-          /* Destructive */
-          --destructive: 0 84.2% 60.2%;
-          --destructive-foreground: 0 0% 98%;
+        /* Muted / Accent */
+        --muted: 210 40% 96.1%;
+        --muted-foreground: 215.4 16.3% 46.9%;
+        --accent: 210 40% 96.1%;
+        --accent-foreground: 222.2 47.4% 11.2%;
 
-          /* UI */
-          --border: 214.3 31.8% 91.4%;
-          --input: 214.3 31.8% 91.4%;
-          --ring: 231 84% 30%;
+        /* Destructive */
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 0 0% 98%;
 
-          /* Sidebar */
-          --sidebar: 0 0% 100%;
-          --sidebar-foreground: 210 17% 8%;
-          --sidebar-border: 216 19% 88%;
-          --sidebar-accent: 220 14% 96%;
-          --sidebar-accent-foreground: 208 91% 11%;
-          
-          --font-sans: 'Inter', ui-sans-serif, sans-serif, system-ui;
-        }
+        /* UI */
+        --border: 214.3 31.8% 91.4%;
+        --input: 214.3 31.8% 91.4%;
+        --ring: 231 84% 30%;
 
-        .dark {
-          --background: 240 10% 3.9%;
-          --foreground: 240 5% 95%;
+        /* Sidebar */
+        --sidebar: 0 0% 100%;
+        --sidebar-foreground: 210 17% 8%;
+        --sidebar-border: 216 19% 88%;
+        --sidebar-accent: 220 14% 96%;
+        --sidebar-accent-foreground: 208 91% 11%;
 
-          --card: 240 4.8% 10%;
-          --card-foreground: 240 5% 95%;
-
-          --popover: 240 10% 3.9%;
-          --popover-foreground: 240 5% 95%;
-
-          --primary: 217 91% 65%;
-          --primary-foreground: 0 0% 98%;
-
-          --secondary: 240 3.7% 15.9%;
-          --secondary-foreground: 240 5% 95%;
-
-          --muted: 240 3.7% 15.9%;
-          --muted-foreground: 240 5% 64.9%;
-
-          --accent: 240 3.7% 15.9%;
-          --accent-foreground: 240 5% 95%;
-
-          --destructive: 0 62.8% 30.6%;
-          --destructive-foreground: 240 5% 95%;
-
-          --border: 240 3.7% 15.9%;
-          --input: 240 3.7% 15.9%;
-          --ring: 217 91% 65%;
-
-          --sidebar: 240 5% 7%;
-          --sidebar-foreground: 240 4% 91%;
-          --sidebar-border: 240 5% 15%;
-          --sidebar-accent: 240 4% 12%;
-          --sidebar-accent-foreground: 240 5% 95%;
-        }
+        --font-sans: 'Inter', ui-sans-serif, sans-serif, system-ui;
       }
 
-      body {
-        font-family: var(--font-sans);
-        background-color: hsl(var(--background));
-        color: hsl(var(--foreground));
-      }
+      .dark {
+        --background: 240 10% 3.9%;
+        --foreground: 240 5% 95%;
 
-      .material-symbols-outlined {
-        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-      }
-      .material-symbols-outlined.filled {
-        font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-      }
-      
-      ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-      }
-      ::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: hsl(var(--muted-foreground) / 0.3);
-        border-radius: 3px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: hsl(var(--muted-foreground) / 0.5);
-      }
+        --card: 240 4.8% 10%;
+        --card-foreground: 240 5% 95%;
 
-      /* Kanban specific scrollbars */
-      .kanban-scroll::-webkit-scrollbar {
-          height: 8px;
-          width: 8px;
+        --popover: 240 10% 3.9%;
+        --popover-foreground: 240 5% 95%;
+
+        --primary: 217 91% 65%;
+        --primary-foreground: 0 0% 98%;
+
+        --secondary: 240 3.7% 15.9%;
+        --secondary-foreground: 240 5% 95%;
+
+        --muted: 240 3.7% 15.9%;
+        --muted-foreground: 240 5% 64.9%;
+
+        --accent: 240 3.7% 15.9%;
+        --accent-foreground: 240 5% 95%;
+
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 240 5% 95%;
+
+        --border: 240 3.7% 15.9%;
+        --input: 240 3.7% 15.9%;
+        --ring: 217 91% 65%;
+
+        --sidebar: 240 5% 7%;
+        --sidebar-foreground: 240 4% 91%;
+        --sidebar-border: 240 5% 15%;
+        --sidebar-accent: 240 4% 12%;
+        --sidebar-accent-foreground: 240 5% 95%;
       }
-      .kanban-scroll::-webkit-scrollbar-thumb {
-          background-color: hsl(var(--border));
-          border-radius: 4px;
-      }
-      .kanban-column-scroll::-webkit-scrollbar {
-          width: 4px;
-      }
-      .kanban-column-scroll::-webkit-scrollbar-thumb {
-          background-color: hsl(var(--border));
-          border-radius: 4px;
-      }
-      
-      /* Drawer specific scrollbar */
-      .drawer-scroll::-webkit-scrollbar {
-          width: 6px;
-      }
-      .drawer-scroll::-webkit-scrollbar-thumb {
-          background-color: hsl(var(--border));
-          border-radius: 3px;
-      }
-    </style>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+
+    .material-symbols-outlined.filled {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: hsl(var(--muted-foreground) / 0.3);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: hsl(var(--muted-foreground) / 0.5);
+    }
+
+    /* Kanban specific scrollbars */
+    .kanban-scroll::-webkit-scrollbar {
+      height: 8px;
+      width: 8px;
+    }
+
+    .kanban-scroll::-webkit-scrollbar-thumb {
+      background-color: hsl(var(--border));
+      border-radius: 4px;
+    }
+
+    .kanban-column-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .kanban-column-scroll::-webkit-scrollbar-thumb {
+      background-color: hsl(var(--border));
+      border-radius: 4px;
+    }
+
+    /* Drawer specific scrollbar */
+    .drawer-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .drawer-scroll::-webkit-scrollbar-thumb {
+      background-color: hsl(var(--border));
+      border-radius: 3px;
+    }
+
+    /* Custom Scrollbar from User Request */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 20px;
+    }
+
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #4b5563;
+    }
+
+    details>summary {
+      list-style: none;
+    }
+
+    details>summary::-webkit-details-marker {
+      display: none;
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Inter', 'sans-serif'],
+            body: ['Noto Sans', 'sans-serif'],
+          },
+          colors: {
+            // Requested specific colors
+            "background-light": "#f6f7f8",
+            "background-dark": "#111921",
+            "card-light": "#ffffff",
+            "card-dark": "#1e2732",
+            "border-light": "#dce0e5",
+            "border-dark": "#2d3748",
+
+            border: "hsl(var(--border))",
+            input: "hsl(var(--input))",
+            ring: "hsl(var(--ring))",
+            background: "hsl(var(--background))",
+            foreground: "hsl(var(--foreground))",
+            primary: {
+              DEFAULT: "#197fe6",
+              foreground: "hsl(var(--primary-foreground))",
             },
-            colors: {
-              border: "hsl(var(--border))",
-              input: "hsl(var(--input))",
-              ring: "hsl(var(--ring))",
-              background: "hsl(var(--background))",
-              foreground: "hsl(var(--foreground))",
-              primary: {
-                DEFAULT: "hsl(var(--primary))",
-                foreground: "hsl(var(--primary-foreground))",
-              },
-              secondary: {
-                DEFAULT: "hsl(var(--secondary))",
-                foreground: "hsl(var(--secondary-foreground))",
-              },
-              destructive: {
-                DEFAULT: "hsl(var(--destructive))",
-                foreground: "hsl(var(--destructive-foreground))",
-              },
-              muted: {
-                DEFAULT: "hsl(var(--muted))",
-                foreground: "hsl(var(--muted-foreground))",
-              },
-              accent: {
-                DEFAULT: "hsl(var(--accent))",
-                foreground: "hsl(var(--accent-foreground))",
-              },
-              popover: {
-                DEFAULT: "hsl(var(--popover))",
-                foreground: "hsl(var(--popover-foreground))",
-              },
-              card: {
-                DEFAULT: "hsl(var(--card))",
-                foreground: "hsl(var(--card-foreground))",
-              },
-              sidebar: {
-                DEFAULT: "hsl(var(--sidebar))",
-                foreground: "hsl(var(--sidebar-foreground))",
-                primary: "hsl(var(--sidebar-primary))",
-                "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-                accent: "hsl(var(--sidebar-accent))",
-                "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-                border: "hsl(var(--sidebar-border))",
-                ring: "hsl(var(--sidebar-ring))",
-              },
-              // Semantic mappings for older code compatibility
-              "background-light": "hsl(var(--background))",
-              "background-dark": "hsl(var(--background))",
-              "surface-light": "hsl(var(--card))",
-              "surface-dark": "hsl(var(--card))",
-              "border-light": "hsl(var(--border))",
-              "border-dark": "hsl(var(--border))",
-              "text-main-light": "hsl(var(--foreground))",
-              "text-main-dark": "hsl(var(--foreground))",
-              "text-sec-light": "hsl(var(--muted-foreground))",
-              "text-sec-dark": "hsl(var(--muted-foreground))",
-              "primary-dark": "hsl(var(--primary))",
+            // Existing mappings preserved below...
+            secondary: {
+              DEFAULT: "hsl(var(--secondary))",
+              foreground: "hsl(var(--secondary-foreground))",
             },
-            borderRadius: {
-              lg: "var(--radius)",
-              md: "calc(var(--radius) - 2px)",
-              sm: "calc(var(--radius) - 4px)",
-              xl: "calc(var(--radius) + 4px)",
-              "2xl": "calc(var(--radius) + 8px)",
-              base: "0.775rem",
-              "full": "9999px"
+            destructive: {
+              DEFAULT: "hsl(var(--destructive))",
+              foreground: "hsl(var(--destructive-foreground))",
             },
-            keyframes: {
-              'slide-in-right': {
-                '0%': { transform: 'translateX(100%)' },
-                '100%': { transform: 'translateX(0)' },
-              }
+            muted: {
+              DEFAULT: "hsl(var(--muted))",
+              foreground: "hsl(var(--muted-foreground))",
             },
-            animation: {
-              'slide-in-right': 'slide-in-right 0.3s ease-out forwards',
+            accent: {
+              DEFAULT: "hsl(var(--accent))",
+              foreground: "hsl(var(--accent-foreground))",
+            },
+            popover: {
+              DEFAULT: "hsl(var(--popover))",
+              foreground: "hsl(var(--popover-foreground))",
+            },
+            card: {
+              DEFAULT: "hsl(var(--card))",
+              foreground: "hsl(var(--card-foreground))",
+            },
+            sidebar: {
+              DEFAULT: "hsl(var(--sidebar))",
+              foreground: "hsl(var(--sidebar-foreground))",
+              primary: "hsl(var(--sidebar-primary))",
+              "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+              accent: "hsl(var(--sidebar-accent))",
+              "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+              border: "hsl(var(--sidebar-border))",
+              ring: "hsl(var(--sidebar-ring))",
+            },
+            // Compatibility mappings (overridden by specific colors above where colliding)
+            "surface-light": "hsl(var(--card))",
+            "surface-dark": "hsl(var(--card))",
+            "text-main-light": "hsl(var(--foreground))",
+            "text-main-dark": "hsl(var(--foreground))",
+            "text-sec-light": "hsl(var(--muted-foreground))",
+            "text-sec-dark": "hsl(var(--muted-foreground))",
+            "primary-dark": "hsl(var(--primary))",
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            lg: "0.5rem",
+            xl: "0.75rem",
+            "full": "9999px",
+            md: "calc(var(--radius) - 2px)",
+            sm: "calc(var(--radius) - 4px)",
+            "2xl": "calc(var(--radius) + 8px)",
+            base: "0.775rem",
+          },
+          keyframes: {
+            'slide-in-right': {
+              '0%': { transform: 'translateX(100%)' },
+              '100%': { transform: 'translateX(0)' },
             }
+          },
+          animation: {
+            'slide-in-right': 'slide-in-right 0.3s ease-out forwards',
           }
         }
       }
-    </script>
+    }
+  </script>
   <script type="importmap">
 {
   "imports": {
@@ -245,8 +291,10 @@
 }
 </script>
 </head>
-  <body class="font-display bg-background text-foreground antialiased overflow-x-hidden">
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+
+<body class="font-display bg-background text-foreground antialiased overflow-x-hidden">
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
 </html>
