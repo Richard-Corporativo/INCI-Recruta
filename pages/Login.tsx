@@ -160,20 +160,13 @@ const Login: React.FC = () => {
                                 </div>
                                 <span className="relative px-4 bg-card text-[10px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Ambiente de Demonstração</span>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4">
                                 <button
-                                    onClick={() => quickLogin('ana.silva@company.com', 'admin')}
+                                    onClick={() => quickLogin('admin@admin.com', 'admin')}
                                     className="flex flex-col items-center gap-1.5 p-3.5 rounded-base border border-border hover:border-primary/40 hover:bg-primary/5 transition-all group"
                                 >
-                                    <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold border border-primary/20">AS</div>
-                                    <span className="text-[10px] font-bold text-foreground">Admin / RH</span>
-                                </button>
-                                <button
-                                    onClick={() => quickLogin('carlos.souza@company.com', 'user123')}
-                                    className="flex flex-col items-center gap-1.5 p-3.5 rounded-base border border-border hover:border-primary/40 hover:bg-primary/5 transition-all group"
-                                >
-                                    <div className="size-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[10px] font-bold border border-border">CS</div>
-                                    <span className="text-[10px] font-bold text-foreground">Gestor</span>
+                                    <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold border border-primary/20">AD</div>
+                                    <span className="text-[10px] font-bold text-foreground">Acesso Administrador (admin@admin.com)</span>
                                 </button>
                             </div>
                         </div>

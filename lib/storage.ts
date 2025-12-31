@@ -6,7 +6,7 @@ const KEYS = {
     ROLES: 'recruitsys_roles',
     AUDIT: 'recruitsys_audit',
     USERS: 'recruitsys_users',
-    INITIALIZED: 'recruitsys_initialized'
+    INITIALIZED: 'recruitsys_initialized_v2'
 };
 
 export const StorageService = {
@@ -61,7 +61,7 @@ export const StorageService = {
         const defaultAdmin: User = {
             id: '1',
             name: 'Administrador',
-            email: 'admin',
+            email: 'admin@admin.com',
             role: 'admin',
             status: 'active',
             lastAccess: new Date().toLocaleDateString('pt-BR'),
