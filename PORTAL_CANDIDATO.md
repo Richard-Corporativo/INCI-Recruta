@@ -1,75 +1,94 @@
-# Estruturação do Portal do Candidato - Sistema de Recrutamento
+# 🚀 Roadmap Frontend: Portal do Candidato
 
-Este documento detalha a arquitetura e o fluxo de trabalho para a implementação da parte do **Candidato** no sistema de recrutamento, integrando-se com a área administrativa já existente.
-
-## 1. Visão Geral
-O Portal do Candidato é a interface externa do sistema, permitindo que talentos descubram oportunidades, gerenciem seus perfis e acompanhem seu progresso nos processos seletivos.
-
-## 2. Jornada do Candidato
-1.  **Descoberta:** O candidato acessa a página pública de vagas (`/vagas`).
-2.  **Visualização:** Consulta detalhes de uma vaga específica (requisitos, salário, modelo de trabalho).
-3.  **Cadastro/Login:** Para se candidatar, o usuário deve criar uma conta ou entrar.
-4.  **Candidatura:** O usuário clica em "Candidatar-se" e confirma seus dados/currículo.
-5.  **Acompanhamento:** Através de um Dashboard, o candidato vê em qual etapa do Kanban ele se encontra.
-6.  **Notificação:** Recebe alertas (e-mail e plataforma) quando seu status é alterado pelo Admin.
+Este documento foca exclusivamente na implementação da **Interface do Candidato**, priorizando a experiência visual e de navegação antes da integração com o backend.
 
 ---
 
-## 3. Estrutura de Rotas (Frontend)
-| Rota | Descrição | Acesso |
-| :--- | :--- | :--- |
-| `/vagas` | Listagem pública de vagas abertas. | Público |
-| `/vagas/:id` | Detalhes da vaga e botão de candidatura. | Público |
-| `/login` / `/cadastro` | Autenticação do candidato. | Público |
-| `/dashboard` | Resumo das candidaturas e status atual. | Privado |
-| `/perfil` | Edição de dados pessoais, experiências e currículo. | Privado |
-| `/notificacoes` | Histórico de mudanças de status e mensagens. | Privado |
+## 🗺️ Visão Geral da Jornada
+O objetivo é entregar um fluxo completo de ponta a ponta:
+**Descoberta (Vagas)** -> **Interesse (Detalhes)** -> **Ação (Cadastro/Login)** -> **Confirmação (Dashboard)**.
 
 ---
 
-## 4. Arquitetura de Dados (Proposta)
-Para que o sistema funcione em tempo real e integre Admin + Candidato, recomenda-se a migração do `localStorage` para um backend (ex: **Supabase**).
+## 📅 Etapa 1: Descoberta e Visualização (Public)
+*Onde o candidato se apaixona pela empresa.*
 
-### Novas Entidades / Campos:
-*   **Tabela `candidatos` (Extensão):**
-    *   `password_hash`: Para autenticação.
-    *   `resume_url`: Link para o PDF do currículo.
-    *   `bio`: Breve descrição do candidato.
-*   **Tabela `applications` (Candidaturas):**
-    *   `candidate_id` (FK)
-    *   `job_id` (FK)
-    *   `current_step`: Relacionado ao `KanbanColumnId` do Admin.
-    *   `notes_for_candidate`: Feedback que o admin decide compartilhar.
-*   **Tabela `notifications`:**
-    *   `user_id`: Destinatário.
-    *   `title` / `message`.
-    *   `read`: booleano.
-    *   `type`: (ex: 'status_change', 'message').
+### 1.1 Layout Público (`PublicLayout`)
+- **Header:** Logotipo da empresa + Botões "Login" (Outline) e "Cadastre-se" (Solid Primary).
+- **Footer:** Links institucionais simplificados.
+- **Estilo:** Clean, espaçamento generoso, tipografia moderna (Inter/Outfit).
 
----
+### 1.2 Listagem de Vagas (`/vagas`)
+- **Hero Section:** Título convidativo ("Encontre seu próximo desafio").
+- **Filtros:** Barra lateral ou topo (Modelo de trabalho, Departamento).
+- **Cards de Vaga (`JobCardPublic`):**
+    - Título da vaga em destaque.
+    - Tags (e.g., "Remoto", "Engenharia").
+    - Botão "Ver Detalhes" com micro-interação de hover.
 
-## 5. Sistema de Notificações
-A peça central da integração entre Admin e Candidato.
-
-### Fluxo de Notificação por Mudança de Status:
-1.  **Ação Admin:** O recrutador move o "Card" do candidato de *Triagem* para *Entrevista Técnica* no Kanban.
-2.  **Trigger (Gatilho):** O sistema detecta a mudança de `columnId`.
-3.  **Processamento:**
-    *   **In-app:** Uma nova entrada é criada na tabela `notifications`.
-    *   **E-mail:** Um serviço de e-mail (ex: Resend, SendGrid ou SMTP) é disparado com um template tipo: *"Olá [Nome], seu status na vaga [Vaga] foi atualizado para [Novo Status]!"*.
-4.  **Visualização:** O candidato vê um "badge" (bolinha vermelha) no ícone de notificações na plataforma.
+### 1.3 Detalhes da Vaga (`/vagas/:id`)
+- **Header da Vaga:** Título, Localização e Salário (se público).
+- **Conteúdo:** Descrição rica (Rich Text) com requisitos e benefícios.
+- **Call to Action (CTA):** Sticky bar no mobile ou Card flutuante no desktop com botão "Candidatar-se".
 
 ---
 
-## 6. Componentes Necessários
-*   `JobCardPublic`: Versão simplificada do card de vaga para o público.
-*   `ApplicationStatusStepper`: Barra de progresso visual para o candidato ver onde está no processo.
-*   `NotificationCenter`: Dropdown ou página para listar alertas recentes.
-*   `AuthGuard`: Proteção de rotas para garantir que apenas candidatos logados acessem o dashboard.
+## 🔐 Etapa 2: Identidade e Acesso (Auth)
+*Onde o visitante vira um usuário.*
+
+### 2.1 Login (`/login`)
+- **Design:** Card centralizado em fundo neutro ou com imagem lateral inspiradora.
+- **Campos:** E-mail e Senha.
+- **Social:** (Opcional) "Entrar com Google/LinkedIn" (apenas UI por enquanto).
+
+### 2.2 Cadastro (`/cadastro`)
+- **Wizard Simplificado:**
+    1.  **Credenciais:** Nome, E-mail, Senha.
+    2.  **Profissional:** Link LinkedIn, Link Portfólio.
+    3.  **Currículo:** Drag-and-drop para upload de PDF.
+- **Feedback:** Feedback visual imediato de sucesso ("Conta criada!").
 
 ---
 
-## 7. Próximos Passos Recomendados
-1.  **Backend Integration:** Configurar Supabase ou similar para persistência compartilhada.
-2.  **Layout Portal:** Criar uma identidade visual "Clean" e convidativa para o candidato (diferente da densidade de dados do Admin).
-3.  **Email Templates:** Definir os textos para cada mudança de fase no Kanban.
+## 📋 Etapa 3: Candidatura e Acompanhamento (Private)
+*Onde o candidato gerencia sua carreira.*
+
+### 3.1 Modal de Aplicação
+- Ao clicar em "Candidatar-se" (logado):
+- Confirmação dos dados do perfil.
+- Campo opcional para "Carta de Apresentação" ou "Por que devo ser contratado?".
+- Botão final "Enviar Candidatura".
+
+### 3.2 Dashboard do Candidato (`/dashboard`)
+- **Resumo:** "Você tem X candidaturas ativas".
+- **Lista de Aplicações:**
+    - Cards horizontais para cada vaga aplicada.
+    - **Stepper Visual:** Barra de progresso mostrando a etapa atual.
+        - `Enviado` -> `Triagem` -> `Entrevista` -> `Proposta`
+    - **Status:** Badge com cor semântica (Amarelo: Em andamento, Verde: Aprovado, Cinza: Banco de Talentos).
+
+---
+
+## 🛠️ Checklist de Desenvolvimento (Frontend First)
+
+- [ ] **Setup**
+    - [ ] Criar `PublicLayout.tsx` e `CandidateLayout.tsx`.
+    - [ ] Configurar rotas no React Router (`vagas/*`, `candidate/*`).
+
+- [ ] **Componentes Base (UI)**
+    - [ ] `JobCardPublic`: Versão "marketável" do card de vaga.
+    - [ ] `StatusStepper`: Componente visual de etapas (bolinhas conectadas por linha).
+    - [ ] `ResumeUploader`: Área de dropzone estilizada.
+
+- [ ] **Páginas**
+    - [ ] `/vagas` (Grid com dados mockados).
+    - [ ] `/vagas/:id` (Página de vendas da vaga).
+    - [ ] `/login` & `/cadastro` (Formulários validados).
+    - [ ] `/dashboard` (Visualização do status).
+
+---
+
+## 🎨 Diretrizes de Design (INCI v2.0)
+- **Cores:** Usar a paleta primária da marca para CTAs.
+- **Espaçamento:** Aumentar o whitespace em 20% comparado ao Admin para ar mais "leve".
+- **Raio de Borda:** Manter consistência (`rounded-lg` ou `rounded-xl`).
