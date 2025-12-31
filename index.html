@@ -11,88 +11,92 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <style>
-      :root {
-        --background: #f6f7f8;
-        --foreground: #0f1419;
-        --card: #ffffff;
-        --card-foreground: #0f1419;
-        --popover: #ffffff;
-        --popover-foreground: #0f1419;
-        --primary: #197fe6;
-        --primary-foreground: #ffffff;
-        --secondary: #0f1419;
-        --secondary-foreground: #ffffff;
-        --muted: #e5e5e6;
-        --muted-foreground: #0f1419;
-        --accent: #ebedef;
-        --accent-foreground: #032135;
-        --destructive: #f4212e;
-        --destructive-foreground: #ffffff;
-        --border: #e1eaef;
-        --input: #f7f9fa;
-        --ring: #1da1f2;
-        --chart-1: #1e9df1;
-        --chart-2: #00b87a;
-        --chart-3: #f7b928;
-        --chart-4: #17bf63;
-        --chart-5: #e0245e;
-        --sidebar: #ffffff;
-        --sidebar-foreground: #0f1419;
-        --sidebar-primary: #1e9df1;
-        --sidebar-primary-foreground: #ffffff;
-        --sidebar-accent: #e3ecf6;
-        --sidebar-accent-foreground: #1e9df1;
-        --sidebar-border: #e1e8ed;
-        --sidebar-ring: #1da1f2;
-        --font-sans: 'Inter', ui-sans-serif, sans-serif, system-ui;
-        --radius: 0.775rem;
-        --shadow-sm: 0px 1px 2px rgba(0, 0, 0, 0.05);
-        --shadow: 0px 1px 3px rgba(0, 0, 0, 0.1), 0px 1px 2px rgba(0, 0, 0, 0.06);
-        --shadow-md: 0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06);
-        --shadow-lg: 0px 10px 15px -3px rgba(0, 0, 0, 0.1), 0px 4px 6px -2px rgba(0, 0, 0, 0.05);
-        --shadow-xl: 0px 20px 25px -5px rgba(0, 0, 0, 0.1), 0px 10px 10px -5px rgba(0, 0, 0, 0.04);
-        --shadow-2xl: 0px 25px 50px -12px rgba(0, 0, 0, 0.25);
-      }
+      @layer base {
+        :root {
+          --radius: 0.775rem;
 
-      .dark {
-        --background: #111921;
-        --foreground: #e7e9ea;
-        --card: #1a2632;
-        --card-foreground: #d9d9d9;
-        --popover: #1a2632;
-        --popover-foreground: #e7e9ea;
-        --primary: #197fe6;
-        --primary-foreground: #ffffff;
-        --secondary: #ef9600;
-        --secondary-foreground: #0f1419;
-        --muted: #181818;
-        --muted-foreground: #72767a;
-        --accent: #041420;
-        --accent-foreground: #bdccd6;
-        --destructive: #f4212e;
-        --destructive-foreground: #ffffff;
-        --border: #242628;
-        --input: #22303c;
-        --ring: #009dff;
-        --chart-1: #1e9df1;
-        --chart-2: #00b87a;
-        --chart-3: #f7b928;
-        --chart-4: #17bf63;
-        --chart-5: #e0245e;
-        --sidebar: #1a2632;
-        --sidebar-foreground: #d9d9d9;
-        --sidebar-primary: #1da1f2;
-        --sidebar-primary-foreground: #ffffff;
-        --sidebar-accent: #061622;
-        --sidebar-accent-foreground: #1c9cf0;
-        --sidebar-border: #38444d;
-        --sidebar-ring: #1da1f2;
+          /* Base */
+          --background: 240 5% 96%;
+          --foreground: 222.2 84% 4.9%;
+
+          /* Card / Popover */
+          --card: 0 0% 100%;
+          --card-foreground: 222.2 84% 4.9%;
+          --popover: 0 0% 100%;
+          --popover-foreground: 0 0% 3.9%;
+
+          /* Primary / Secondary */
+          --primary: 231 84% 30%;
+          --primary-foreground: 0 0% 98%;
+          --secondary: 210 40% 98%;
+          --secondary-foreground: 222.2 47.4% 11.2%;
+
+          /* Muted / Accent */
+          --muted: 210 40% 96.1%;
+          --muted-foreground: 215.4 16.3% 46.9%;
+          --accent: 210 40% 96.1%;
+          --accent-foreground: 222.2 47.4% 11.2%;
+
+          /* Destructive */
+          --destructive: 0 84.2% 60.2%;
+          --destructive-foreground: 0 0% 98%;
+
+          /* UI */
+          --border: 214.3 31.8% 91.4%;
+          --input: 214.3 31.8% 91.4%;
+          --ring: 231 84% 30%;
+
+          /* Sidebar */
+          --sidebar: 0 0% 100%;
+          --sidebar-foreground: 210 17% 8%;
+          --sidebar-border: 216 19% 88%;
+          --sidebar-accent: 220 14% 96%;
+          --sidebar-accent-foreground: 208 91% 11%;
+          
+          --font-sans: 'Inter', ui-sans-serif, sans-serif, system-ui;
+        }
+
+        .dark {
+          --background: 240 10% 3.9%;
+          --foreground: 240 5% 95%;
+
+          --card: 240 4.8% 10%;
+          --card-foreground: 240 5% 95%;
+
+          --popover: 240 10% 3.9%;
+          --popover-foreground: 240 5% 95%;
+
+          --primary: 217 91% 65%;
+          --primary-foreground: 0 0% 98%;
+
+          --secondary: 240 3.7% 15.9%;
+          --secondary-foreground: 240 5% 95%;
+
+          --muted: 240 3.7% 15.9%;
+          --muted-foreground: 240 5% 64.9%;
+
+          --accent: 240 3.7% 15.9%;
+          --accent-foreground: 240 5% 95%;
+
+          --destructive: 0 62.8% 30.6%;
+          --destructive-foreground: 240 5% 95%;
+
+          --border: 240 3.7% 15.9%;
+          --input: 240 3.7% 15.9%;
+          --ring: 217 91% 65%;
+
+          --sidebar: 240 5% 7%;
+          --sidebar-foreground: 240 4% 91%;
+          --sidebar-border: 240 5% 15%;
+          --sidebar-accent: 240 4% 12%;
+          --sidebar-accent-foreground: 240 5% 95%;
+        }
       }
 
       body {
         font-family: var(--font-sans);
-        background-color: var(--background);
-        color: var(--foreground);
+        background-color: hsl(var(--background));
+        color: hsl(var(--foreground));
       }
 
       .material-symbols-outlined {
@@ -110,13 +114,11 @@
         background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: var(--muted-foreground);
+        background: hsl(var(--muted-foreground) / 0.3);
         border-radius: 3px;
-        opacity: 0.3;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: var(--muted-foreground);
-        opacity: 0.8;
+        background: hsl(var(--muted-foreground) / 0.5);
       }
 
       /* Kanban specific scrollbars */
@@ -124,18 +126,15 @@
           height: 8px;
           width: 8px;
       }
-      .kanban-scroll::-webkit-scrollbar-track {
-          background: transparent;
-      }
       .kanban-scroll::-webkit-scrollbar-thumb {
-          background-color: var(--border);
+          background-color: hsl(var(--border));
           border-radius: 4px;
       }
       .kanban-column-scroll::-webkit-scrollbar {
           width: 4px;
       }
       .kanban-column-scroll::-webkit-scrollbar-thumb {
-          background-color: var(--border);
+          background-color: hsl(var(--border));
           border-radius: 4px;
       }
       
@@ -143,11 +142,8 @@
       .drawer-scroll::-webkit-scrollbar {
           width: 6px;
       }
-      .drawer-scroll::-webkit-scrollbar-track {
-          background: transparent;
-      }
       .drawer-scroll::-webkit-scrollbar-thumb {
-          background-color: var(--border);
+          background-color: hsl(var(--border));
           border-radius: 3px;
       }
     </style>
@@ -158,67 +154,63 @@
           extend: {
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
-              display: ['Inter', 'sans-serif'],
-              body: ['Inter', 'sans-serif'],
             },
             colors: {
-              border: "var(--border)",
-              input: "var(--input)",
-              ring: "var(--ring)",
-              background: "var(--background)",
-              foreground: "var(--foreground)",
+              border: "hsl(var(--border))",
+              input: "hsl(var(--input))",
+              ring: "hsl(var(--ring))",
+              background: "hsl(var(--background))",
+              foreground: "hsl(var(--foreground))",
               primary: {
-                DEFAULT: "var(--primary)",
-                foreground: "var(--primary-foreground)",
-                dark: "var(--primary)", 
-                light: "var(--accent)"
+                DEFAULT: "hsl(var(--primary))",
+                foreground: "hsl(var(--primary-foreground))",
               },
               secondary: {
-                DEFAULT: "var(--secondary)",
-                foreground: "var(--secondary-foreground)",
+                DEFAULT: "hsl(var(--secondary))",
+                foreground: "hsl(var(--secondary-foreground))",
               },
               destructive: {
-                DEFAULT: "var(--destructive)",
-                foreground: "var(--destructive-foreground)",
+                DEFAULT: "hsl(var(--destructive))",
+                foreground: "hsl(var(--destructive-foreground))",
               },
               muted: {
-                DEFAULT: "var(--muted)",
-                foreground: "var(--muted-foreground)",
+                DEFAULT: "hsl(var(--muted))",
+                foreground: "hsl(var(--muted-foreground))",
               },
               accent: {
-                DEFAULT: "var(--accent)",
-                foreground: "var(--accent-foreground)",
+                DEFAULT: "hsl(var(--accent))",
+                foreground: "hsl(var(--accent-foreground))",
               },
               popover: {
-                DEFAULT: "var(--popover)",
-                foreground: "var(--popover-foreground)",
+                DEFAULT: "hsl(var(--popover))",
+                foreground: "hsl(var(--popover-foreground))",
               },
               card: {
-                DEFAULT: "var(--card)",
-                foreground: "var(--card-foreground)",
+                DEFAULT: "hsl(var(--card))",
+                foreground: "hsl(var(--card-foreground))",
               },
               sidebar: {
-                DEFAULT: "var(--sidebar)",
-                foreground: "var(--sidebar-foreground)",
-                primary: "var(--sidebar-primary)",
-                "primary-foreground": "var(--sidebar-primary-foreground)",
-                accent: "var(--sidebar-accent)",
-                "accent-foreground": "var(--sidebar-accent-foreground)",
-                border: "var(--sidebar-border)",
-                ring: "var(--sidebar-ring)",
+                DEFAULT: "hsl(var(--sidebar))",
+                foreground: "hsl(var(--sidebar-foreground))",
+                primary: "hsl(var(--sidebar-primary))",
+                "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+                accent: "hsl(var(--sidebar-accent))",
+                "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+                border: "hsl(var(--sidebar-border))",
+                ring: "hsl(var(--sidebar-ring))",
               },
               // Semantic mappings for older code compatibility
-              "background-light": "var(--background)",
-              "background-dark": "var(--background)",
-              "surface-light": "var(--card)",
-              "surface-dark": "var(--card)",
-              "border-light": "var(--border)",
-              "border-dark": "var(--border)",
-              "text-main-light": "var(--foreground)",
-              "text-main-dark": "var(--foreground)",
-              "text-sec-light": "var(--muted-foreground)",
-              "text-sec-dark": "var(--muted-foreground)",
-              "primary-dark": "var(--primary)",
+              "background-light": "hsl(var(--background))",
+              "background-dark": "hsl(var(--background))",
+              "surface-light": "hsl(var(--card))",
+              "surface-dark": "hsl(var(--card))",
+              "border-light": "hsl(var(--border))",
+              "border-dark": "hsl(var(--border))",
+              "text-main-light": "hsl(var(--foreground))",
+              "text-main-dark": "hsl(var(--foreground))",
+              "text-sec-light": "hsl(var(--muted-foreground))",
+              "text-sec-dark": "hsl(var(--muted-foreground))",
+              "primary-dark": "hsl(var(--primary))",
             },
             borderRadius: {
               lg: "var(--radius)",
@@ -226,16 +218,8 @@
               sm: "calc(var(--radius) - 4px)",
               xl: "calc(var(--radius) + 4px)",
               "2xl": "calc(var(--radius) + 8px)",
-              DEFAULT: "0.25rem",
+              base: "0.775rem",
               "full": "9999px"
-            },
-            boxShadow: {
-               sm: "var(--shadow-sm)",
-               DEFAULT: "var(--shadow)",
-               md: "var(--shadow-md)",
-               lg: "var(--shadow-lg)",
-               xl: "var(--shadow-xl)",
-               "2xl": "var(--shadow-2xl)",
             },
             keyframes: {
               'slide-in-right': {

@@ -47,6 +47,9 @@ export interface Role {
   open_positions: number;
   status: 'Ativo' | 'Inativo';
   updated_at: string;
+  mission?: string;
+  responsibilities?: string;
+  seniority?: string;
 }
 
 export interface User {

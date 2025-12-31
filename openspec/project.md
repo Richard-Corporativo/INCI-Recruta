@@ -21,6 +21,11 @@ A modern Internal Recruitment System (ATS) designed for managers and HR professi
 - **Simplified Storage**: All data is managed via `StorageService` (`lib/storage.ts`).
 - **Data Hooks**: Direct access to entities via `useJobs`, `useCandidates`, etc.
 - **Client-Side Auth**: Simulated sessions based on stored user entities.
+- **Design System (INCI v2.0.0)**:
+  - **Tokens**: Use exclusively CSS tokens (`bg-background`, `bg-card`, `bg-primary`, `bg-sidebar`, etc.).
+  - **Radius**: Buttons (`rounded-base`), Inputs (`rounded-md`), Cards (`rounded-lg`).
+  - **Standard**: HEX/RGB/HSL values and inline styles are strictly prohibited.
+  - **Animations**: Mandatory `duration-200 ease-in-out` for all transitions.
 
 ## Important Constraints
 - No external backend or database. Everything must run in the browser.

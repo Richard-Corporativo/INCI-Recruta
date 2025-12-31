@@ -44,18 +44,25 @@ const EditUser: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="p-8 text-center bg-background-light dark:bg-background-dark h-screen text-slate-900 dark:text-white">
-        <h2 className="text-xl font-bold">Usuário não encontrado</h2>
-        <button onClick={() => navigate('/settings')} className="mt-4 text-primary underline">Voltar para configurações</button>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center">
+        <div className="size-16 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-4">
+          <span className="material-symbols-outlined text-[32px]">error</span>
+        </div>
+        <h2 className="text-2xl font-bold text-foreground">Usuário não encontrado</h2>
+        <p className="text-muted-foreground mt-2 mb-6">Não foi possível localizar os dados deste colaborador no sistema.</p>
+        <button onClick={() => navigate('/settings')} className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-base font-bold shadow-sm hover:bg-primary/90 transition-all">
+          <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+          Voltar para Configurações
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background-light dark:bg-background-dark overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden bg-background transition-colors duration-200">
       {/* Header */}
-      <header className="h-16 bg-white dark:bg-[#1a202c] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shrink-0 z-20">
-        <div className="flex items-center gap-4">
+      <header className="bg-card border-b border-border pt-8 pb-4 px-8 z-20 shadow-sm shrink-0 sticky top-0">
+        <div className="mb-3">
           <Breadcrumbs
             items={[
               { label: 'Configurações', to: '/settings' },
@@ -64,61 +71,82 @@ const EditUser: React.FC = () => {
             ]}
           />
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="size-16 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl font-bold shrink-0">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-4">
+            <div className="size-14 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-bold border border-primary/20 shadow-inner">
               {formData.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{formData.name}</h1>
-              <p className="text-slate-500 dark:text-slate-400 text-sm">ID: {id} • Último acesso: {user.lastAccess}</p>
+              <h1 className="text-3xl font-bold text-foreground tracking-tight">{formData.name}</h1>
+              <p className="text-muted-foreground text-sm font-medium">ID: {id} • Último acesso: {user.lastAccess}</p>
             </div>
           </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => navigate('/settings')}
+              className="px-4 py-2 text-sm font-bold text-foreground bg-background border border-border rounded-base hover:bg-accent transition-all duration-200 ease-in-out shadow-sm active:translate-y-[1px]"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="flex items-center gap-2 bg-primary text-primary-foreground border border-border/40 px-5 py-2 rounded-base text-sm font-bold shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/90 active:translate-y-[1px]"
+            >
+              {isLoading ? (
+                <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+              ) : (
+                <span className="material-symbols-outlined text-[20px]">save</span>
+              )}
+              {isLoading ? 'Salvando...' : 'Salvar Usuário'}
+            </button>
+          </div>
+        </div>
+      </header>
 
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-y-auto bg-muted/30 p-8">
+        <div className="max-w-3xl mx-auto pb-12">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="bg-white dark:bg-[#1a202c] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-                <h2 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">manage_accounts</span>
-                  Dados de Acesso e Perfil
-                </h2>
+            <div className="bg-card border border-border shadow-sm rounded-lg overflow-hidden">
+              <div className="px-6 py-4 border-b border-border bg-muted/40 flex items-center gap-2 h-14">
+                <span className="material-symbols-outlined text-primary">manage_accounts</span>
+                <h2 className="text-foreground font-bold text-lg">Dados de Acesso e Perfil</h2>
               </div>
 
               <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Nome Completo</label>
+                  <label className="block text-sm font-bold text-foreground" htmlFor="name">Nome Completo</label>
                   <input
                     type="text"
+                    id="name"
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:text-white transition-all"
+                    className="w-full bg-background border border-border rounded-base px-3 py-2.5 text-sm text-foreground font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200"
+                    required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">E-mail Corporativo</label>
+                  <label className="block text-sm font-bold text-foreground" htmlFor="email">E-mail Corporativo</label>
                   <input
                     type="email"
+                    id="email"
                     name="email"
                     value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-500 dark:text-slate-400 cursor-not-allowed"
+                    className="w-full bg-muted border border-border rounded-base px-3 py-2.5 text-sm text-muted-foreground font-bold cursor-not-allowed"
                     readOnly
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Perfil de Acesso</label>
+                  <label className="block text-sm font-bold text-foreground" htmlFor="role">Perfil de Acesso</label>
                   <select
+                    id="role"
                     name="role"
                     value={formData.role}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:text-white transition-all capitalize"
+                    className="w-full bg-background border border-border rounded-base px-3 py-2.5 text-sm text-foreground font-bold capitalize focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 cursor-pointer"
                   >
                     <option value="admin">Administrador</option>
                     <option value="quality">Qualidade</option>
@@ -126,18 +154,19 @@ const EditUser: React.FC = () => {
                     <option value="manager">Gestor</option>
                     <option value="recruiter">Recrutador</option>
                   </select>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-muted-foreground font-medium">
                     Define as permissões e visibilidade dentro do sistema.
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Departamento Principal</label>
+                  <label className="block text-sm font-bold text-foreground" htmlFor="department">Departamento Principal</label>
                   <select
+                    id="department"
                     name="department"
                     value={formData.department}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:text-white transition-all"
+                    className="w-full bg-background border border-border rounded-base px-3 py-2.5 text-sm text-foreground font-bold focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 cursor-pointer"
                   >
                     <option value="">Selecione...</option>
                     <option value="Tecnologia">Tecnologia</option>
@@ -149,51 +178,35 @@ const EditUser: React.FC = () => {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Status da Conta</label>
+                  <label className="block text-sm font-bold text-foreground">Status da Conta</label>
                   <div className="flex gap-4">
-                    <label className="flex items-center gap-2 p-3 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors w-full">
+                    <label className={`flex flex-1 items-center gap-3 p-3 border rounded-base cursor-pointer transition-all duration-200 ${formData.status === 'active' ? 'bg-primary/5 border-primary text-primary' : 'bg-background border-border text-muted-foreground hover:bg-accent'}`}>
                       <input
                         type="radio"
                         name="status"
                         value="active"
                         checked={formData.status === 'active'}
                         onChange={handleInputChange}
-                        className="text-primary focus:ring-primary"
+                        className="sr-only"
                       />
-                      <span className="text-sm font-medium text-slate-900 dark:text-white">Ativo</span>
+                      <span className="material-symbols-outlined text-[20px]">{formData.status === 'active' ? 'check_circle' : 'radio_button_unchecked'}</span>
+                      <span className="text-sm font-bold">Ativo</span>
                     </label>
-                    <label className="flex items-center gap-2 p-3 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors w-full">
+                    <label className={`flex flex-1 items-center gap-3 p-3 border rounded-base cursor-pointer transition-all duration-200 ${formData.status === 'suspended' ? 'bg-destructive/5 border-destructive text-destructive' : 'bg-background border-border text-muted-foreground hover:bg-accent'}`}>
                       <input
                         type="radio"
                         name="status"
                         value="suspended"
                         checked={formData.status === 'suspended'}
                         onChange={handleInputChange}
-                        className="text-red-600 focus:ring-red-600"
+                        className="sr-only"
                       />
-                      <span className="text-sm font-medium text-slate-900 dark:text-white">Suspenso</span>
+                      <span className="material-symbols-outlined text-[20px]">{formData.status === 'suspended' ? 'report' : 'radio_button_unchecked'}</span>
+                      <span className="text-sm font-bold">Suspenso</span>
                     </label>
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-4">
-              <button
-                type="button"
-                onClick={() => navigate('/settings')}
-                className="px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="px-6 py-2.5 rounded-lg bg-primary hover:bg-primary-dark text-white font-semibold text-sm shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isLoading && <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>}
-                {isLoading ? 'Salvando...' : 'Salvar Alterações'}
-              </button>
             </div>
           </form>
         </div>

@@ -30,5 +30,12 @@ export const useUsers = () => {
         StorageService.set(KEYS.USERS, updated);
     };
 
-    return { users, addUser, updateUser };
+    const deleteUser = (id: string) => {
+        const data = StorageService.get<User[]>(KEYS.USERS) || [];
+        const updated = data.filter(u => u.id !== id);
+        setUsers(updated);
+        StorageService.set(KEYS.USERS, updated);
+    };
+
+    return { users, addUser, updateUser, deleteUser };
 };

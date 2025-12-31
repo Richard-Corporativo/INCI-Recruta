@@ -6,15 +6,19 @@ import { useAudit } from '../hooks/useAudit';
 import { useAuth } from '../hooks/useAuth';
 import UserModal from '../components/UserModal';
 import Toast from '../components/Toast';
+import { StorageService } from '../lib/storage';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState('users');
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const { users, updateUser } = useUsers();
+  const { users, updateUser, deleteUser } = useUsers();
   const { logs } = useAudit();
   const { user: currentUser } = useAuth();
   const [selectedManagerId, setSelectedManagerId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   // Initialize selected manager
   React.useEffect(() => {
@@ -24,6 +28,48 @@ const Settings: React.FC = () => {
     }
   }, [users, selectedManagerId]);
 
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleExport = () => {
+    try {
+      const data = StorageService.exportData();
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `recruitsys-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      setToast({ message: 'Backup exportado com sucesso!', type: 'success' });
+    } catch (e) {
+      setToast({ message: 'Erro ao exportar backup.', type: 'error' });
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (StorageService.importData(content)) {
+        setToast({ message: 'Dados importados! Reiniciando o sistema...', type: 'success' });
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        setToast({ message: 'Arquivo inválido ou erro na importação.', type: 'error' });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
   const selectedManager = users.find(u => u.id === selectedManagerId);
 
   const tabs = [
@@ -31,38 +77,39 @@ const Settings: React.FC = () => {
     { id: 'privileges', label: 'Privilégios' },
     { id: 'scope', label: 'Escopo do Gestor' },
     { id: 'audit', label: 'Auditoria de Configurações' },
+    { id: 'system', label: 'Sistema' },
   ];
 
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-background-light dark:bg-background-dark relative">
+    <div className="flex flex-col h-screen overflow-hidden bg-background relative">
       {/* Header */}
-      <header className="bg-white dark:bg-[#1a2632] border-b border-slate-200 dark:border-slate-800 px-6 py-6 sticky top-0 z-20 shrink-0">
+      <header className="bg-card border-b border-border px-6 py-6 sticky top-0 z-20 shrink-0">
         <div className="max-w-7xl mx-auto w-full">
           <div className="mb-4">
             <Breadcrumbs items={[{ label: 'Configurações' }]} />
           </div>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Configurações</h1>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Gerencie usuários, permissões e regras de governança do sistema.</p>
+              <h1 className="text-2xl font-bold text-foreground tracking-tight">Configurações</h1>
+              <p className="text-muted-foreground text-sm mt-1">Gerencie usuários, permissões e regras de governança do sistema.</p>
             </div>
             <div className="flex gap-2">
-              <button className="items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-white font-medium py-2 px-4 rounded-lg transition-all text-sm shadow-sm hidden sm:inline-flex">
+              <button className="items-center justify-center gap-2 bg-primary text-primary-foreground border border-border/40 font-bold py-2.5 px-6 rounded-base shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/90 active:translate-y-[1px] hidden sm:inline-flex focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                 <span className="material-symbols-outlined text-[20px]">save</span>
                 Salvar Alterações
               </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-6 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+          <div className="flex items-center gap-6 border-b border-border overflow-x-auto">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.id
-                  ? 'border-primary text-primary dark:text-blue-400'
-                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                className={`pb-3 px-1 text-sm font-bold border-b-2 transition-all duration-200 whitespace-nowrap ${activeTab === tab.id
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
               >
                 {tab.label}
@@ -79,22 +126,22 @@ const Settings: React.FC = () => {
           {/* Tab: Usuários */}
           {activeTab === 'users' && (
             <div className="space-y-6">
-              <div className="bg-white dark:bg-[#1a2632] rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+              <div className="bg-card rounded-lg border border-border p-4 shadow-sm">
                 <div className="flex flex-col md:flex-row gap-4 justify-between">
                   <div className="flex flex-col md:flex-row gap-4 flex-1">
                     <div className="relative flex-1 max-w-md">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[20px]">search</span>
-                      <input className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="Buscar por nome ou e-mail" type="text" />
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground material-symbols-outlined text-[20px]">search</span>
+                      <input className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-base text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200" placeholder="Buscar por nome ou e-mail" type="text" />
                     </div>
                     <div className="w-full md:w-48">
-                      <select className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer">
+                      <select className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-bold focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer">
                         <option value="">Todos os tipos</option>
                         <option value="admin">Admin / Qualidade</option>
                         <option value="manager">Gestor</option>
                       </select>
                     </div>
                     <div className="w-full md:w-48">
-                      <select className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer">
+                      <select className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-bold focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer">
                         <option value="">Status: Todos</option>
                         <option value="active">Ativo</option>
                         <option value="suspended">Suspenso</option>
@@ -103,7 +150,7 @@ const Settings: React.FC = () => {
                   </div>
                   <button
                     onClick={() => setIsInviteModalOpen(true)}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-primary hover:bg-primary-dark rounded-lg shadow-sm transition-all whitespace-nowrap"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-2 text-sm font-bold text-primary-foreground bg-primary border border-border/40 rounded-base shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/90 active:translate-y-[1px] whitespace-nowrap focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
                     <span className="material-symbols-outlined text-[18px]">person_add</span>
                     Adicionar usuário
@@ -111,53 +158,60 @@ const Settings: React.FC = () => {
                 </div>
               </div>
 
-              <div className="bg-white dark:bg-[#1a2632] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+              <div className="bg-card border-border shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-1/3">Nome / E-mail</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tipo</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Último Acesso</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Ações</th>
+                      <tr className="bg-muted border-b border-border">
+                        <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider w-1/3">Nome / E-mail</th>
+                        <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Tipo</th>
+                        <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Último Acesso</th>
+                        <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Ações</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                    <tbody className="divide-y divide-border text-sm">
                       {users.map((user) => (
-                        <tr key={user.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                        <tr key={user.id} className="group hover:bg-muted/40 transition-all duration-200">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="size-9 rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 flex items-center justify-center text-xs font-bold shrink-0">
+                              <div className="size-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0 border border-primary/20">
                                 {user.name.split(' ').map(n => n[0]).join('')}
                               </div>
                               <div className="flex flex-col">
-                                <span className="font-medium text-slate-900 dark:text-white">{user.name}</span>
-                                <span className="text-xs text-slate-500 dark:text-slate-400">{user.email}</span>
+                                <span className="font-bold text-foreground">{user.name}</span>
+                                <span className="text-xs text-muted-foreground font-medium">{user.email}</span>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-muted text-foreground border border-border capitalize">
                               {user.role}
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${user.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30' : 'bg-red-100 text-red-700 dark:bg-red-900/30'}`}>
-                              <span className={`size-1.5 rounded-full ${user.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${user.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-destructive/10 text-destructive border border-destructive/20'}`}>
+                              <span className={`size-1.5 rounded-full ${user.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-destructive'}`}></span>
                               {user.status === 'active' ? 'Ativo' : 'Suspenso'}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{user.lastAccess}</td>
+                          <td className="px-6 py-4 text-muted-foreground font-medium">{user.lastAccess}</td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <Link to={`/settings/users/${user.id}/edit`} className="p-1.5 text-slate-400 hover:text-primary transition-colors" title="Editar"><span className="material-symbols-outlined text-[18px]">edit</span></Link>
+                              <Link to={`/settings/users/${user.id}/edit`} className="p-1.5 text-muted-foreground hover:text-primary transition-all duration-200" title="Editar"><span className="material-symbols-outlined text-[18px]">edit</span></Link>
                               <button
                                 onClick={() => updateUser(user.id, { status: user.status === 'active' ? 'suspended' : 'active' })}
-                                className={`p-1.5 transition-colors ${user.status === 'active' ? 'text-slate-400 hover:text-red-500' : 'text-slate-400 hover:text-green-500'}`}
+                                className={`p-1.5 transition-all duration-200 ${user.status === 'active' ? 'text-muted-foreground hover:text-destructive' : 'text-muted-foreground hover:text-emerald-500'}`}
                                 title={user.status === 'active' ? 'Suspender' : 'Ativar'}
                               >
                                 <span className="material-symbols-outlined text-[18px]">{user.status === 'active' ? 'block' : 'check_circle'}</span>
+                              </button>
+                              <button
+                                onClick={() => setUserToDelete(user.id)}
+                                className="p-1.5 text-muted-foreground hover:text-destructive transition-all duration-200"
+                                title="Excluir"
+                              >
+                                <span className="material-symbols-outlined text-[18px]">delete</span>
                               </button>
                             </div>
                           </td>
@@ -166,8 +220,8 @@ const Settings: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
-                <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-                  <span className="text-xs text-slate-500">Mostrando {users.length} usuários</span>
+                <div className="px-6 py-4 border-t border-border flex justify-between items-center bg-muted/20">
+                  <span className="text-xs text-muted-foreground font-bold italic">Mostrando {users.length} usuários registrados</span>
                 </div>
               </div>
             </div>
@@ -177,32 +231,32 @@ const Settings: React.FC = () => {
           {activeTab === 'privileges' && (
             <div className="space-y-8">
               <section>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Resumo por Perfil</h2>
+                <h2 className="text-lg font-bold text-foreground mb-4">Resumo por Perfil</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white dark:bg-[#1a2632] p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-start gap-4">
-                    <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400 shrink-0">
+                  <div className="bg-card p-5 rounded-lg border border-border shadow-sm flex items-start gap-4">
+                    <div className="p-3 bg-primary/10 rounded-lg text-primary shrink-0 border border-primary/20">
                       <span className="material-symbols-outlined">admin_panel_settings</span>
                     </div>
                     <div>
-                      <h3 className="text-slate-900 dark:text-white font-bold text-sm mb-1">Administrador / Qualidade</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed mb-2">
+                      <h3 className="text-foreground font-bold text-sm mb-1">Administrador / Qualidade</h3>
+                      <p className="text-muted-foreground text-xs leading-relaxed mb-2 font-medium">
                         Possui acesso irrestrito a todas as vagas, candidatos e configurações do sistema. Pode auditar ações e reverter etapas.
                       </p>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300 border border-purple-100 dark:border-purple-800">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-primary/10 text-primary border border-primary/20 tracking-wider">
                         Acesso Total
                       </span>
                     </div>
                   </div>
-                  <div className="bg-white dark:bg-[#1a2632] p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-start gap-4">
-                    <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 shrink-0">
+                  <div className="bg-card p-5 rounded-lg border border-border shadow-sm flex items-start gap-4">
+                    <div className="p-3 bg-primary/10 rounded-lg text-primary shrink-0 border border-primary/20">
                       <span className="material-symbols-outlined">supervisor_account</span>
                     </div>
                     <div>
-                      <h3 className="text-slate-900 dark:text-white font-bold text-sm mb-1">Gestor Contratante</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed mb-2">
+                      <h3 className="text-foreground font-bold text-sm mb-1">Gestor Contratante</h3>
+                      <p className="text-muted-foreground text-xs leading-relaxed mb-2 font-medium">
                         Acesso restrito apenas às vagas e departamentos sob sua responsabilidade direta. Ações críticas requerem validação ou configuração explícita.
                       </p>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border border-blue-100 dark:border-blue-800">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-muted text-foreground border border-border tracking-wider">
                         Escopo Restrito
                       </span>
                     </div>
@@ -210,62 +264,62 @@ const Settings: React.FC = () => {
                 </div>
               </section>
 
-              <section className="bg-white dark:bg-[#1a2632] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-                <div className="px-6 py-5 border-b border-slate-200 dark:border-slate-700">
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Chaves de Permissão para Gestores</h2>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Defina quais ações sensíveis os gestores podem executar autonomamente em seus processos.</p>
+              <section className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-border">
+                  <h2 className="text-lg font-bold text-foreground">Chaves de Permissão para Gestores</h2>
+                  <p className="text-muted-foreground text-sm mt-1">Defina quais ações sensíveis os gestores podem executar autonomamente em seus processos.</p>
                 </div>
-                <div className="divide-y divide-slate-200 dark:divide-slate-700">
+                <div className="divide-y divide-border">
                   <div className="px-6 py-4 flex items-center justify-between gap-4">
                     <div className="flex-1">
-                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Mover candidato para "Finalista"</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Permite ao gestor avançar candidatos para a fase final sem validação prévia do RH.</p>
-                      <div className="mt-2 flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 w-fit px-2 py-0.5 rounded">
+                      <h3 className="text-foreground font-bold">Mover candidato para "Finalista"</h3>
+                      <p className="text-xs text-muted-foreground font-medium">Permite ao gestor avançar candidatos para a fase final sem validação prévia do RH.</p>
+                      <div className="mt-2 flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 w-fit px-2 py-0.5 rounded border border-amber-500/20">
                         <span className="material-symbols-outlined text-[12px]">info</span> Impacta diretamente os KPIs de conversão do funil.
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input defaultChecked className="sr-only peer" type="checkbox" />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                      <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                   </div>
                   <div className="px-6 py-4 flex items-center justify-between gap-4">
                     <div className="flex-1">
-                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Marcar como "Não Selecionado / Banco"</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Habilita o gestor a desqualificar candidatos durante o processo de entrevista.</p>
-                      <div className="mt-2 flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 w-fit px-2 py-0.5 rounded">
+                      <h3 className="text-foreground font-bold">Marcar como "Não Selecionado / Banco"</h3>
+                      <p className="text-xs text-muted-foreground font-medium">Habilita o gestor a desqualificar candidatos durante o processo de entrevista.</p>
+                      <div className="mt-2 flex items-center gap-1.5 text-[10px] text-muted-foreground bg-muted w-fit px-2 py-0.5 rounded border border-border">
                         <span className="material-symbols-outlined text-[12px]">fact_check</span> O sistema solicitará confirmação dupla e motivo obrigatório.
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input defaultChecked className="sr-only peer" type="checkbox" />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                      <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                   </div>
                   <div className="px-6 py-4 flex items-center justify-between gap-4">
                     <div className="flex-1">
-                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Retornar etapa do candidato</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Permite voltar um candidato para uma fase anterior (ex: de Entrevista para Triagem).</p>
-                      <div className="mt-2 flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 w-fit px-2 py-0.5 rounded">
+                      <h3 className="text-foreground font-bold">Retornar etapa do candidato</h3>
+                      <p className="text-xs text-muted-foreground font-medium">Permite voltar um candidato para uma fase anterior (ex: de Entrevista para Triagem).</p>
+                      <div className="mt-2 flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 w-fit px-2 py-0.5 rounded border border-amber-500/20">
                         <span className="material-symbols-outlined text-[12px]">warning</span> Ação limitada a 3 ocorrências/mês para evitar distorção de SLA.
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input className="sr-only peer" type="checkbox" />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                      <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                   </div>
                   <div className="px-6 py-4 flex items-center justify-between gap-4">
                     <div className="flex-1">
-                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Encerrar vaga</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Autoridade para fechar a vaga diretamente pelo painel do gestor.</p>
-                      <div className="mt-2 flex items-center gap-1.5 text-[10px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 w-fit px-2 py-0.5 rounded">
+                      <h3 className="text-foreground font-bold">Encerrar vaga</h3>
+                      <p className="text-xs text-muted-foreground font-medium">Autoridade para fechar a vaga diretamente pelo painel do gestor.</p>
+                      <div className="mt-2 flex items-center gap-1.5 text-[10px] text-destructive bg-destructive/10 w-fit px-2 py-0.5 rounded border border-destructive/20">
                         <span className="material-symbols-outlined text-[12px]">security</span> Recomendado apenas para gestores de nível sênior.
                       </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input className="sr-only peer" type="checkbox" />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                      <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                   </div>
                 </div>
@@ -276,30 +330,30 @@ const Settings: React.FC = () => {
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white">Matriz de Acesso Detalhada</h2>
                   <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">Visualização somente leitura</span>
                 </div>
-                <div className="bg-white dark:bg-[#1a2632] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                <div className="bg-card border-border shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
-                          <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-1/3">Área / Funcionalidade</th>
-                          <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center w-1/3">Admin / Qualidade</th>
-                          <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center w-1/3">Gestor</th>
+                        <tr className="bg-muted border-b border-border">
+                          <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider w-1/3">Área / Funcionalidade</th>
+                          <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center w-1/3">Admin / Qualidade</th>
+                          <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-center w-1/3">Gestor</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-sm">
-                        <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                          <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">
+                      <tbody className="divide-y divide-border text-sm">
+                        <tr className="hover:bg-muted/40 transition-colors">
+                          <td className="px-6 py-4 text-foreground font-bold">
                             <div className="flex items-center gap-2">
-                              <span className="material-symbols-outlined text-slate-400 text-[18px]">work</span> Gestão de Cargos
+                              <span className="material-symbols-outlined text-muted-foreground text-[18px]">work</span> Gestão de Cargos
                             </div>
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                               <span className="material-symbols-outlined text-[14px]">check</span> Criar e Editar
                             </span>
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-muted text-foreground border border-border">
                               <span className="material-symbols-outlined text-[14px]">visibility</span> Visualizar Apenas
                             </span>
                           </td>
@@ -316,44 +370,44 @@ const Settings: React.FC = () => {
           {/* Tab: Escopo do Gestor */}
           {activeTab === 'scope' && (
             <div className="space-y-6">
-              <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex items-start gap-3">
-                <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 mt-0.5">info</span>
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex items-start gap-3">
+                <span className="material-symbols-outlined text-primary mt-0.5">info</span>
                 <div>
-                  <h3 className="text-sm font-semibold text-blue-800 dark:text-blue-200">Definição de Escopo</h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-300/80 mt-1">Configure o que cada gestor pode visualizar e operar dentro do sistema. As alterações aqui refletem imediatamente no acesso do usuário.</p>
+                  <h3 className="text-sm font-bold text-primary">Definição de Escopo</h3>
+                  <p className="text-sm text-foreground/80 mt-1 font-medium">Configure o que cada gestor pode visualizar e operar dentro do sistema. As alterações aqui refletem imediatamente no acesso do usuário.</p>
                 </div>
               </div>
 
-              <section className="bg-white dark:bg-[#1a2632] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6">
-                <label className="block text-sm font-bold text-slate-900 dark:text-white mb-2">Selecione o Gestor para Configurar</label>
+              <section className="bg-card border border-border shadow-sm rounded-lg p-6">
+                <label className="block text-foreground font-bold mb-4">Selecione o Gestor para Configurar</label>
                 <div className="flex flex-col md:flex-row gap-4">
                   <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400">person_search</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-muted-foreground">person_search</span>
                     <select
                       value={selectedManagerId || ''}
                       onChange={(e) => setSelectedManagerId(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm text-slate-900 dark:text-white appearance-none"
+                      className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-base focus:ring-2 focus:ring-ring text-sm text-foreground font-bold appearance-none cursor-pointer"
                     >
                       {users.filter(u => u.role === 'manager' || u.role === 'admin').map(u => (
                         <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
                       ))}
                     </select>
-                    <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+                    <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">expand_more</span>
                   </div>
                 </div>
 
                 {selectedManager && (
-                  <div className="mt-6 flex items-center gap-4 p-4 border border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/30 rounded-lg">
-                    <div className="size-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-lg font-bold shrink-0">
+                  <div className="mt-6 flex items-center gap-4 p-4 border border-border bg-muted/30 rounded-lg">
+                    <div className="size-12 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-bold shrink-0 border border-primary/20 shadow-inner">
                       {selectedManager.name.split(' ').map(n => n[0]).join('')}
                     </div>
                     <div>
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white">{selectedManager.name}</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">{selectedManager.role === 'admin' ? 'Administrador' : 'Gestor'} • {selectedManager.department || 'Geral'}</p>
+                      <h3 className="text-base font-bold text-foreground">{selectedManager.name}</h3>
+                      <p className="text-sm text-muted-foreground font-bold">{selectedManager.role === 'admin' ? 'Administrador' : 'Gestor'} • {selectedManager.department || 'Geral'}</p>
                     </div>
-                    <span className={`ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${selectedManager.status === 'active'
-                      ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800'
-                      : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800'
+                    <span className={`ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border uppercase tracking-wider ${selectedManager.status === 'active'
+                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                      : 'bg-destructive/10 text-destructive border-destructive/20'
                       }`}>
                       {selectedManager.status === 'active' ? 'Ativo' : 'Suspenso'}
                     </span>
@@ -363,8 +417,8 @@ const Settings: React.FC = () => {
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
-                  <section className="bg-white dark:bg-[#1a2632] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6">
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                  <section className="bg-card border-border shadow-sm p-6">
+                    <h2 className="text-foreground font-bold hover:text-primary transition-all duration-200 ease-in-out mb-4 flex items-center gap-2">
                       <span className="material-symbols-outlined text-primary">visibility</span> Visibilidade de Vagas
                     </h2>
                     <div className="space-y-6">
@@ -374,32 +428,32 @@ const Settings: React.FC = () => {
                           <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors has-[:checked]:border-primary has-[:checked]:bg-blue-50/50 dark:has-[:checked]:bg-blue-900/10">
                             <input defaultChecked className="mt-1 text-primary focus:ring-primary border-slate-300 dark:border-slate-600 bg-transparent" name="vacancy_scope" type="radio" />
                             <div>
-                              <span className="block text-sm font-medium text-slate-900 dark:text-white">Somente vagas onde ele é responsável direto</span>
-                              <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">O gestor verá apenas as vagas atribuídas diretamente ao seu perfil.</span>
+                              <span className="block text-sm text-foreground font-bold hover:text-primary transition-all duration-200 ease-in-out">Somente vagas onde ele é responsável direto</span>
+                              <span className="block text-xs text-muted-foreground font-medium">O gestor verá apenas as vagas atribuídas diretamente ao seu perfil.</span>
                             </div>
                           </label>
                           <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors has-[:checked]:border-primary has-[:checked]:bg-blue-50/50 dark:has-[:checked]:bg-blue-900/10">
                             <input className="mt-1 text-primary focus:ring-primary border-slate-300 dark:border-slate-600 bg-transparent" name="vacancy_scope" type="radio" />
                             <div>
-                              <span className="block text-sm font-medium text-slate-900 dark:text-white">Também pode ver vagas do seu departamento</span>
-                              <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Permite visualizar todas as vagas dentro dos departamentos selecionados abaixo, mesmo sem ser o responsável direto.</span>
+                              <span className="block text-sm text-foreground font-bold hover:text-primary transition-all duration-200 ease-in-out">Também pode ver vagas do seu departamento</span>
+                              <span className="block text-xs text-muted-foreground font-medium">Permite visualizar todas as vagas dentro dos departamentos selecionados abaixo, mesmo sem ser o responsável direto.</span>
                             </div>
                           </label>
                         </div>
                       </div>
                       <div className="h-px bg-slate-100 dark:bg-slate-800"></div>
                       <div>
-                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Áreas / Departamentos Permitidos</label>
-                        <p className="text-xs text-slate-500 mb-3">Departamentos onde o gestor pode abrir vagas ou visualizar processos (dependendo da regra acima).</p>
+                        <label className="block text-sm font-bold text-foreground mb-2">Áreas / Departamentos Permitidos</label>
+                        <p className="text-xs text-muted-foreground font-medium mb-3">Departamentos onde o gestor pode abrir vagas ou visualizar processos.</p>
                         <div className="relative">
-                          <div className="flex flex-wrap gap-2 mb-2 p-2 min-h-[42px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-xs font-medium text-slate-700 dark:text-slate-200">
-                              Tecnologia <button className="hover:text-red-500 flex items-center"><span className="material-symbols-outlined text-[14px]">close</span></button>
+                          <div className="flex flex-wrap gap-2 mb-2 p-2 min-h-[46px] bg-background border border-border rounded-base">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-muted border border-border text-xs font-bold text-foreground">
+                              Tecnologia <button className="hover:text-destructive flex items-center transition-colors"><span className="material-symbols-outlined text-[14px]">close</span></button>
                             </span>
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-xs font-medium text-slate-700 dark:text-slate-200">
-                              Produto <button className="hover:text-red-500 flex items-center"><span className="material-symbols-outlined text-[14px]">close</span></button>
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-muted border border-border text-xs font-bold text-foreground">
+                              Produto <button className="hover:text-destructive flex items-center transition-colors"><span className="material-symbols-outlined text-[14px]">close</span></button>
                             </span>
-                            <input className="bg-transparent border-none text-sm focus:ring-0 p-0 placeholder:text-slate-400 min-w-[150px] text-slate-900 dark:text-white" placeholder="Adicionar departamento..." type="text" />
+                            <input className="bg-transparent border-none text-sm focus:ring-0 p-0 placeholder:text-muted-foreground min-w-[150px] text-foreground font-medium" placeholder="Adicionar departamento..." type="text" />
                           </div>
                         </div>
                       </div>
@@ -419,7 +473,7 @@ const Settings: React.FC = () => {
                       </div>
                     </div>
                   </section>
-                  <section className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 rounded-xl p-4 flex gap-3">
+                  <section className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 rounded-lg p-4 flex gap-3">
                     <span className="material-symbols-outlined text-orange-600 dark:text-orange-400 shrink-0">warning</span>
                     <div>
                       <h4 className="text-sm font-bold text-orange-800 dark:text-orange-200">Regra de Perda de Acesso</h4>
@@ -430,8 +484,8 @@ const Settings: React.FC = () => {
                   </section>
                 </div>
                 <div className="lg:col-span-1">
-                  <section className="bg-white dark:bg-[#1a2632] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 sticky top-24">
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                  <section className="bg-card border-border shadow-sm p-6 sticky top-24">
+                    <h2 className="text-foreground font-bold hover:text-primary transition-all duration-200 ease-in-out mb-4 flex items-center gap-2">
                       <span className="material-symbols-outlined text-primary">toggle_on</span> Ações Habilitadas
                     </h2>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-6">Defina quais operações críticas este gestor pode realizar autonomamente.</p>
@@ -489,15 +543,15 @@ const Settings: React.FC = () => {
           {/* Tab: Auditoria */}
           {activeTab === 'audit' && (
             <div className="space-y-6">
-              <div className="bg-white dark:bg-[#1a2632] rounded-xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-                <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <div className="bg-card border-border p-5 shadow-sm">
+                <h2 className="text-foreground font-bold hover:text-primary transition-all duration-200 ease-in-out mb-4 flex items-center gap-2">
                   <span className="material-symbols-outlined text-slate-400 text-[20px]">filter_list</span>
                   Filtros de Auditoria
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Período</label>
-                    <select className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Período</label>
+                    <select className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-bold focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer">
                       <option value="30">Últimos 30 dias</option>
                       <option value="7">Últimos 7 dias</option>
                       <option value="today">Hoje</option>
@@ -505,17 +559,17 @@ const Settings: React.FC = () => {
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Quem alterou</label>
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Quem alterou</label>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="material-symbols-outlined text-slate-400 text-[18px]">person_search</span>
+                        <span className="material-symbols-outlined text-muted-foreground text-[18px]">person_search</span>
                       </span>
-                      <input className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-slate-400" placeholder="Nome ou e-mail" />
+                      <input className="w-full pl-9 pr-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-medium focus:ring-2 focus:ring-ring transition-all duration-200 placeholder:text-muted-foreground" placeholder="Nome ou e-mail" />
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Tipo de Mudança</label>
-                    <select className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Tipo de Mudança</label>
+                    <select className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-bold focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer">
                       <option value="">Todos os tipos</option>
                       <option value="profile">Perfil de Acesso</option>
                       <option value="scope">Escopo de Gestão</option>
@@ -524,15 +578,15 @@ const Settings: React.FC = () => {
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Usuário Afetado</label>
-                    <input className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-slate-400" placeholder="Nome do usuário alvo" />
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Usuário Afetado</label>
+                    <input className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-medium focus:ring-2 focus:ring-ring transition-all duration-200 placeholder:text-muted-foreground" placeholder="Nome do usuário alvo" />
                   </div>
                 </div>
-                <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                  <button className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-border">
+                  <button className="px-4 py-2 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">
                     Limpar Filtros
                   </button>
-                  <button className="bg-primary hover:bg-primary-dark text-white font-medium py-2 px-6 rounded-lg transition-all text-sm shadow-sm flex items-center gap-2">
+                  <button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-2 px-6 rounded-base transition-all duration-200 text-sm shadow-sm flex items-center gap-2 active:translate-y-[1px]">
                     <span className="material-symbols-outlined text-[18px]">search</span>
                     Buscar Logs
                   </button>
@@ -541,55 +595,53 @@ const Settings: React.FC = () => {
 
               <div className="flex flex-col gap-4">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">Registro de Alterações</h3>
-                <div className="bg-white dark:bg-[#1a2632] rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                <div className="bg-card border border-border shadow-sm rounded-lg overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
-                          <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-48">Quem / Quando</th>
-                          <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-40">Tipo</th>
-                          <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">O que mudou</th>
-                          <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-48">Motivo</th>
-                          <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider w-10"></th>
+                        <tr className="bg-muted border-b border-border">
+                          <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider w-48">Quem / Quando</th>
+                          <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider w-40">Tipo</th>
+                          <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">O que mudou</th>
+                          <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider w-48">Motivo</th>
+                          <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider w-10"></th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                      <tbody className="divide-y divide-border text-sm">
                         {logs.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="px-6 py-8 text-center text-slate-500 italic">Nenhum registro de auditoria encontrado.</td>
+                            <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground italic font-bold">Nenhum registro de auditoria encontrado.</td>
                           </tr>
                         ) : (
                           logs.map(log => (
-                            <tr key={log.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <tr key={log.id} className="group hover:bg-muted/40 transition-all duration-200">
                               <td className="px-6 py-4 align-top">
                                 <div className="flex flex-col gap-1">
                                   <div className="flex items-center gap-2">
-                                    <div className="size-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-bold">
+                                    <div className="size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold border border-primary/20">
                                       {log.user_name.split(' ').map(n => n[0]).join('')}
                                     </div>
-                                    <span className="font-medium text-slate-900 dark:text-white">{log.user_name}</span>
+                                    <span className="text-foreground font-bold">{log.user_name}</span>
                                   </div>
-                                  <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400 text-xs mt-1">
+                                  <div className="flex items-center gap-1 text-muted-foreground font-bold text-[10px] uppercase tracking-wider">
                                     <span className="material-symbols-outlined text-[14px]">calendar_today</span>
                                     <span>{new Date(log.timestamp).toLocaleString('pt-BR')}</span>
                                   </div>
                                 </div>
                               </td>
                               <td className="px-6 py-4 align-top">
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 capitalize">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-muted text-foreground border border-border capitalize">
                                   {log.action}
                                 </span>
                               </td>
                               <td className="px-6 py-4 align-top">
-                                <div className="flex flex-col gap-2">
-                                  <p className="text-slate-900 dark:text-white font-medium">{log.details}</p>
-                                </div>
+                                <p className="text-foreground font-medium leading-relaxed">{log.details}</p>
                               </td>
                               <td className="px-6 py-4 align-top">
-                                <span className="text-slate-400 dark:text-slate-500 italic text-xs">Automático</span>
+                                <span className="text-muted-foreground italic text-xs font-bold">Automático</span>
                               </td>
                               <td className="px-6 py-4 align-top text-right">
-                                <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                                <button className="text-muted-foreground hover:text-primary transition-colors">
                                   <span className="material-symbols-outlined text-[20px]">info</span>
                                 </button>
                               </td>
@@ -599,13 +651,79 @@ const Settings: React.FC = () => {
                       </tbody>
                     </table>
                   </div>
-                  <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
-                    <span className="text-xs text-slate-500">Mostrando {logs.length} registros</span>
-                    <div className="flex gap-1">
-                      <button className="p-1 rounded hover:bg-white dark:hover:bg-slate-700 text-slate-400 disabled:opacity-50" disabled><span className="material-symbols-outlined text-[18px]">chevron_left</span></button>
-                      <button className="p-1 rounded hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300" disabled><span className="material-symbols-outlined text-[18px]">chevron_right</span></button>
-                    </div>
+                  <div className="px-6 py-4 border-t border-border flex justify-between items-center bg-muted/20 text-xs text-muted-foreground font-bold">
+                    <span>Mostrando {logs.length} registros</span>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Sistema */}
+          {activeTab === 'system' && (
+            <div className="space-y-6">
+              <div className="bg-card rounded-lg border border-border p-6 shadow-sm">
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="p-3 bg-amber-500/10 rounded-lg text-amber-600 dark:text-amber-400 shrink-0 border border-amber-500/20">
+                    <span className="material-symbols-outlined">database</span>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">Gerenciamento de Dados (Backup)</h2>
+                    <p className="text-muted-foreground text-sm mt-1">Como o sistema utiliza armazenamento local, recomendamos exportar seus dados regularmente para evitar perdas acidentais.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="p-5 border border-border rounded-lg hover:bg-muted/30 transition-all duration-200 ease-in-out group">
+                    <h3 className="font-bold text-foreground mb-2 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[20px] text-primary">file_upload</span>
+                      Exportar Dados
+                    </h3>
+                    <p className="text-xs text-muted-foreground mb-4">Cria um arquivo JSON com todas as configurações, vagas e candidatos atuais.</p>
+                    <button
+                      onClick={handleExport}
+                      className="w-full py-2.5 bg-foreground text-background font-bold rounded-base text-sm transition-all duration-200 ease-in-out hover:opacity-90 active:translate-y-[1px]"
+                    >
+                      Exportar JSON
+                    </button>
+                  </div>
+
+                  <div className="p-5 border border-border rounded-lg hover:bg-muted/30 transition-all duration-200 ease-in-out group">
+                    <h3 className="font-bold text-foreground mb-2 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[20px] text-primary">file_download</span>
+                      Importar Dados
+                    </h3>
+                    <p className="text-xs text-muted-foreground mb-4">Carrega dados de um backup anterior. <span className="text-destructive font-bold">Isso apagará o estado atual!</span></p>
+                    <button
+                      onClick={handleImportClick}
+                      className="w-full py-2.5 bg-background border border-border text-foreground font-bold rounded-base text-sm transition-all duration-200 ease-in-out hover:bg-muted active:translate-y-[1px]"
+                    >
+                      Importar JSON
+                    </button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept=".json"
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-5 flex gap-4">
+                <span className="material-symbols-outlined text-destructive shrink-0">dangerous</span>
+                <div>
+                  <h4 className="text-sm font-bold text-destructive">Zona de Perigo</h4>
+                  <p className="text-sm text-foreground/80 mt-1 font-medium">
+                    Apagar todos os dados locais restaurará o sistema para o estado inicial (dados de demonstração). Esta ação não pode ser desfeita.
+                  </p>
+                  <button
+                    onClick={() => setIsResetConfirmOpen(true)}
+                    className="mt-4 px-4 py-2 bg-destructive border border-border/40 text-destructive-foreground text-xs font-bold rounded-base transition-all duration-200 hover:bg-destructive/90 shadow-sm active:translate-y-[1px]"
+                  >
+                    Resetar Todo o Sistema
+                  </button>
                 </div>
               </div>
             </div>
@@ -613,7 +731,35 @@ const Settings: React.FC = () => {
         </div>
       </div>
 
-      {/* Invite Modal */}
+      <ConfirmationModal
+        isOpen={isResetConfirmOpen}
+        onClose={() => setIsResetConfirmOpen(false)}
+        onConfirm={() => {
+          localStorage.clear();
+          window.location.reload();
+        }}
+        title="Resetar Todo o Sistema"
+        message="Tem certeza que deseja apagar todos os dados locais? Esta ação restaurará o sistema para o estado inicial e não pode ser desfeita."
+        confirmLabel="Resetar Sistema"
+        type="danger"
+      />
+
+      <ConfirmationModal
+        isOpen={!!userToDelete}
+        onClose={() => setUserToDelete(null)}
+        onConfirm={() => {
+          if (userToDelete) {
+            deleteUser(userToDelete);
+            setUserToDelete(null);
+            setToast({ message: 'Usuário removido com sucesso.', type: 'success' });
+          }
+        }}
+        title="Excluir Usuário"
+        message="Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita e ele perderá o acesso imediatamente."
+        confirmLabel="Excluir Usuário"
+        type="danger"
+      />
+
       <UserModal
         isOpen={isInviteModalOpen}
         onClose={() => setIsInviteModalOpen(false)}

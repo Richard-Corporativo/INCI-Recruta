@@ -26,22 +26,22 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="max-w-[400px]">
             <div className="p-6">
                 <div className="flex items-center gap-3 mb-4">
-                    <div className={`size-10 rounded-full flex items-center justify-center ${type === 'danger' ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' : 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'}`}>
+                    <div className={`size-10 rounded-full flex items-center justify-center ${type === 'danger' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
                         <span className="material-symbols-outlined text-[24px]">
                             {type === 'danger' ? 'warning' : 'help'}
                         </span>
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">{title}</h3>
+                    <h3 className="text-lg font-bold text-foreground">{title}</h3>
                 </div>
 
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+                <p className="text-sm text-muted-foreground leading-relaxed mb-6 font-bold">
                     {message}
                 </p>
 
                 <div className="flex gap-3">
                     <button
                         onClick={onClose}
-                        className="flex-1 px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                        className="flex-1 px-4 py-2.5 text-sm font-bold text-foreground bg-background border border-border rounded-base hover:bg-muted active:translate-y-[1px] transition-all duration-200 ease-in-out focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         {cancelLabel}
                     </button>
@@ -50,7 +50,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                             onConfirm();
                             onClose();
                         }}
-                        className={`flex-1 px-4 py-2 text-sm font-semibold text-white rounded-lg transition-all shadow-sm ${type === 'danger' ? 'bg-red-500 hover:bg-red-600' : 'bg-primary hover:bg-primary-dark'}`}
+                        className={`flex-1 px-4 py-2.5 text-sm font-bold text-primary-foreground rounded-base transition-all duration-200 ease-in-out shadow-sm active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${type === 'danger' ? 'bg-destructive hover:bg-destructive/90' : 'bg-primary hover:bg-primary/90'}`}
                     >
                         {confirmLabel}
                     </button>

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface BaseModalProps {
     isOpen: boolean;
@@ -24,20 +25,21 @@ const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, children, maxWid
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+                className="absolute inset-0 bg-background/80 backdrop-blur-sm transition-opacity duration-200"
                 onClick={onClose}
             ></div>
 
             {/* Modal Container */}
-            <div className={`relative w-full ${maxWidth} bg-white dark:bg-[#1a2632] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200`}>
-                <div className="h-1.5 w-full bg-gradient-to-r from-primary to-blue-400 absolute top-0 left-0"></div>
+            <div className={`relative w-full ${maxWidth} bg-card rounded-lg shadow-2xl border border-border overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200`}>
+                <div className="h-1 w-full bg-primary absolute top-0 left-0"></div>
                 {children}
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

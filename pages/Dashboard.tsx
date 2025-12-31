@@ -5,6 +5,7 @@ import { useJobs } from '../hooks/useJobs';
 import { useCandidates } from '../hooks/useCandidates';
 import { useUsers } from '../hooks/useUsers';
 import { useAuth } from '../hooks/useAuth';
+import Toast from '../components/Toast';
 
 const Dashboard: React.FC = () => {
   const { jobs } = useJobs();
@@ -16,12 +17,16 @@ const Dashboard: React.FC = () => {
     period: '30',
     area: '',
     manager: '',
-    search: ''
+    search: '',
+    urgency: ''
   });
+
+  const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const filteredJobs = jobs.filter(job => {
     if (filters.area && job.department !== filters.area) return false;
     if (filters.search && !job.title.toLowerCase().includes(filters.search.toLowerCase())) return false;
+    if (filters.urgency && job.urgency !== filters.urgency) return false;
 
     if (filters.manager) {
       const targetManagerId = filters.manager === 'me' ? user?.id : filters.manager;
@@ -42,6 +47,8 @@ const Dashboard: React.FC = () => {
       if (job.manager_id !== targetManagerId) return false;
     }
 
+    if (filters.urgency && job.urgency !== filters.urgency) return false;
+
     return true;
   });
 
@@ -51,7 +58,7 @@ const Dashboard: React.FC = () => {
 
   const calculateAvgTime = () => {
     const hired = candidates.filter(c => c.columnId === 'hired' && c.applied_at && c.hired_at);
-    if (hired.length === 0) return 38; // Voltar ao mock se não houver dados, ou 0
+    if (hired.length === 0) return 0;
 
     const totalDays = hired.reduce((acc, c) => {
       const start = new Date(c.applied_at!).getTime();
@@ -69,7 +76,7 @@ const Dashboard: React.FC = () => {
   };
 
   const resetFilters = () => {
-    setFilters({ period: '30', area: '', manager: '', search: '' });
+    setFilters({ period: '30', area: '', manager: '', search: '', urgency: '' });
   };
 
   return (
@@ -94,20 +101,23 @@ const Dashboard: React.FC = () => {
               <p className="text-muted-foreground text-sm">Acompanhe vagas, candidatos e eficiência do processo por período e responsáveis.</p>
             </div>
             <div className="flex gap-2">
-              <button className="hidden sm:inline-flex items-center justify-center gap-2 bg-card hover:bg-accent border border-border text-foreground font-medium py-2 px-4 rounded-lg transition-all text-sm">
+              <button
+                onClick={() => setToast({ message: 'Visão personalizada salva com sucesso!', type: 'success' })}
+                className="hidden sm:inline-flex items-center justify-center gap-2 bg-card hover:bg-accent border border-border text-foreground font-bold py-2 px-4 rounded-base transition-all duration-200 ease-in-out text-sm shadow-sm active:translate-y-[1px]"
+              >
                 <span className="material-symbols-outlined text-[20px]">bookmark_border</span>
                 Salvar visão
               </button>
             </div>
           </div>
-          <div className="bg-accent/50 p-4 rounded-xl border border-border mb-2">
+          <div className="bg-accent/50 p-4 rounded-lg border border-border mb-2">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-foreground uppercase tracking-wide">Período</label>
                 <select
                   value={filters.period}
                   onChange={(e) => handleFilterChange('period', e.target.value)}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all duration-200 ease-in-out hover:border-ring"
                 >
                   <option value="30">Últimos 30 dias</option>
                   <option value="90">Últimos 3 meses</option>
@@ -119,7 +129,7 @@ const Dashboard: React.FC = () => {
                 <label className="text-xs font-semibold text-foreground uppercase tracking-wide">Área / Depto</label>
                 <div className="relative">
                   <input
-                    className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground"
+                    className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all duration-200 ease-in-out hover:border-ring placeholder:text-muted-foreground"
                     list="areas"
                     placeholder="Todas as áreas"
                     value={filters.area}
@@ -138,7 +148,7 @@ const Dashboard: React.FC = () => {
                 <select
                   value={filters.manager}
                   onChange={(e) => handleFilterChange('manager', e.target.value)}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all disabled:opacity-50 disabled:bg-muted"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all duration-200 ease-in-out hover:border-ring disabled:opacity-50 disabled:bg-muted"
                 >
                   <option value="">Todos os Gestores</option>
                   <option value="me">Somente eu</option>
@@ -150,7 +160,7 @@ const Dashboard: React.FC = () => {
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold text-foreground uppercase tracking-wide">Cargo</label>
                 <input
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder:text-muted-foreground"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all duration-200 ease-in-out hover:border-ring placeholder:text-muted-foreground"
                   placeholder="Buscar cargo..."
                   value={filters.search}
                   onChange={(e) => handleFilterChange('search', e.target.value)}
@@ -158,8 +168,8 @@ const Dashboard: React.FC = () => {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => {/* Lógica de aplicação se necessário, mas já é reativo */ }}
-                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2 px-4 rounded-lg transition-all text-sm shadow-sm"
+                  onClick={() => setToast({ message: 'Filtros aplicados!', type: 'success' })}
+                  className="flex-1 bg-primary text-primary-foreground border border-border/40 font-bold py-2 px-4 rounded-base transition-all duration-200 ease-in-out text-sm shadow-sm hover:bg-primary/90 active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   Aplicar
                 </button>
@@ -180,7 +190,10 @@ const Dashboard: React.FC = () => {
           <section>
             <h2 className="sr-only">KPIs Essenciais</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-card p-5 rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+              <div
+                onClick={() => setFilters(prev => ({ ...prev, urgency: '' }))}
+                className={`bg-card p-5 rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group ${!filters.urgency ? 'ring-2 ring-primary/50' : ''}`}
+              >
                 <div className="flex justify-between items-start mb-4">
                   <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600 dark:text-blue-400">
                     <span className="material-symbols-outlined">work</span>
@@ -192,7 +205,7 @@ const Dashboard: React.FC = () => {
                   <span className="text-xs text-muted-foreground">Total ativo</span>
                 </div>
               </div>
-              <div className="bg-card p-5 rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+              <div className="bg-card p-5 rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
                 <div className="flex justify-between items-start mb-4">
                   <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-purple-600 dark:text-purple-400">
                     <span className="material-symbols-outlined">group</span>
@@ -204,7 +217,7 @@ const Dashboard: React.FC = () => {
                   <span className="text-xs text-muted-foreground">Em processo</span>
                 </div>
               </div>
-              <div className="bg-card p-5 rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+              <div className="bg-card p-5 rounded-lg border border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
                 <div className="flex justify-between items-start mb-4">
                   <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-orange-600 dark:text-orange-400">
                     <span className="material-symbols-outlined">timer</span>
@@ -216,7 +229,10 @@ const Dashboard: React.FC = () => {
                   <span className="text-xs text-muted-foreground">Dias corridos</span>
                 </div>
               </div>
-              <div className={`${delayedJobs > 0 ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-card border-border'} p-5 rounded-xl border shadow-sm hover:shadow-md transition-shadow cursor-pointer group relative overflow-hidden`}>
+              <div
+                onClick={() => setFilters(prev => ({ ...prev, urgency: 'Alta' }))}
+                className={`${delayedJobs > 0 ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-card border-border'} p-5 rounded-lg border shadow-sm hover:shadow-md transition-shadow cursor-pointer group relative overflow-hidden ${filters.urgency === 'Alta' ? 'ring-2 ring-red-500/50' : ''}`}
+              >
                 <div className="absolute top-0 right-0 w-16 h-16 bg-red-100 dark:bg-red-800/30 rounded-bl-full -mr-8 -mt-8"></div>
                 <div className="flex justify-between items-start mb-4 relative z-10">
                   <div className="p-2 bg-card rounded-lg text-red-600 dark:text-red-400 shadow-sm">
@@ -232,7 +248,7 @@ const Dashboard: React.FC = () => {
             </div>
           </section>
 
-          <section className="bg-card rounded-xl border border-border shadow-sm p-6">
+          <section className="bg-card rounded-lg border border-border shadow-sm p-6">
             <h2 className="text-lg font-bold text-foreground mb-6">Conversão por Etapa</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative">
               <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-accent -translate-y-1/2 z-0"></div>
@@ -276,14 +292,14 @@ const Dashboard: React.FC = () => {
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-bold text-foreground">Gerenciamento de Vagas</h2>
                 <div className="flex gap-2">
-                  <Link to="/jobs/new" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg shadow-sm transition-all">
+                  <Link to="/jobs/new" className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold text-primary-foreground bg-primary border border-border/40 hover:bg-primary/90 rounded-base shadow-sm transition-all duration-200 ease-in-out active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                     <span className="material-symbols-outlined text-[18px]">add</span>
                     Criar nova vaga
                   </Link>
                 </div>
               </div>
 
-              <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+              <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
@@ -328,7 +344,7 @@ const Dashboard: React.FC = () => {
 
             <section className="xl:col-span-1 flex flex-col gap-4">
               <h2 className="text-lg font-bold text-foreground">Candidatos Recentes</h2>
-              <div className="bg-card rounded-xl border border-border shadow-sm flex flex-col h-full">
+              <div className="bg-card rounded-lg border border-border shadow-sm flex flex-col h-full">
                 <div className="flex-1 overflow-y-auto max-h-[400px] p-2 space-y-2">
                   {candidates.slice(0, 5).map(candidate => (
                     <div key={candidate.id} className="p-3 hover:bg-accent/50 rounded-lg border border-transparent hover:border-border transition-all cursor-pointer group">
@@ -352,6 +368,13 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </>
   );
 };

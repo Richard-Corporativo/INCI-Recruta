@@ -33,5 +33,19 @@ export const useCandidates = (jobId?: string | number) => {
         StorageService.set(KEYS.CANDIDATES, updated);
     };
 
-    return { candidates, addCandidate, moveCandidate };
+    const deleteCandidate = (id: string) => {
+        const data = StorageService.get<Candidate[]>(KEYS.CANDIDATES) || [];
+        const updated = data.filter(c => c.id !== id);
+        setCandidates(updated);
+        StorageService.set(KEYS.CANDIDATES, updated);
+    };
+
+    const refresh = () => {
+        const data = StorageService.get<Candidate[]>(KEYS.CANDIDATES);
+        if (data) {
+            setCandidates(data);
+        }
+    };
+
+    return { candidates, addCandidate, moveCandidate, deleteCandidate, refresh };
 };

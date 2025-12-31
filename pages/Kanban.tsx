@@ -7,6 +7,7 @@ import { useJobs } from '../hooks/useJobs';
 import { useCandidates } from '../hooks/useCandidates';
 import { useAuth } from '../hooks/useAuth';
 import { Candidate, KanbanColumnId } from '../types';
+import Toast from '../components/Toast';
 
 type Column = {
   id: KanbanColumnId;
@@ -24,76 +25,73 @@ const COLUMNS_CONFIG: Column[] = [
   {
     id: 'received',
     title: 'Recebido',
-    dotColor: 'bg-slate-400',
-    countColor: 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
+    dotColor: 'bg-muted-foreground/40',
+    countColor: 'bg-muted text-muted-foreground',
     convRate: '45% conv.',
-    containerClass: 'bg-slate-200/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/50',
-    headerClass: 'bg-slate-50/50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/50'
+    containerClass: 'bg-muted/30 border-border/50',
+    headerClass: 'bg-background/50 border-border/50'
   },
   {
     id: 'screening',
     title: 'Em Triagem',
     dotColor: 'bg-blue-400',
-    countColor: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
+    countColor: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
     convRate: '60% conv.',
-    containerClass: 'bg-slate-200/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/50',
-    headerClass: 'bg-slate-50/50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/50'
+    containerClass: 'bg-muted/30 border-border/50',
+    headerClass: 'bg-background/50 border-border/50'
   },
   {
     id: 'technical',
     title: 'Avaliação Téc.',
     dotColor: 'bg-purple-400',
-    countColor: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300',
+    countColor: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
     convRate: '33% conv.',
-    containerClass: 'bg-slate-200/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/50',
-    headerClass: 'bg-slate-50/50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/50'
+    containerClass: 'bg-muted/30 border-border/50',
+    headerClass: 'bg-background/50 border-border/50'
   },
   {
     id: 'hr_interview',
     title: 'Entrevista RH',
     dotColor: 'bg-indigo-400',
-    countColor: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300',
+    countColor: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
     convRate: '50% conv.',
-    containerClass: 'bg-slate-200/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/50',
-    headerClass: 'bg-slate-50/50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/50'
+    containerClass: 'bg-muted/30 border-border/50',
+    headerClass: 'bg-background/50 border-border/50'
   },
   {
     id: 'manager_interview',
     title: 'Entrevista Gestor',
     dotColor: 'bg-primary animate-pulse',
-    countColor: 'bg-primary text-white',
-    convRate: 'Action Required',
-    // Estilo especial com sombra azul e borda
-    containerClass: 'bg-white dark:bg-[#1a2632] border-primary/20 dark:border-primary/40 shadow-[0_0_15px_-3px_rgba(25,127,230,0.1)]',
-    headerClass: 'bg-primary/5 dark:bg-primary/10 border-primary/10 dark:border-primary/30',
-    bodyClass: 'bg-slate-50/50 dark:bg-slate-900/20'
+    countColor: 'bg-primary text-primary-foreground',
+    convRate: 'Feedback Pendente',
+    containerClass: 'bg-background border-primary/20 shadow-sm ring-1 ring-primary/10',
+    headerClass: 'bg-primary/5 dark:bg-primary/10 border-primary/10',
+    bodyClass: 'bg-accent/10'
   },
   {
     id: 'finalist',
     title: 'Finalista',
     dotColor: 'bg-yellow-400',
-    countColor: 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300',
+    countColor: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400',
     convRate: '50% conv.',
-    containerClass: 'bg-slate-200/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/50',
-    headerClass: 'bg-slate-50/50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/50'
+    containerClass: 'bg-muted/30 border-border/50',
+    headerClass: 'bg-background/50 border-border/50'
   },
   {
     id: 'hired',
     title: 'Contratado',
-    dotColor: 'bg-green-500',
-    countColor: 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200',
-    // Estilo verde especial
-    containerClass: 'bg-green-50/50 dark:bg-green-900/10 border-green-200 dark:border-green-800/50',
-    headerClass: 'bg-green-50/80 dark:bg-green-900/30 border-green-200 dark:border-green-800/50'
+    dotColor: 'bg-emerald-500',
+    countColor: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+    containerClass: 'bg-emerald-50/20 dark:bg-emerald-900/10 border-emerald-200/50',
+    headerClass: 'bg-emerald-50/30 dark:bg-emerald-900/20 border-emerald-200/50'
   },
   {
     id: 'rejected',
     title: 'Não Selecionado',
-    dotColor: 'bg-slate-500',
-    countColor: 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
-    // Opacidade reduzida
-    containerClass: 'bg-slate-200/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/50 opacity-75 hover:opacity-100 transition-opacity',
-    headerClass: 'bg-slate-50/50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/50'
+    dotColor: 'bg-muted-foreground/60',
+    countColor: 'bg-muted text-muted-foreground',
+    containerClass: 'bg-muted/30 border-border/50 opacity-75 hover:opacity-100 transition-opacity duration-200',
+    headerClass: 'bg-background/50 border-border/50'
   },
 ];
 
@@ -111,9 +109,31 @@ const Kanban: React.FC = () => {
   const [feedbackCandidate, setFeedbackCandidate] = useState<Candidate | null>(null);
   const [movingCandidate, setMovingCandidate] = useState<Candidate | null>(null);
   const [movingSourceCol, setMovingSourceCol] = useState<KanbanColumnId | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const [kanbanFilters, setKanbanFilters] = useState({
+    role: 'Todos',
+    dept: 'Todos',
+    period: 'Últimos 30 dias'
+  });
 
   const job = jobs.find(j => j.id === id || j.id === Number(id));
   const jobTitle = job?.title || 'Vaga Selecionada';
+
+  // Filter candidates based on job and header filters
+  const filteredCandidatesByJob = candidates.filter(c => {
+    if (id && c.jobId.toString() !== id.toString()) return false;
+
+    if (kanbanFilters.role !== 'Todos' && c.role !== kanbanFilters.role) return false;
+
+    // Dept filter would require finding the job for each candidate
+    if (kanbanFilters.dept !== 'Todos') {
+      const cJob = jobs.find(j => j.id === c.jobId);
+      if (cJob?.department !== kanbanFilters.dept) return false;
+    }
+
+    return true;
+  });
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, candidateId: string, sourceColId: KanbanColumnId) => {
     e.dataTransfer.setData('candidateId', candidateId);
@@ -148,35 +168,44 @@ const Kanban: React.FC = () => {
     setIsMoveModalOpen(true);
   }
 
+  const handleAction = (e: React.MouseEvent, candidateId: string, action: KanbanColumnId, message: string) => {
+    e.stopPropagation();
+    moveCandidate(candidateId, action);
+    setToast({ message, type: 'success' });
+  };
+
   return (
-    <div className="flex-1 flex flex-col min-w-0 transition-all duration-200 h-full overflow-hidden bg-background-light dark:bg-background-dark">
+    <div className="flex-1 flex flex-col min-w-0 transition-all duration-200 h-full overflow-hidden bg-background">
 
       {/* Header Avançado */}
-      <header className="bg-white dark:bg-[#1a2632] border-b border-slate-200 dark:border-slate-800 px-6 py-4 z-20 shrink-0">
+      <header className="bg-card border-b border-border px-6 py-4 z-20 shrink-0">
         <div className="max-w-[1920px] mx-auto w-full">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-4">
             <div>
               <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                <h1 className="text-xl font-bold text-foreground tracking-tight flex items-center gap-2">
                   Candidatos — {jobTitle}
                   <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-normal border border-slate-200 dark:border-slate-600">ID: #{id || '4092'}</span>
                 </h1>
               </div>
-              <p className="text-slate-500 dark:text-slate-400 text-sm">Acompanhe etapas e entrevistas com auditoria completa.</p>
+              <p className="text-muted-foreground text-sm font-medium">Acompanhe etapas e entrevistas com auditoria completa.</p>
             </div>
             <div className="flex gap-2">
-              <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                <span className="material-symbols-outlined text-[18px]">history</span>
+              <button
+                onClick={() => navigate('/audit')}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-foreground bg-background border border-border rounded-base hover:bg-accent transition-all duration-200 ease-in-out shadow-sm active:translate-y-[1px]"
+              >
+                <span className="material-symbols-outlined text-[20px]">history</span>
                 Log de Auditoria
               </button>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3 items-end bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+          <div className="flex flex-wrap gap-3 items-end bg-muted/50 p-3 rounded-lg border border-border">
             <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[160px]">
               <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Vaga</label>
               <select
-                className="w-full pl-2 pr-8 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                className="w-full pl-2 pr-8 py-1.5 bg-background border border-border rounded-md text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring transition-all duration-200 ease-in-out hover:border-ring"
                 value={id}
                 onChange={(e) => navigate(`/kanban/${e.target.value}`)}
               >
@@ -185,18 +214,28 @@ const Kanban: React.FC = () => {
             </div>
             <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[140px]">
               <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Cargo</label>
-              <select className="w-full pl-2 pr-8 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary">
-                <option defaultValue="selected">Todos</option>
-                <option>Desenvolvedor</option>
-                <option>Designer</option>
+              <select
+                value={kanbanFilters.role}
+                onChange={(e) => setKanbanFilters(prev => ({ ...prev, role: e.target.value }))}
+                className="w-full pl-2 pr-8 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+              >
+                <option value="Todos">Todos</option>
+                <option value="Frontend">Frontend</option>
+                <option value="UX/UI">UX/UI</option>
+                <option value="Backend">Backend</option>
               </select>
             </div>
             <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[140px]">
               <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Área/Depto</label>
-              <select className="w-full pl-2 pr-8 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary">
-                <option defaultValue="selected">Tecnologia</option>
-                <option>Produto</option>
-                <option>Marketing</option>
+              <select
+                value={kanbanFilters.dept}
+                onChange={(e) => setKanbanFilters(prev => ({ ...prev, dept: e.target.value }))}
+                className="w-full pl-2 pr-8 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+              >
+                <option value="Todos">Todos</option>
+                <option value="Tecnologia">Tecnologia</option>
+                <option value="Recursos Humanos">Recursos Humanos</option>
+                <option value="Marketing">Marketing</option>
               </select>
             </div>
             <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[160px]">
@@ -213,10 +252,14 @@ const Kanban: React.FC = () => {
             </div>
             <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[140px]">
               <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Período</label>
-              <select className="w-full pl-2 pr-8 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary">
-                <option defaultValue="selected">Últimos 30 dias</option>
-                <option>Este Trimestre</option>
-                <option>Este Ano</option>
+              <select
+                value={kanbanFilters.period}
+                onChange={(e) => setKanbanFilters(prev => ({ ...prev, period: e.target.value }))}
+                className="w-full pl-2 pr-8 py-1.5 bg-background border border-border rounded-md text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring transition-all duration-200 ease-in-out hover:border-ring"
+              >
+                <option value="Últimos 30 dias">Últimos 30 dias</option>
+                <option value="Este Trimestre">Este Trimestre</option>
+                <option value="Este Ano">Este Ano</option>
               </select>
             </div>
           </div>
@@ -224,15 +267,15 @@ const Kanban: React.FC = () => {
       </header>
 
       {/* Kanban Board Area */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden bg-slate-100 dark:bg-background-dark p-6 kanban-scroll">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden bg-muted/30 p-6 kanban-scroll">
         <div className="flex h-full gap-4 min-w-max items-start">
 
           {COLUMNS_CONFIG.map((col) => {
-            const columnCandidates = candidates.filter(c => c.columnId === col.id);
+            const columnCandidates = filteredCandidatesByJob.filter(c => c.columnId === col.id);
             return (
               <div
                 key={col.id}
-                className={`flex flex-col w-[280px] h-full rounded-xl border shrink-0 ${col.containerClass}`}
+                className={`flex flex-col w-[280px] h-full rounded-lg border shrink-0 ${col.containerClass}`}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, col.id)}
               >
@@ -269,7 +312,7 @@ const Kanban: React.FC = () => {
                       draggable
                       onDragStart={(e) => handleDragStart(e, candidate.id, col.id)}
                       onClick={() => openProfile(candidate)}
-                      className={`bg-white dark:bg-[#1a2632] p-3 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer group relative ${col.id === 'manager_interview' ? 'border border-primary/30 dark:border-primary/50' : (col.id === 'screening' ? 'border-l-4 border-l-blue-500 border-y border-r border-slate-200 dark:border-slate-700' : (col.id === 'finalist' ? 'border-l-4 border-l-yellow-500 border-y border-r border-slate-200 dark:border-slate-700' : (col.id === 'rejected' ? 'bg-white/50 dark:bg-slate-800/50 grayscale hover:grayscale-0 transition-all border border-slate-200 dark:border-slate-700' : 'border border-slate-200 dark:border-slate-700')))}`}
+                      className={`bg-card p-3 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 ease-in-out cursor-pointer group relative border border-border hover:border-ring ${col.id === 'manager_interview' ? 'ring-1 ring-primary/20' : (col.id === 'rejected' ? 'grayscale opacity-70 hover:opacity-100 hover:grayscale-0' : '')}`}
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
@@ -327,7 +370,7 @@ const Kanban: React.FC = () => {
                           </div>
                           <button
                             onClick={(e) => openFeedback(e, candidate)}
-                            className="flex items-center justify-center gap-1.5 w-full py-1.5 rounded bg-primary text-white hover:bg-primary-dark text-xs font-semibold transition-colors shadow-sm"
+                            className="flex items-center justify-center gap-1.5 w-full py-2 rounded-base bg-primary text-primary-foreground border border-border/40 hover:bg-primary/90 text-xs font-bold transition-all duration-200 ease-in-out shadow-sm active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           >
                             <span className="material-symbols-outlined text-[14px]">rate_review</span>
                             Registrar Feedback
@@ -337,7 +380,12 @@ const Kanban: React.FC = () => {
 
                       {col.id === 'finalist' && (
                         <div className="flex gap-2">
-                          <button className="flex-1 py-1.5 rounded bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors">Contratar</button>
+                          <button
+                            onClick={(e) => handleAction(e, candidate.id, 'hired', 'Candidato formalmente contratado!')}
+                            className="flex-1 py-1.5 rounded-base bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold border border-emerald-500/20 transition-all duration-200 shadow-sm active:translate-y-[1px]"
+                          >
+                            Contratar
+                          </button>
                         </div>
                       )}
 
@@ -347,8 +395,20 @@ const Kanban: React.FC = () => {
                           <button className="text-xs font-medium text-primary hover:text-primary-dark">Ver Perfil</button>
                           {col.id === 'manager_interview' ? (
                             <div className="flex gap-1">
-                              <button className="p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded" title="Rejeitar"><span className="material-symbols-outlined text-[16px]">close</span></button>
-                              <button className="p-1 hover:bg-green-50 text-slate-400 hover:text-green-500 rounded" title="Aprovar para Finalista"><span className="material-symbols-outlined text-[16px]">check</span></button>
+                              <button
+                                onClick={(e) => handleAction(e, candidate.id, 'rejected', 'Candidato movido para Não Selecionados')}
+                                className="p-1 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded"
+                                title="Rejeitar"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">close</span>
+                              </button>
+                              <button
+                                onClick={(e) => handleAction(e, candidate.id, 'finalist', 'Candidato aprovado para a fase final!')}
+                                className="p-1 hover:bg-green-50 text-slate-400 hover:text-green-500 rounded"
+                                title="Aprovar para Finalista"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">check</span>
+                              </button>
                             </div>
                           ) : (
                             <button
@@ -396,6 +456,14 @@ const Kanban: React.FC = () => {
         currentStage={movingSourceCol ? COLUMNS_CONFIG.find(c => c.id === movingSourceCol)?.title || '' : ''}
         candidateId={movingCandidate?.id || ''}
       />
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };

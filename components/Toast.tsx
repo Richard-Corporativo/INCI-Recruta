@@ -25,17 +25,17 @@ const Toast: React.FC<ToastProps> = ({ message, type = 'success', duration = 300
         info: 'info'
     };
 
-    const colors = {
-        success: 'bg-emerald-500',
-        error: 'bg-red-500',
-        info: 'bg-blue-500'
+    const iconColors = {
+        success: 'text-emerald-500',
+        error: 'text-destructive',
+        info: 'text-primary'
     };
 
     return (
-        <div className={`fixed bottom-8 right-8 z-[100] flex items-center gap-3 px-4 py-3 rounded-xl text-white shadow-2xl transition-all duration-300 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'} ${colors[type]}`}>
-            <span className="material-symbols-outlined">{icons[type]}</span>
-            <span className="text-sm font-bold">{message}</span>
-            <button onClick={() => setIsVisible(false)} className="ml-2 hover:opacity-75">
+        <div className={`fixed bottom-8 right-8 z-[100] flex items-center gap-3 px-5 py-4 rounded-lg bg-card border border-border text-foreground shadow-2xl transition-all duration-300 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
+            <span className={`material-symbols-outlined ${iconColors[type]}`}>{icons[type]}</span>
+            <span className="text-sm font-bold tracking-tight">{message}</span>
+            <button onClick={() => setIsVisible(false)} className="ml-4 text-muted-foreground hover:text-foreground transition-all duration-200">
                 <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
         </div>

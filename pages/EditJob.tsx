@@ -72,18 +72,25 @@ const EditJob: React.FC = () => {
 
   if (!job) {
     return (
-      <div className="p-8 text-center">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Vaga não encontrada</h2>
-        <button onClick={() => navigate('/jobs')} className="text-primary hover:underline mt-4 inline-block">Voltar para Vagas</button>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center">
+        <div className="size-16 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-4">
+          <span className="material-symbols-outlined text-[32px]">error</span>
+        </div>
+        <h2 className="text-2xl font-bold text-foreground">Vaga não encontrada</h2>
+        <p className="text-muted-foreground mt-2 mb-6">Não foi possível localizar as informações para esta vaga.</p>
+        <button onClick={() => navigate('/jobs')} className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-base font-bold shadow-sm hover:bg-primary/90 transition-all">
+          <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+          Voltar para Vagas
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background-light dark:bg-background-dark overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden bg-background transition-colors duration-200">
       {/* Header */}
-      <header className="h-16 bg-white dark:bg-[#1a202c] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shrink-0 z-20">
-        <div className="flex items-center gap-4">
+      <header className="bg-card border-b border-border pt-8 pb-4 px-8 z-20 shadow-sm shrink-0 sticky top-0">
+        <div className="mb-3">
           <Breadcrumbs
             items={[
               { label: 'Vagas', to: '/jobs' },
@@ -92,108 +99,112 @@ const EditJob: React.FC = () => {
             ]}
           />
         </div>
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">Editar Contexto da Vaga</h1>
+            <p className="text-muted-foreground text-sm mt-1">Atualize as informações e o contexto estratégico desta oportunidade.</p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => navigate(`/jobs/${id}`)}
+              className="px-4 py-2 text-sm font-bold text-foreground bg-background border border-border rounded-base hover:bg-accent transition-all duration-200 shadow-sm active:translate-y-[1px]"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="flex items-center gap-2 bg-primary text-primary-foreground border border-border/40 px-5 py-2 rounded-base text-sm font-bold shadow-sm transition-all duration-200 hover:bg-primary/90 active:translate-y-[1px] disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[20px]">save</span>
+              {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+            </button>
+          </div>
+        </div>
       </header>
 
-      {/* Main Form Content */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
-        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6 pb-24">
-          <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold text-slate-900 dark:text-white">
-              Editar Contexto da Vaga <span className="text-slate-400 font-normal ml-2 text-sm">#{id}</span>
-            </h1>
-          </div>
-
-          <section className="bg-white dark:bg-[#1a202c] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">badge</span>
-              <h2 className="font-bold text-slate-900 dark:text-white">Informações Principais</h2>
-            </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2 md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Título da Vaga</label>
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Departamento</label>
-                <input
-                  type="text"
-                  name="department"
-                  value={formData.department}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary dark:text-white"
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="bg-white dark:bg-[#1a202c] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">description</span>
-              <h2 className="font-bold text-slate-900 dark:text-white">Detalhes do Contrato</h2>
-            </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Modelo de Trabalho</label>
-                <select name="model" value={formData.model} onChange={handleInputChange} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg dark:text-white">
-                  <option>Presencial</option>
-                  <option>Híbrido</option>
-                  <option>Remoto</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Tipo de Contrato</label>
-                <select name="contract" value={formData.contract} onChange={handleInputChange} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg dark:text-white">
-                  <option>CLT</option>
-                  <option>PJ</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Nível de Urgência</label>
-                <select name="urgency" value={formData.urgency} onChange={handleInputChange} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg dark:text-white">
-                  <option>Baixa</option>
-                  <option>Média</option>
-                  <option>Alta</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Localização</label>
-                <input type="text" name="location" value={formData.location} onChange={handleInputChange} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg dark:text-white" />
-              </div>
-              <div className="md:col-span-2 space-y-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Faixa Salarial</label>
-                <div className="flex items-center gap-3">
-                  <input type="number" name="salaryMin" value={formData.salaryMin} onChange={handleInputChange} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg dark:text-white" />
-                  <span>até</span>
-                  <input type="number" name="salaryMax" value={formData.salaryMax} onChange={handleInputChange} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg dark:text-white" />
+      {/* Main Layout */}
+      <main className="flex-1 overflow-y-auto bg-muted/30 p-8">
+        <div className="max-w-[1200px] mx-auto">
+          {/* Main Form Card */}
+          <div className="bg-card border border-border shadow-sm rounded-lg overflow-hidden">
+            <form className="divide-y divide-border" onSubmit={handleSubmit}>
+              {/* Section 1: Informações Básicas */}
+              <div className="p-6 md:p-8">
+                <div className="flex items-center gap-2 mb-6">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <span className="material-symbols-outlined text-sm">badge</span>
+                  </span>
+                  <h3 className="text-lg font-bold text-foreground">Informações Básicas</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-foreground" htmlFor="title">Título da Vaga</label>
+                    <input
+                      className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
+                      id="title" name="title" type="text" value={formData.title} onChange={handleInputChange} required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-foreground" htmlFor="department">Departamento</label>
+                    <input
+                      className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
+                      id="department" name="department" type="text" value={formData.department} onChange={handleInputChange} required
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
 
-          <section className="bg-white dark:bg-[#1a202c] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary">article</span>
-              <h2 className="font-bold text-slate-900 dark:text-white">Descrição e Contexto</h2>
-            </div>
-            <div className="p-6">
-              <textarea name="context" value={formData.context} onChange={handleInputChange} rows={6} className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg dark:text-white resize-y"></textarea>
-            </div>
-          </section>
-        </form>
+              {/* Section 2: Localização e Contrato */}
+              <div className="p-6 md:p-8">
+                <div className="flex items-center gap-2 mb-6">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-muted border border-border text-foreground">
+                    <span className="material-symbols-outlined text-sm">location_on</span>
+                  </span>
+                  <h3 className="text-lg font-bold text-foreground">Localização e Contrato</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-foreground" htmlFor="location">Cidade/UF</label>
+                    <input
+                      className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
+                      id="location" name="location" type="text" value={formData.location} onChange={handleInputChange} required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-foreground" htmlFor="model">Modelo de Trabalho</label>
+                    <select
+                      className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3 cursor-pointer"
+                      id="model" name="model" value={formData.model} onChange={handleInputChange} required
+                    >
+                      <option value="Presencial">Presencial</option>
+                      <option value="Híbrido">Híbrido</option>
+                      <option value="Remoto">Remoto</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Contexto Estratégico */}
+              <div className="p-6 md:p-8">
+                <div className="flex items-center gap-2 mb-6">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <span className="material-symbols-outlined text-sm">description</span>
+                  </span>
+                  <h3 className="text-lg font-bold text-foreground">Contexto Estratégico</h3>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-foreground" htmlFor="context">Descrição da Vaga</label>
+                  <textarea
+                    className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 p-3 min-h-[200px] resize-none"
+                    id="context" name="context" rows={8} value={formData.context} onChange={handleInputChange} required
+                  />
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
       </main>
-
-      <footer className="bg-white dark:bg-[#1a202c] border-t border-slate-200 dark:border-slate-800 p-4 md:px-8 py-4 flex items-center justify-end gap-3 shrink-0 z-20">
-        <button onClick={() => navigate(`/jobs/${id}`)} className="px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800">Cancelar</button>
-        <button onClick={handleSubmit} disabled={isLoading} className="px-6 py-2.5 rounded-lg bg-primary hover:bg-primary-dark text-white font-semibold text-sm shadow-md transition-all flex items-center gap-2">
-          {isLoading ? 'Salvando...' : 'Salvar Alterações'}
-        </button>
-      </footer>
     </div>
   );
 };
