@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import TermsModal from '../components/candidate/TermsModal';
+import { supabase } from '../lib/supabase';
 
 const CandidateLayout: React.FC = () => {
     const navigate = useNavigate();
@@ -10,9 +11,8 @@ const CandidateLayout: React.FC = () => {
         type: 'terms'
     });
 
-    const handleLogout = () => {
-        localStorage.removeItem('recruitSys_candidate_email');
-        localStorage.removeItem('recruitSys_user_role');
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
         navigate('/login');
     };
 

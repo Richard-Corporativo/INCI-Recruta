@@ -153,23 +153,7 @@ const Login: React.FC = () => {
                             </button>
                         </form>
 
-                        <div className="mt-10">
-                            <div className="relative flex items-center justify-center mb-6 transition-colors">
-                                <div className="absolute inset-0 flex items-center">
-                                    <div className="w-full border-t border-border"></div>
-                                </div>
-                                <span className="relative px-4 bg-card text-[10px] font-semibold text-muted-foreground transition-colors">Ambiente de demonstração</span>
-                            </div>
-                            <div className="grid grid-cols-1 gap-4">
-                                <button
-                                    onClick={() => quickLogin('admin@admin.com', 'admin')}
-                                    className="flex flex-col items-center gap-1.5 p-3.5 rounded-lg border border-border hover:border-ring hover:bg-accent transition-all duration-200 ease-in-out group outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
-                                >
-                                    <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-semibold border border-primary/20 transition-colors">AD</div>
-                                    <span className="text-[10px] font-semibold text-foreground transition-colors">Acesso Administrador (admin@admin.com)</span>
-                                </button>
-                            </div>
-                        </div>
+
                     </div>
                     <div className="bg-muted/50 border-t border-border p-6 transition-colors duration-200">
                         <div className="flex gap-4 items-start">

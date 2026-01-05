@@ -9,7 +9,7 @@ import useDebounce from '../hooks/useDebounce';
 
 const Jobs: React.FC = () => {
   const navigate = useNavigate();
-  const { jobs, deleteJob } = useJobs();
+  const { jobs, deleteJob, isLoading } = useJobs();
   const { user } = useAuth();
 
   const [jobToDelete, setJobToDelete] = useState<string | number | null>(null);
@@ -125,88 +125,94 @@ const Jobs: React.FC = () => {
       <main className="flex-1 overflow-hidden relative bg-muted/30 transition-colors">
         <div className="absolute inset-0 overflow-y-auto p-8 animate-in fade-in duration-300 custom-scrollbar">
           <div className="max-w-[1920px] mx-auto">
-            <div className="bg-card border border-border shadow-sm rounded-lg overflow-hidden transition-all duration-200">
-              <table className="w-full text-left border-collapse">
-                <thead className="bg-muted/50 border-b border-border shadow-sm">
-                  <tr>
-                    <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground w-[25%] transition-colors">Vaga / Contexto</th>
-                    <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Área/Depto</th>
-                    <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Local/Modelo</th>
-                    <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Contrato</th>
-                    <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Urgência</th>
-                    <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Status</th>
-                    <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Candidatos</th>
-                    <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground text-right transition-colors">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {jobs.filter(job => !debouncedSearchTerm || job.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase())).map((job) => (
-                    <tr
-                      key={job.id}
-                      className="bg-card hover:bg-muted/50 transition-colors duration-200 ease-in-out cursor-pointer group"
-                      onClick={() => navigate(`/jobs/${job.id}/kanban`)}
-                    >
-                      <td className="px-6 py-5">
-                        <div className="flex flex-col">
-                          <span className="text-sm text-foreground font-semibold group-hover:text-primary transition-all duration-200 ease-in-out">
-                            {job.title}
-                          </span>
-                          <span className="text-xs text-muted-foreground mt-1 transition-colors">{job.context}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5 text-sm text-foreground transition-colors">{job.department}</td>
-                      <td className="px-6 py-5 text-sm text-foreground transition-colors">{job.location}</td>
-                      <td className="px-6 py-5">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-muted text-muted-foreground border border-border transition-colors">
-                          {job.contract}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${getUrgencyStyles(job.urgency)}`}>
-                          <span className={`size-1.5 rounded-full transition-colors ${getUrgencyDotColor(job.urgency)}`}></span> {job.urgency}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${getStatusStyles(job.status)}`}>
-                          <span className={`size-1.5 rounded-full transition-colors ${getStatusDotColor(job.status)}`}></span> {job.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-baseline gap-1 transition-colors">
-                          <span className="text-sm font-semibold text-foreground">0</span>
-                          <span className="text-xs text-muted-foreground">ativos</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}/kanban`); }}
-                            className="p-2 text-muted-foreground hover:text-primary rounded-lg hover:bg-primary/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            title="Ver Kanban"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">view_kanban</span>
-                          </button>
-                          <Link
-                            to={`/jobs/${job.id}/edit`}
-                            className="p-2 text-muted-foreground hover:text-primary rounded-lg hover:bg-primary/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            title="Editar"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">edit</span>
-                          </Link>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setJobToDelete(job.id); }}
-                            className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-destructive/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-destructive"
-                            title="Excluir"
-                          >
-                            <span className="material-symbols-outlined text-[20px]">delete</span>
-                          </button>
-                        </div>
-                      </td>
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <div className="bg-card border border-border shadow-sm rounded-lg overflow-hidden transition-all duration-200">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-muted/50 border-b border-border shadow-sm">
+                    <tr>
+                      <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground w-[25%] transition-colors">Vaga / Contexto</th>
+                      <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Área/Depto</th>
+                      <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Local/Modelo</th>
+                      <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Contrato</th>
+                      <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Urgência</th>
+                      <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Status</th>
+                      <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Candidatos</th>
+                      <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground text-right transition-colors">Ações</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {jobs.filter(job => !debouncedSearchTerm || job.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase())).map((job) => (
+                      <tr
+                        key={job.id}
+                        className="bg-card hover:bg-muted/50 transition-colors duration-200 ease-in-out cursor-pointer group"
+                        onClick={() => navigate(`/jobs/${job.id}/kanban`)}
+                      >
+                        <td className="px-6 py-5">
+                          <div className="flex flex-col">
+                            <span className="text-sm text-foreground font-semibold group-hover:text-primary transition-all duration-200 ease-in-out">
+                              {job.title}
+                            </span>
+                            <span className="text-xs text-muted-foreground mt-1 transition-colors">{job.context}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 text-sm text-foreground transition-colors">{job.department}</td>
+                        <td className="px-6 py-5 text-sm text-foreground transition-colors">{job.location}</td>
+                        <td className="px-6 py-5">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-muted text-muted-foreground border border-border transition-colors">
+                            {job.contract}
+                          </span>
+                        </td>
+                        <td className="px-6 py-5">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${getUrgencyStyles(job.urgency)}`}>
+                            <span className={`size-1.5 rounded-full transition-colors ${getUrgencyDotColor(job.urgency)}`}></span> {job.urgency}
+                          </span>
+                        </td>
+                        <td className="px-6 py-5">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${getStatusStyles(job.status)}`}>
+                            <span className={`size-1.5 rounded-full transition-colors ${getStatusDotColor(job.status)}`}></span> {job.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="flex items-baseline gap-1 transition-colors">
+                            <span className="text-sm font-semibold text-foreground">0</span>
+                            <span className="text-xs text-muted-foreground">ativos</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}/kanban`); }}
+                              className="p-2 text-muted-foreground hover:text-primary rounded-lg hover:bg-primary/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              title="Ver Kanban"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">view_kanban</span>
+                            </button>
+                            <Link
+                              to={`/jobs/${job.id}/edit`}
+                              className="p-2 text-muted-foreground hover:text-primary rounded-lg hover:bg-primary/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              title="Editar"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">edit</span>
+                            </Link>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setJobToDelete(job.id); }}
+                              className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-destructive/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                              title="Excluir"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </main>

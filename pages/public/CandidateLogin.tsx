@@ -1,45 +1,62 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { StorageService, KEYS } from '../../lib/storage';
-import { Candidate } from '../../types';
+import { supabase } from '../../lib/supabase';
+import { useToast } from '../../components/ui/Toast';
 
 const CandidateLogin: React.FC = () => {
     const navigate = useNavigate();
-    // Assuming useAuth might handle candidate logic or we mock it for now
-    const { login, isAuthenticated } = useAuth();
+    const { login } = useAuth();
+    const { error: toastError } = useToast();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [keepConnected, setKeepConnected] = useState(false);
-    const [error, setError] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [userNotFound, setUserNotFound] = useState(false);
 
-    // Redirect logic removed to allow viewing the page freely during development/testing
-    // useEffect(() => {
-    //     if (isAuthenticated) {
-    //         navigate('/vagas');
-    //     }
-    // }, [isAuthenticated, navigate]);
+    // Reset userNotFound state when email changes
+    useEffect(() => {
+        setUserNotFound(false);
+    }, [email]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        try {
-            const allCandidates = StorageService.get<Candidate[]>(KEYS.CANDIDATES) || [];
-            // @ts-ignore - Accessing password field added in registration
-            const found = allCandidates.find(c => c.email === email && c.password === password);
+        setIsLoading(true);
+        setUserNotFound(false);
 
-            if (found) {
-                setError(false);
-                // Set candidate session
-                localStorage.setItem('recruitSys_candidate_email', email);
-                localStorage.setItem('recruitSys_user_role', 'candidate');
+        try {
+            const { data, error: authError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+
+            if (authError) {
+                // Check if user actually exists to give a better hint
+                const { data: profile } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('email', email.trim().toLowerCase())
+                    .maybeSingle();
+
+                if (!profile) {
+                    setUserNotFound(true);
+                    toastError('Conta não encontrada.');
+                } else {
+                    toastError('E-mail ou senha incorretos.');
+                }
+                throw authError;
+            }
+
+            if (data.user) {
+                if (!data.user.email_confirmed_at) {
+                    navigate('/verificar-email');
+                    return;
+                }
                 navigate('/candidate/dashboard');
-            } else {
-                // Secondary check: Maybe it's an admin trying to login here? No, keep it separate for now.
-                setError(true);
             }
         } catch (err: any) {
-            setError(true);
-            console.error(err.message);
+            console.error('Login error:', err.message);
+            setIsLoading(false);
         }
     };
 
@@ -62,14 +79,20 @@ const CandidateLogin: React.FC = () => {
                             </p>
                         </div>
 
-                        {/* Error Alert */}
-                        <div className={`${error ? 'flex' : 'hidden'} mb-6 p-4 rounded-md bg-red-50 border border-red-200 items-start gap-4`}>
-                            <span className="material-symbols-outlined text-red-600 text-[22px] shrink-0">error</span>
-                            <div className="flex-1">
-                                <h4 className="text-sm font-semibold text-red-700 mb-0.5">Falha na autenticação</h4>
-                                <p className="text-xs text-red-600/90 leading-snug font-medium">Credenciais inválidas. Verifique seu e-mail e senha.</p>
+                        {userNotFound && (
+                            <div className="mb-8 p-4 rounded-lg bg-blue-50 border border-blue-200 flex flex-col gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div className="flex items-center gap-2 text-blue-800">
+                                    <span className="material-symbols-outlined text-[20px]">info</span>
+                                    <p className="text-xs font-bold">E-mail não cadastrado</p>
+                                </div>
+                                <p className="text-xs text-blue-700 leading-relaxed">Não encontramos uma conta com este e-mail. Deseja criar uma agora?</p>
+                                <Link to="/cadastro" className="text-xs font-bold text-blue-800 underline hover:text-blue-900 transition-colors self-start mt-1">
+                                    Criar conta gratuitamente
+                                </Link>
                             </div>
-                        </div>
+                        )}
+
+
 
                         <form onSubmit={handleLogin} className="flex flex-col gap-6">
                             <div className="space-y-2">
@@ -121,9 +144,13 @@ const CandidateLogin: React.FC = () => {
                                 <label className="text-sm font-semibold text-slate-500 select-none cursor-pointer" htmlFor="keep-logged">Permanecer logado</label>
                             </div>
 
-                            <button className="group w-full h-12 bg-primary hover:bg-primary/90 text-white font-semibold rounded-md shadow-lg shadow-primary/20 transition-all duration-200 active:scale-95 flex items-center justify-center gap-2.5 text-sm outline-none" type="submit">
-                                <span>Acessar conta</span>
-                                <span className="material-symbols-outlined text-[18px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+                            <button
+                                className="group w-full h-12 bg-primary hover:bg-primary/90 text-white font-semibold rounded-md shadow-lg shadow-primary/20 transition-all duration-200 active:scale-95 flex items-center justify-center gap-2.5 text-sm outline-none disabled:bg-primary/50 disabled:cursor-not-allowed"
+                                type="submit"
+                                disabled={isLoading}
+                            >
+                                <span>{isLoading ? 'Acessando...' : 'Acessar conta'}</span>
+                                {!isLoading && <span className="material-symbols-outlined text-[18px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>}
                             </button>
                         </form>
 

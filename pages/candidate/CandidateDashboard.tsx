@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useCandidateData } from '../../hooks/useCandidateData';
+import { Skeleton } from '../../components/ui/Skeleton';
+import { useToast } from '../../components/ui/Toast';
 
 const CandidateDashboard: React.FC = () => {
     const { currentCandidate, isLoading, updateProfile, completeness } = useCandidateData();
+    const { success, error, warning } = useToast();
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState<any>(null);
 
@@ -25,26 +28,42 @@ const CandidateDashboard: React.FC = () => {
         }
     }, [currentCandidate]);
 
-    const handleSave = (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        updateProfile({
-            name: formData.name,
-            phone: formData.phone,
-            location: formData.location,
-            role: formData.role,
-            summary: formData.summary,
-            linkedin: formData.linkedin,
-            github: formData.github,
-            portfolio: formData.portfolio,
-            resumeName: formData.resumeName,
-            avatar: formData.avatar
-        });
-        setIsEditing(false);
+        try {
+            await updateProfile({
+                name: formData.name,
+                phone: formData.phone,
+                location: formData.location,
+                role: formData.role,
+                summary: formData.summary,
+                linkedin: formData.linkedin,
+                github: formData.github,
+                portfolio: formData.portfolio,
+                resumeName: formData.resumeName,
+                avatar: formData.avatar
+            });
+            setIsEditing(false);
+            success('Perfil atualizado com sucesso!');
+        } catch (err: any) {
+            error('Erro ao atualizar perfil: ' + err.message);
+        }
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'resume') => {
         const file = e.target.files?.[0];
         if (!file) return;
+
+        if (type === 'resume') {
+            if (file.type !== 'application/pdf') {
+                warning('Por favor, envie apenas arquivos PDF.');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                warning('O arquivo deve ter no máximo 5MB.');
+                return;
+            }
+        }
 
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -57,7 +76,46 @@ const CandidateDashboard: React.FC = () => {
         reader.readAsDataURL(file);
     };
 
-    if (isLoading || !formData) return <div className="p-12 text-center text-sm font-semibold">Carregando perfil...</div>;
+    const renderSkeletons = () => (
+        <div className="flex flex-col gap-12 pb-24 animate-pulse">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+                <div className="flex flex-col gap-3">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-10 w-48" />
+                    <Skeleton className="h-4 w-64" />
+                </div>
+                <Skeleton className="h-12 w-40" />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 items-start">
+                <div className="lg:col-span-8 flex flex-col gap-10">
+                    <div className="bg-card rounded-lg border border-border overflow-hidden">
+                        <div className="p-10 md:p-14 border-b border-border flex flex-col sm:flex-row items-center sm:items-start gap-10">
+                            <Skeleton className="size-32 rounded-3xl shrink-0" />
+                            <div className="flex flex-col items-center sm:items-start text-center sm:text-left gap-4 pt-4 flex-1">
+                                <Skeleton className="h-10 w-64" />
+                                <Skeleton className="h-5 w-32" />
+                            </div>
+                        </div>
+                        <div className="p-10 md:p-14 grid grid-cols-1 sm:grid-cols-2 gap-10 bg-muted/10">
+                            {[1, 2, 3, 4].map(idx => (
+                                <div key={idx} className="flex flex-col gap-2">
+                                    <Skeleton className="h-3 w-20" />
+                                    <Skeleton className="h-5 w-full" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                <div className="lg:col-span-4 flex flex-col gap-10">
+                    <Skeleton className="h-[200px] w-full rounded-lg" />
+                    <Skeleton className="h-[300px] w-full rounded-lg" />
+                </div>
+            </div>
+        </div>
+    );
+
+    if (isLoading || !formData) return <div className="p-12">{renderSkeletons()}</div>;
 
     if (isEditing) {
         return (
@@ -193,14 +251,14 @@ const CandidateDashboard: React.FC = () => {
                                 <label className="relative group cursor-pointer border-2 border-dashed border-border p-8 rounded-xl bg-muted/5 hover:border-primary/40 transition-all flex flex-col items-center gap-4">
                                     <input
                                         type="file"
-                                        accept=".pdf,.doc,.docx"
+                                        accept=".pdf"
                                         onChange={e => handleFileChange(e, 'resume')}
                                         className="hidden"
                                     />
                                     <span className="material-symbols-outlined text-muted-foreground text-3xl">upload_file</span>
                                     <div className="text-center">
                                         <p className="text-sm font-semibold text-foreground">{formData.resumeName}</p>
-                                        <p className="text-xs text-muted-foreground font-semibold mt-1">Clique para enviar novo arquivo (PDF ou Doc)</p>
+                                        <p className="text-xs text-muted-foreground font-semibold mt-1">Clique para enviar novo arquivo (PDF • Máx. 5MB)</p>
                                     </div>
                                 </label>
                             </div>

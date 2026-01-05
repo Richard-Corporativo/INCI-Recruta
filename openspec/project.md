@@ -8,7 +8,8 @@ A modern Internal Recruitment System (ATS) designed for managers and HR professi
 - TypeScript
 - Tailwind CSS
 - React Router 6
-- LocalStorage for persistence
+- **Supabase (Auth & Database)**
+- **PostgreSQL** (Managed by Supabase)
 
 ## Project Conventions
 
@@ -18,9 +19,9 @@ A modern Internal Recruitment System (ATS) designed for managers and HR professi
 - Lucid styling with Material Symbols for icons.
 
 ### Architecture Patterns
-- **Simplified Storage**: All data is managed via `StorageService` (`lib/storage.ts`).
-- **Data Hooks**: Direct access to entities via `useJobs`, `useCandidates`, etc.
-- **Client-Side Auth**: Simulated sessions based on stored user entities.
+- **Services Layer**: Domain-specific services (`src/services/`) interacting with Supabase.
+- **Data Hooks**: Direct access to entities via `useJobs`, `useCandidates`, etc. (Async).
+- **Authentication**: Native Supabase Auth (`auth.users`).
 - **Design System (INCI v2.0.0)**:
   - **Tokens**: Use exclusively CSS tokens (`bg-background`, `bg-card`, `bg-primary`, `bg-sidebar`, etc.).
   - **Radius**: Buttons (`rounded-base`), Inputs (`rounded-md`), Cards (`rounded-lg`).
@@ -28,8 +29,8 @@ A modern Internal Recruitment System (ATS) designed for managers and HR professi
   - **Animations**: Mandatory `duration-200 ease-in-out` for all transitions.
 
 ## Important Constraints
-- No external backend or database. Everything must run in the browser.
-- No third-party AI dependencies in the final build.
+- **Performance**: Prioritize async data fetching with loading states.
+- **Security**: Rely on RLS (Row Level Security) for data access control.
 
 ## External Dependencies
 - Google Fonts (Inter, Outfit)

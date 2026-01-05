@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { StorageService, KEYS } from '../lib/storage';
+import { useState, useCallback, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import { SystemSettings } from '../types';
 
 const DEFAULT_SETTINGS: SystemSettings = {
@@ -12,17 +12,46 @@ const DEFAULT_SETTINGS: SystemSettings = {
 };
 
 export function useSettings() {
-    const [settings, setSettings] = useState<SystemSettings>(() => {
-        return StorageService.get<SystemSettings>(KEYS.SETTINGS) || DEFAULT_SETTINGS;
-    });
+    const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const updateSettings = (newSettings: Partial<SystemSettings>) => {
+    const loadSettings = useCallback(async () => {
+        const { data, error } = await supabase
+            .from('system_settings')
+            .select('*')
+            .eq('key', 'manager_permissions')
+            .single();
+
+        if (error && error.code !== 'PGRST116') {
+            console.error('Error loading settings:', error);
+        } else if (data) {
+            setSettings({ manager_permissions: data.value });
+        }
+        setIsLoading(false);
+    }, []);
+
+    useEffect(() => {
+        loadSettings();
+    }, [loadSettings]);
+
+    const updateSettings = async (newSettings: Partial<SystemSettings>) => {
         const updated = { ...settings, ...newSettings };
         setSettings(updated);
-        StorageService.set(KEYS.SETTINGS, updated);
+
+        const { error } = await supabase
+            .from('system_settings')
+            .upsert({
+                key: 'manager_permissions',
+                value: updated.manager_permissions,
+                updated_at: new Date().toISOString()
+            });
+
+        if (error) {
+            console.error('Error saving settings:', error);
+        }
     };
 
-    const updateManagerPermission = (key: keyof SystemSettings['manager_permissions'], value: boolean) => {
+    const updateManagerPermission = async (key: keyof SystemSettings['manager_permissions'], value: boolean) => {
         const updated = {
             ...settings,
             manager_permissions: {
@@ -31,12 +60,24 @@ export function useSettings() {
             }
         };
         setSettings(updated);
-        StorageService.set(KEYS.SETTINGS, updated);
+
+        const { error } = await supabase
+            .from('system_settings')
+            .upsert({
+                key: 'manager_permissions',
+                value: updated.manager_permissions,
+                updated_at: new Date().toISOString()
+            });
+
+        if (error) {
+            console.error('Error saving permission:', error);
+        }
     };
 
     return {
         settings,
         updateSettings,
-        updateManagerPermission
+        updateManagerPermission,
+        isLoading
     };
 }

@@ -1,20 +1,42 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCandidateData } from '../../hooks/useCandidateData';
-import { StorageService, KEYS } from '../../lib/storage';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { Job } from '../../types';
 
 const MyApplications: React.FC = () => {
     const navigate = useNavigate();
-    const { myApplications, isLoading } = useCandidateData();
-
-    const jobs = useMemo(() => StorageService.get<Job[]>(KEYS.JOBS) || [], []);
+    const { myApplications, jobs, isLoading } = useCandidateData();
 
     const handleViewDetails = (id: string) => {
         navigate(`/candidate/applications/${id}`);
     };
 
-    if (isLoading) return <div className="p-12 text-center text-xs font-semibold">Buscando candidaturas...</div>;
+    const renderSkeletons = () => (
+        <div className="flex flex-col gap-10 pb-20 animate-pulse">
+            <div className="flex flex-col gap-2">
+                <Skeleton className="h-10 w-64" />
+                <Skeleton className="h-4 w-96" />
+            </div>
+            <div className="flex flex-col gap-6">
+                {[1, 2, 3].map(i => (
+                    <div key={i} className="bg-card rounded-lg p-8 border border-border flex gap-8">
+                        <Skeleton className="size-16 rounded-xl shrink-0" />
+                        <div className="flex-1 space-y-4">
+                            <Skeleton className="h-8 w-3/4" />
+                            <Skeleton className="h-4 w-1/2" />
+                            <div className="flex justify-between items-end pt-4">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-11 w-40" />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
+    if (isLoading) return <div className="p-4">{renderSkeletons()}</div>;
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-10 pb-20">

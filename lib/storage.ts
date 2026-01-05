@@ -12,6 +12,7 @@ const KEYS = {
 
 export const StorageService = {
     get<T>(key: string): T | null {
+        console.warn(`[DEPRECATED] StorageService.get(${key}) called. Use Supabase Services instead.`);
         try {
             const data = localStorage.getItem(key);
             if (data) {

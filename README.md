@@ -28,10 +28,58 @@ O projeto apresenta um design moderno, responsivo e suporta nativamente **Dark M
 - **Avaliação:** Módulo para registro de feedbacks de entrevistas com sistema de notas (estrelas) e parecer técnico.
 - **Dados:** Informações de contato e resumo profissional.
 
+
 ### 5. Governança e Auditoria
 - **Log de Auditoria:** Registro imutável de todas as ações no sistema (quem fez, quando e o que mudou).
 - **Controle de Acesso (RBAC):** Diferenciação entre perfis de Admin, RH e Gestor Contratante.
 - **Configurações de Escopo:** Definição granular de quais departamentos um gestor pode visualizar.
+
+### 6. Portal do Candidato
+- **Área Pública:** Listagem de vagas abertas e formulário de candidatura.
+- **Dashboard Pessoal:** Acompanhamento do status de candidaturas em tempo real.
+- **Gestão de Perfil:** Atualização de dados pessoais, currículo e informações de contato.
+
+## 🔐 Segurança e Controle de Acesso
+
+### Role-Based Access Control (RBAC)
+
+O sistema implementa controle de acesso baseado em funções (roles) com validação em múltiplas camadas:
+
+#### Funções Administrativas
+- **admin** - Acesso total ao sistema, incluindo configurações e gestão de usuários
+- **manager** - Gestão de departamentos e equipes
+- **recruiter** - Operações de recrutamento e gestão de candidatos
+- **quality** - Garantia de qualidade e auditoria de processos
+- **dp** - Departamento pessoal e RH
+
+#### Função de Candidato
+- **candidate** - Acesso exclusivo ao portal do candidato (sem acesso administrativo)
+
+### Proteção de Rotas
+
+#### Rotas Administrativas (Requerem função administrativa)
+- `/admin/*` - Painel administrativo
+- `/jobs/*` - Gestão de vagas
+- `/settings/*` - Configurações do sistema
+- `/talent-bank` - Banco de talentos
+- `/audit` - Logs de auditoria
+
+#### Rotas do Candidato (Requerem função 'candidate')
+- `/candidate/*` - Portal do candidato
+- `/candidate/dashboard` - Dashboard pessoal
+- `/candidate/applications` - Minhas candidaturas
+
+#### Rotas Públicas (Sem autenticação)
+- `/vagas` - Listagem de vagas
+- `/login` - Login do candidato
+- `/cadastro` - Registro de candidato
+
+### Camadas de Segurança
+
+1. **Frontend Guard**: Componente `RequireAuth` valida role antes de renderizar rotas
+2. **Row Level Security (RLS)**: Políticas do Supabase garantem acesso aos dados
+3. **API Validation**: Edge Functions validam permissões no servidor
+
 
 ## 🛠️ Stack Tecnológica
 
@@ -40,6 +88,7 @@ O projeto foi construído utilizando tecnologias modernas de frontend:
 - **Core:** [React 18](https://react.dev/)
 - **Linguagem:** [TypeScript](https://www.typescriptlang.org/)
 - **Estilização:** [Tailwind CSS](https://tailwindcss.com/)
+- **Backend:** [Supabase](https://supabase.com/) (Auth & Database)
 - **Roteamento:** [React Router DOM](https://reactrouter.com/)
 - **Ícones:** [Google Material Symbols](https://fonts.google.com/icons)
 - **Build/Dev:** Vite (Implícito pela estrutura)
@@ -68,20 +117,30 @@ O sistema utiliza um tema personalizado com suporte a modo claro e escuro:
 
 ## 🚀 Como Executar
 
-1. Certifique-se de ter um ambiente Node.js instalado (para desenvolvimento local padrão) ou utilize um servidor estático simples, já que o projeto utiliza `importmap` no `index.html` para carregar dependências via CDN (esm.sh).
+1. Certifique-se de ter um ambiente Node.js instalado.
 
-2. Para desenvolvimento tradicional com Vite (recomendado):
+2. Configure o ambiente Supabase:
+   - Crie um projeto no Supabase.
+   - Crie um arquivo `.env` na raiz com:
+     ```
+     VITE_SUPABASE_URL=seu_url
+     VITE_SUPABASE_ANON_KEY=sua_chave
+     ```
+   - Execute o script SQL em `docs/db_init.sql`.
+
+3. Para desenvolvimento tradicional com Vite:
    ```bash
    npm install
    npm run dev
    ```
 
-3. O sistema abrirá no navegador padrão.
+4. O sistema abrirá no navegador padrão.
 
-## 🔐 Acesso (Dados Mockados)
+## 🔐 Acesso
 
-Como é uma versão de demonstração/frontend, o sistema possui autenticação simulada.
-- **Login:** Qualquer e-mail/senha válidos na lógica do `Login.tsx` (ex: `israel.richard@incibrasil.com.br` / `incibrasil1234`) ou acesso direto via rotas protegidas simuladas.
+O sistema utiliza **Supabase Auth**.
+- **Login:** Utilize as credenciais de um usuário cadastrado na tabela `auth.users` (e `public.users`).
+- **Cadastro:** Via convite ou inserção direta no banco de dados (Dashboard Supabase).
 
 ---
 

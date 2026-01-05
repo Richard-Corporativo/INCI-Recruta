@@ -32,7 +32,7 @@ const KanbanBoard: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { jobs } = useJobs();
-  const { candidates, refresh, moveCandidate } = useCandidates();
+  const { candidates, refresh, moveCandidate } = useCandidates(id); // Filter by job ID
   const { user } = useAuth();
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -63,13 +63,10 @@ const KanbanBoard: React.FC = () => {
   const job = jobs.find(j => j.id === id || j.id === Number(id));
   const jobTitle = job?.title || 'Vaga Selecionada';
 
-  const filteredCandidates = candidates.filter(c => {
-    if (id && String(c.jobId) !== String(id)) return false;
-    return true;
-  });
+  // useCandidates(id) already filters by job_id, no need for additional filtering
+  const filteredCandidates = candidates;
 
   const handleDragStart = (event: DragStartEvent) => {
-    console.log("=== DRAG START ===", event.active.id);
     const { active } = event;
     const candidate = candidates.find(c => String(c.id) === String(active.id));
     if (candidate) {

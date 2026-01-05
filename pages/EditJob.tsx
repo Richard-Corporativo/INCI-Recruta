@@ -166,10 +166,13 @@ const EditJob: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-foreground" htmlFor="location">Cidade/UF</label>
-                    <input
-                      className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
-                      id="location" name="location" type="text" value={formData.location} onChange={handleInputChange} required
-                    />
+                    <select
+                      className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3 cursor-pointer"
+                      id="location" name="location" value={formData.location} onChange={handleInputChange} required
+                    >
+                      <option value="Juazeiro do Norte - CE">Juazeiro do Norte - CE</option>
+                      <option value="Barbalha - CE">Barbalha - CE</option>
+                    </select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-foreground" htmlFor="model">Modelo de Trabalho</label>

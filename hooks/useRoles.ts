@@ -1,46 +1,74 @@
 import { useState, useEffect, useCallback } from 'react';
-import { StorageService, KEYS } from '../lib/storage';
+import { supabase } from '../lib/supabase';
 import { Role } from '../types';
 
 export const useRoles = () => {
     const [roles, setRoles] = useState<Role[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const loadRoles = useCallback(async () => {
+        const { data, error } = await supabase
+            .from('roles')
+            .select('*')
+            .order('title');
+
+        if (error) {
+            console.error('Error loading roles:', error);
+        } else if (data) {
+            setRoles(data as Role[]);
+        }
+        setIsLoading(false);
+    }, []);
 
     useEffect(() => {
-        StorageService.initialize();
-        const data = StorageService.get<Role[]>(KEYS.ROLES);
-        if (data) setRoles(data);
-    }, []);
+        loadRoles();
+    }, [loadRoles]);
 
-    const addRole = useCallback((role: Omit<Role, 'id' | 'updated_at'>) => {
-        setRoles(prev => {
-            const newRole: Role = {
+    const addRole = useCallback(async (role: Omit<Role, 'id' | 'updated_at'>) => {
+        const { data, error } = await supabase
+            .from('roles')
+            .insert([{
                 ...role,
-                id: Math.random().toString(36).substring(2, 11),
-                updated_at: 'Hoje'
-            };
-            const updated = [...prev, newRole];
-            StorageService.set(KEYS.ROLES, updated);
-            return updated;
-        });
-    }, []);
+                updated_at: new Date().toISOString()
+            }])
+            .select()
+            .single();
 
-    const updateRole = useCallback((id: string, roleData: Partial<Role>) => {
-        setRoles(prev => {
-            const updated = prev.map(role =>
-                role.id === id ? { ...role, ...roleData, updated_at: 'Hoje' } : role
-            );
-            StorageService.set(KEYS.ROLES, updated);
-            return updated;
-        });
-    }, []);
+        if (error) {
+            console.error('Error adding role:', error);
+        } else {
+            loadRoles();
+        }
+    }, [loadRoles]);
 
-    const deleteRole = useCallback((id: string) => {
-        setRoles(prev => {
-            const updated = prev.filter(role => role.id !== id);
-            StorageService.set(KEYS.ROLES, updated);
-            return updated;
-        });
-    }, []);
+    const updateRole = useCallback(async (id: string, roleData: Partial<Role>) => {
+        const { error } = await supabase
+            .from('roles')
+            .update({
+                ...roleData,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', id);
 
-    return { roles, addRole, updateRole, deleteRole };
+        if (error) {
+            console.error('Error updating role:', error);
+        } else {
+            loadRoles();
+        }
+    }, [loadRoles]);
+
+    const deleteRole = useCallback(async (id: string) => {
+        const { error } = await supabase
+            .from('roles')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('Error deleting role:', error);
+        } else {
+            loadRoles();
+        }
+    }, [loadRoles]);
+
+    return { roles, addRole, updateRole, deleteRole, isLoading };
 };

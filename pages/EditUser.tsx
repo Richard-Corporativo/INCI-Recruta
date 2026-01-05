@@ -7,7 +7,7 @@ const EditUser: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [isLoading, setIsLoading] = useState(false);
-  const { users, updateUser } = useUsers();
+  const { users, updateUser, isLoading: isUsersLoading } = useUsers();
 
   const user = users.find(u => u.id === id);
 
@@ -19,30 +19,58 @@ const EditUser: React.FC = () => {
     status: user?.status || 'active'
   });
 
+  // Sync formData when user is loaded
+  React.useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        email: user.email || '',
+        role: user.role || 'recruiter',
+        department: user.department || 'Tecnologia',
+        status: user.status || 'active'
+      });
+    }
+  }, [user]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
     setIsLoading(true);
 
-    updateUser(id, {
-      name: formData.name,
-      role: formData.role as any,
-      status: formData.status as 'active' | 'suspended',
-      department: formData.department
-    });
-
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await updateUser(id, {
+        name: formData.name,
+        email: formData.email, // Passing email for visual update
+        role: formData.role as any,
+        status: formData.status as 'active' | 'suspended',
+        department: formData.department
+      });
       navigate('/settings');
-    }, 500);
+    } catch (error) {
+      console.error('Falha ao atualizar usuário:', error);
+      alert('Ocorreu um erro ao salvar as alterações. Verifique se você tem permissão.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  if (!user) {
+  if (isUsersLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
+          <p className="text-muted-foreground font-medium">Carregando dados do usuário...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user && !isUsersLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-8 text-center">
         <div className="size-16 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-4">
@@ -134,8 +162,9 @@ const EditUser: React.FC = () => {
                     id="email"
                     name="email"
                     value={formData.email}
-                    className="w-full bg-muted border border-border rounded-base px-3 py-2.5 text-sm text-muted-foreground font-semibold cursor-not-allowed"
-                    readOnly
+                    onChange={handleInputChange}
+                    className="w-full bg-background border border-border rounded-base px-3 py-2.5 text-sm text-foreground font-semibold focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200"
+                    required
                   />
                 </div>
 

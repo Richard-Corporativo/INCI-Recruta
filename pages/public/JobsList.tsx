@@ -4,7 +4,7 @@ import HeroSection from '../../components/candidate/HeroSection';
 import JobFilterSidebar from '../../components/candidate/JobFilterSidebar';
 import JobCardPublic, { PublicJob } from '../../components/candidate/JobCardPublic';
 
-import { StorageService, KEYS } from '../../lib/storage';
+import { JobService } from '../../src/services/JobService';
 import { Job } from '../../types';
 
 // Helper to map Job to JobCardPublic format if they differ slightly
@@ -38,13 +38,18 @@ const JobsList: React.FC = () => {
     });
 
     React.useEffect(() => {
-        const data = StorageService.get<Job[]>(KEYS.JOBS) || [];
-        const activeJobs = data
-            .filter(j => j.status === 'Ativa')
-            .map(mapJobToPublic);
-        setAllJobs(activeJobs);
-        setFilteredJobs(activeJobs);
-        setIsLoading(false);
+        const fetchJobs = async () => {
+            setIsLoading(true);
+            const data = await JobService.getJobs();
+            const activeJobs = data
+                .filter(j => j.status === 'Ativa')
+                .map(mapJobToPublic);
+            setAllJobs(activeJobs);
+            setFilteredJobs(activeJobs);
+            setIsLoading(false);
+        };
+
+        fetchJobs();
     }, []);
 
     const applyFilters = React.useCallback(() => {
@@ -159,9 +164,8 @@ const JobsList: React.FC = () => {
                                             onChange={(e) => setLocationFilter(e.target.value)}
                                         >
                                             <option value="">Qualquer lugar</option>
-                                            <option value="Remoto">Remoto</option>
-                                            <option value="Híbrido">Híbrido</option>
-                                            <option value="Presencial">Presencial</option>
+                                            <option value="Juazeiro do Norte">Juazeiro do Norte</option>
+                                            <option value="Barbalha">Barbalha</option>
                                         </select>
                                         <span className="material-symbols-outlined text-slate-400 text-sm absolute right-4 pointer-events-none">expand_more</span>
                                     </div>

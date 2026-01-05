@@ -1,28 +1,26 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { StorageService, KEYS } from '../../lib/storage';
+import { useCandidateData } from '../../hooks/useCandidateData';
+import { useToast } from '../../components/ui/Toast';
 import { Candidate, Job } from '../../types';
+import { CandidateService } from '../../src/services/CandidateService';
 
 const ApplicationDetail: React.FC = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [showDesistirModal, setShowDesistirModal] = useState(false);
-    const [app, setApp] = useState<Candidate | null>(null);
-    const [job, setJob] = useState<Job | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const { myApplications, jobs, isLoading, refreshData } = useCandidateData();
+    const { success: toastSuccess, error: toastError } = useToast();
 
-    useEffect(() => {
-        const allCandidates = StorageService.get<Candidate[]>(KEYS.CANDIDATES) || [];
-        const foundApp = allCandidates.find(c => c.id === id);
+    const app = useMemo(() =>
+        myApplications.find(c => c.id === id),
+        [myApplications, id]
+    );
 
-        if (foundApp) {
-            setApp(foundApp);
-            const allJobs = StorageService.get<Job[]>(KEYS.JOBS) || [];
-            const foundJob = allJobs.find(j => j.id.toString() === foundApp.jobId?.toString());
-            if (foundJob) setJob(foundJob);
-        }
-        setIsLoading(false);
-    }, [id]);
+    const job = useMemo(() =>
+        app ? jobs.find(j => j.id.toString() === app.jobId?.toString()) : null,
+        [app, jobs]
+    );
 
     const statusConfig: any = {
         'received': { label: 'Recebido', icon: 'check_circle', index: 0 },
@@ -35,27 +33,28 @@ const ApplicationDetail: React.FC = () => {
         'rejected': { label: 'Encerrado', icon: 'cancel', index: -1 }
     };
 
+    const isRejected = app?.columnId === 'rejected';
     const currentStatus = statusConfig[app?.columnId || 'received'] || statusConfig['received'];
 
     const steps = [
         {
             name: 'Candidatura',
-            status: currentStatus.index >= 0 ? 'completed' : 'upcoming',
+            status: isRejected ? 'rejected' : currentStatus.index >= 0 ? 'completed' : 'upcoming',
             desc: 'Sua candidatura foi recebida com sucesso pela nossa equipe.'
         },
         {
             name: 'Triagem inicial',
-            status: currentStatus.index > 1 ? 'completed' : currentStatus.index === 1 ? 'current' : 'upcoming',
+            status: isRejected ? 'rejected' : currentStatus.index > 1 ? 'completed' : currentStatus.index === 1 ? 'current' : 'upcoming',
             desc: 'Análise do perfil e experiências.'
         },
         {
             name: 'Entrevistas / Testes',
-            status: currentStatus.index > 4 ? 'completed' : (currentStatus.index >= 2 && currentStatus.index <= 4) ? 'current' : 'upcoming',
+            status: isRejected ? 'rejected' : currentStatus.index > 4 ? 'completed' : (currentStatus.index >= 2 && currentStatus.index <= 4) ? 'current' : 'upcoming',
             desc: 'Etapa de avaliação técnica e entrevistas com RH e Gestores.'
         },
         {
             name: 'Proposta final',
-            status: currentStatus.index >= 6 ? 'completed' : currentStatus.index === 5 ? 'current' : 'upcoming',
+            status: isRejected ? 'rejected' : currentStatus.index >= 6 ? 'completed' : currentStatus.index === 5 ? 'current' : 'upcoming',
             desc: 'Última etapa do processo com detalhes da contratação.'
         }
     ];
@@ -107,9 +106,25 @@ const ApplicationDetail: React.FC = () => {
                 <div className="lg:col-span-8 space-y-8">
                     <div className="bg-card text-card-foreground rounded-lg border border-border p-10 md:p-14">
                         <div className="flex flex-col gap-2 mb-12">
-                            <p className="text-xs font-semibold text-primary">Próxima etapa: Entrevista</p>
-                            <h3 className="text-2xl font-semibold text-foreground">Progresso da candidatura</h3>
+                            <p className={`text-xs font-semibold ${isRejected ? 'text-destructive' : 'text-primary'}`}>
+                                {isRejected ? 'Processo Finalizado' : 'Próxima etapa: Entrevista'}
+                            </p>
+                            <h3 className="text-2xl font-semibold text-foreground">
+                                {isRejected ? 'Histórico do processo' : 'Progresso da candidatura'}
+                            </h3>
                         </div>
+
+                        {isRejected && (
+                            <div className="mb-14 p-6 rounded-xl bg-destructive/5 border border-destructive/20 flex gap-5 items-start">
+                                <span className="material-symbols-outlined text-destructive text-3xl">info</span>
+                                <div className="flex flex-col gap-2">
+                                    <h4 className="text-base font-semibold text-destructive">Obrigado pelo seu interesse!</h4>
+                                    <p className="text-sm font-medium text-muted-foreground leading-relaxed">
+                                        Informamos que, neste momento, decidimos seguir com outros perfis que atendem mais especificamente aos requisitos técnicos imediatos da vaga. Seus dados permanecerão em nosso banco de talentos para futuras oportunidades.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="relative flex flex-col gap-14 ml-4">
                             {/* Vertical Line */}
@@ -118,18 +133,28 @@ const ApplicationDetail: React.FC = () => {
                             {steps.map((step, idx) => (
                                 <div key={idx} className="relative pl-12">
                                     {/* Step Marker */}
-                                    <div className={`absolute left-0 top-1.5 size-2 rounded-full z-10 ${step.status === 'completed' ? 'bg-primary ring-4 ring-primary/20' :
-                                        step.status === 'current' ? 'bg-primary animate-pulse ring-8 ring-primary/10' :
-                                            'bg-muted-foreground/30'
+                                    <div className={`absolute left-0 top-1.5 size-2 rounded-full z-10 ${step.status === 'rejected' ? 'bg-destructive ring-4 ring-destructive/20' :
+                                        step.status === 'completed' ? 'bg-primary ring-4 ring-primary/20' :
+                                            step.status === 'current' ? 'bg-primary animate-pulse ring-8 ring-primary/10' :
+                                                'bg-muted-foreground/30'
                                         }`}></div>
 
                                     <div className="flex flex-col gap-3">
                                         <div className="flex flex-wrap items-center justify-between gap-4">
-                                            <h4 className={`text-lg font-semibold ${step.status === 'upcoming' ? 'text-muted-foreground' : 'text-foreground'}`}>
+                                            <h4 className={`text-lg font-semibold ${step.status === 'upcoming' ? 'text-muted-foreground' :
+                                                step.status === 'rejected' ? 'text-muted-foreground line-through opacity-50' :
+                                                    'text-foreground'
+                                                }`}>
                                                 {step.name}
                                             </h4>
-                                            <span className={`text-[10px] font-semibold ${step.status === 'upcoming' ? 'text-muted-foreground/40' : 'text-primary'}`}>
-                                                {step.status === 'completed' ? 'Finalizado' : step.status === 'current' ? 'Em andamento' : 'Pendente'}
+                                            <span className={`text-[10px] font-semibold ${step.status === 'upcoming' ? 'text-muted-foreground/40' :
+                                                step.status === 'rejected' ? 'text-destructive' :
+                                                    'text-primary'
+                                                }`}>
+                                                {step.status === 'completed' ? 'Finalizado' :
+                                                    step.status === 'current' ? 'Em andamento' :
+                                                        step.status === 'rejected' ? 'Não selecionado' :
+                                                            'Pendente'}
                                             </span>
                                         </div>
                                         <p className="text-sm font-medium text-muted-foreground leading-relaxed max-w-2xl">
@@ -206,9 +231,24 @@ const ApplicationDetail: React.FC = () => {
                                     Manter candidatura
                                 </button>
                                 <button
-                                    onClick={() => {
-                                        setShowDesistirModal(false);
-                                        navigate('/candidate/applications');
+                                    onClick={async () => {
+                                        try {
+                                            if (app?.id) {
+                                                console.log('Attempting to withdraw from application:', app.id);
+                                                const success = await CandidateService.deleteCandidate(app.id);
+                                                if (success) {
+                                                    toastSuccess('Candidatura removida com sucesso!');
+                                                    setShowDesistirModal(false);
+                                                    // Navigate immediately, the next page's useCandidateData will fetch fresh data
+                                                    navigate('/candidate/applications');
+                                                } else {
+                                                    toastError('Não foi possível processar sua desistência. Verifique se o processo ainda está ativo.');
+                                                }
+                                            }
+                                        } catch (err) {
+                                            console.error('Erro ao desistir:', err);
+                                            toastError('Ocorreu um erro inesperado ao processar sua desistência.');
+                                        }
                                     }}
                                     className="h-12 rounded-base bg-destructive text-destructive-foreground text-[10px] font-semibold hover:bg-destructive/90 transition-all outline-none active:scale-95 shadow-lg shadow-destructive/10"
                                 >

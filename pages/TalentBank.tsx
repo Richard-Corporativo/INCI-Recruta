@@ -3,6 +3,7 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import { useCandidates } from '../hooks/useCandidates';
 import { useJobs } from '../hooks/useJobs';
 import CandidateProfileDrawer from '../components/CandidateProfileDrawer';
+import { Candidate } from '../types';
 
 const TalentBank: React.FC = () => {
     const { candidates, isLoading: candidatesLoading } = useCandidates();
@@ -11,13 +12,27 @@ const TalentBank: React.FC = () => {
     const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+    // Deduplicate candidates by email, keeping only the most recent application
+    const uniqueCandidates = useMemo(() => {
+        const candidatesByEmail = new Map<string, Candidate>();
+
+        candidates.forEach(candidate => {
+            const existing = candidatesByEmail.get(candidate.email);
+            if (!existing || new Date(candidate.applied_at || 0) > new Date(existing.applied_at || 0)) {
+                candidatesByEmail.set(candidate.email, candidate);
+            }
+        });
+
+        return Array.from(candidatesByEmail.values());
+    }, [candidates]);
+
     const filteredCandidates = useMemo(() => {
-        return candidates.filter(c =>
+        return uniqueCandidates.filter(c =>
             c.name.toLowerCase().includes(search.toLowerCase()) ||
             c.email.toLowerCase().includes(search.toLowerCase()) ||
             (c.role && c.role.toLowerCase().includes(search.toLowerCase()))
         );
-    }, [candidates, search]);
+    }, [uniqueCandidates, search]);
 
     const handleOpenProfile = (id: string) => {
         setSelectedCandidateId(id);

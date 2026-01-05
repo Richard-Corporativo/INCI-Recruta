@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { StorageService, KEYS } from '../../lib/storage';
+import { JobService } from '../../src/services/JobService';
 import { Job } from '../../types';
 
 const JobDetailPublic: React.FC = () => {
@@ -10,47 +10,52 @@ const JobDetailPublic: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const allJobs = StorageService.get<Job[]>(KEYS.JOBS) || [];
-        const found = allJobs.find(j => j.id.toString() === id);
+        const fetchJob = async () => {
+            if (!id) return;
+            setIsLoading(true);
+            const found = await JobService.getJobById(id);
 
-        if (found) {
-            // Map the simple Job type to the Rich Detail type for consistency
-            setJob({
-                title: found.title,
-                location: found.location,
-                publishedAt: found.created_at,
-                model: found.model,
-                contract: found.contract,
-                level: found.seniority || 'Sênior',
-                area: found.department,
-                description: found.context,
-                responsibilities: found.responsibilities
-                    ? found.responsibilities.split('\n').map(r => r.replace(/^- /, ''))
-                    : [
-                        "Participar do desenvolvimento e manutenção de sistemas.",
-                        "Colaborar com a equipe para melhoria contínua.",
-                        found.mission || "Contribuir com a visão e missão do projeto."
+            if (found) {
+                // Map the simple Job type to the Rich Detail type for consistency
+                setJob({
+                    title: found.title,
+                    location: found.location,
+                    publishedAt: new Date(found.created_at).toLocaleDateString('pt-BR'),
+                    model: found.model,
+                    contract: found.contract,
+                    level: found.seniority || 'Sênior',
+                    area: found.department,
+                    description: found.context,
+                    responsibilities: found.responsibilities
+                        ? found.responsibilities.split('\n').map(r => r.replace(/^- /, ''))
+                        : [
+                            "Participar do desenvolvimento e manutenção de sistemas.",
+                            "Colaborar com a equipe para melhoria contínua.",
+                            found.mission || "Contribuir com a visão e missão do projeto."
+                        ],
+                    requirements: [
+                        "Experiência prévia na área.",
+                        "Conhecimento técnico compatível com o cargo.",
+                        "Vontade de aprender e crescer."
                     ],
-                requirements: [
-                    "Experiência prévia na área.",
-                    "Conhecimento técnico compatível com o cargo.",
-                    "Vontade de aprender e crescer."
-                ],
-                skills: ["Foco", "Agilidade", "Trabalho em Equipe"],
-                benefits: [
-                    { icon: "favorite", title: "Plano de Saúde", color: "primary" },
-                    { icon: "restaurant", title: "Vale Alimentação", color: "primary" },
-                    { icon: "home_work", title: "Home Office", color: "primary" }
-                ],
-                areaDescription: `A área de ${found.department} é fundamental para o sucesso do nosso negócio.`,
-                steps: [
-                    { number: 1, title: "Aplicação", active: true },
-                    { number: 2, title: "Entrevista", active: false },
-                    { number: 3, title: "Proposta", active: false }
-                ]
-            });
-        }
-        setIsLoading(false);
+                    skills: ["Foco", "Agilidade", "Trabalho em Equipe"],
+                    benefits: [
+                        { icon: "favorite", title: "Plano de Saúde", color: "primary" },
+                        { icon: "restaurant", title: "Vale Alimentação", color: "primary" },
+                        { icon: "home_work", title: "Home Office", color: "primary" }
+                    ],
+                    areaDescription: `A área de ${found.department} é fundamental para o sucesso do nosso negócio.`,
+                    steps: [
+                        { number: 1, title: "Aplicação", active: true },
+                        { number: 2, title: "Entrevista", active: false },
+                        { number: 3, title: "Proposta", active: false }
+                    ]
+                });
+            }
+            setIsLoading(false);
+        };
+
+        fetchJob();
     }, [id]);
 
     if (isLoading) return <div className="h-screen flex items-center justify-center">Carregando...</div>;

@@ -37,9 +37,9 @@ const CreateJob: React.FC = () => {
     roleTitle: '',
     roleCode: '',
     department: '',
-    location: 'São Paulo',
+    location: 'Juazeiro do Norte - CE',
     model: 'Híbrido',
-    contract: 'CLT (Efetivo)',
+    contract: 'CLT',
     urgency: 'Média',
     salaryMin: '',
     salaryMax: '',
@@ -337,9 +337,10 @@ const CreateJob: React.FC = () => {
                       <div className="flex flex-col gap-2">
                         <label className="text-[11px] font-semibold text-muted-foreground transition-colors">Tipo de contrato <span className="text-destructive">*</span></label>
                         <select name="contract" value={formData.contract} onChange={handleInputChange} className="w-full h-11 h-12 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out font-medium hover:border-ring">
-                          <option>CLT (Efetivo)</option>
-                          <option>Pessoa Jurídica (PJ)</option>
-                          <option>Estágio</option>
+                          <option value="CLT">CLT (Efetivo)</option>
+                          <option value="PJ">Pessoa Jurídica (PJ)</option>
+                          <option value="Estágio">Estágio</option>
+                          <option value="Temporário">Temporário</option>
                         </select>
                       </div>
                     </div>
@@ -351,23 +352,12 @@ const CreateJob: React.FC = () => {
                       <div className="flex flex-col gap-2">
                         <label className="text-[11px] font-semibold text-muted-foreground transition-colors flex items-center gap-2">
                           <span className="material-symbols-outlined text-primary text-[16px]">location_on</span>
-                          Localidade do escritório
+                          Localidade do escritório <span className="text-destructive">*</span>
                         </label>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="col-span-2">
-                            <input name="location" value={formData.location} onChange={handleInputChange} className="w-full h-11 h-12 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out font-medium hover:border-ring" placeholder="Ex: São Paulo" type="text" />
-                          </div>
-                          <div>
-                            <select className="w-full h-11 h-12 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out font-medium hover:border-ring">
-                              <option>SP</option>
-                              <option>RJ</option>
-                              <option>MG</option>
-                              <option>SC</option>
-                              <option>RS</option>
-                              <option>PR</option>
-                            </select>
-                          </div>
-                        </div>
+                        <select name="location" value={formData.location} onChange={handleInputChange} className="w-full h-11 h-12 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out font-medium hover:border-ring">
+                          <option>Juazeiro do Norte - CE</option>
+                          <option>Barbalha - CE</option>
+                        </select>
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-muted/20 rounded-lg border border-border transition-colors">

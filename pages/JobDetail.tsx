@@ -8,7 +8,7 @@ const JobDetail: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
-  const { jobs, updateJob } = useJobs();
+  const { jobs, updateJob, isLoading } = useJobs();
   const { users } = useUsers();
 
   const job = jobs.find(j => j.id.toString() === id);
@@ -19,6 +19,14 @@ const JobDetail: React.FC = () => {
     updateJob(id, { status: 'Encerrada' });
     setIsModalOpen(false);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!job) {
     return (

@@ -39,13 +39,12 @@ export interface Candidate {
   email: string;
   phone: string;
   location: string;
-  time: string;
   role?: string;
   summary?: string;
   linkedin?: string;
   github?: string;
   portfolio?: string;
-  resumeName?: string;
+  resume_url?: string;
   avatar?: string;
   match?: string;
   avatarColor: string;
@@ -56,6 +55,7 @@ export interface Candidate {
   applied_at?: string;
   hired_at?: string;
   feedbacks?: CandidateFeedback[];
+  user_id?: string;
   nextInterview?: {
     type: string;
     date: string;
@@ -81,7 +81,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'manager' | 'recruiter' | 'quality' | 'dp';
+  role: 'admin' | 'manager' | 'recruiter' | 'quality' | 'dp' | 'candidate';
   status: 'active' | 'suspended';
   lastAccess: string;
   password?: string;

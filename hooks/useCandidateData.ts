@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { StorageService, KEYS } from '../lib/storage';
+import { supabase } from '../lib/supabase';
+import { CandidateService } from '../src/services/CandidateService';
 import { Job, Candidate } from '../types';
 
 export const useCandidateData = () => {
@@ -10,46 +11,98 @@ export const useCandidateData = () => {
 
     const calculateCompleteness = (candidate: Candidate) => {
         const fields: (keyof Candidate)[] = [
-            'name', 'phone', 'location', 'summary', 'linkedin', 'github', 'portfolio', 'resumeName', 'avatar'
+            'name', 'phone', 'location', 'summary', 'linkedin', 'github', 'portfolio', 'resume_url', 'avatar'
         ];
         const filled = fields.filter(f => !!candidate[f]).length;
         return Math.round((filled / fields.length) * 100);
     };
 
-    const refreshData = useCallback(() => {
+    const refreshData = useCallback(async () => {
         setIsLoading(true);
-        const allJobs = StorageService.get<Job[]>(KEYS.JOBS) || [];
-        const activeJobs = allJobs.filter(j => j.status === 'Ativa');
-        setJobs(activeJobs);
+        try {
+            // 1. Fetch Active Jobs
+            const { data: activeJobs, error: jobsError } = await supabase
+                .from('jobs')
+                .select('*')
+                .eq('status', 'Ativa');
 
-        const email = localStorage.getItem('recruitSys_candidate_email');
-        if (email) {
-            const allCandidates = StorageService.get<Candidate[]>(KEYS.CANDIDATES) || [];
-            const candidateInfo = allCandidates.find(c => c.email === email);
-            if (candidateInfo) {
-                setCurrentCandidate(candidateInfo);
-                const apps = allCandidates.filter(c => c.email === email && c.jobId);
-                setMyApplications(apps);
+            if (!jobsError && activeJobs) {
+                setJobs(activeJobs as unknown as Job[]);
             }
+
+            // 2. Fetch All Candidates via Service (which handles mapping)
+            const allCandidates = await CandidateService.getCandidates();
+
+            // 3. Fetch Current Auth User
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (session?.user) {
+                // Filter candidates belonging to this user
+                const userProfiles = allCandidates.filter(c => c.user_id === session.user.id);
+
+                if (userProfiles.length > 0) {
+                    // The first item is our latest profile
+                    setCurrentCandidate(userProfiles[0]);
+
+                    // All items that have a jobId are applications
+                    const apps = userProfiles.filter(p => !!p.jobId);
+                    setMyApplications(apps);
+                }
+            }
+        } catch (error) {
+            console.error('Error refreshing candidate data:', error);
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     }, []);
 
     useEffect(() => {
         refreshData();
-        // Escutar mudanças no localStorage (simplificado)
-        window.addEventListener('storage', refreshData);
-        return () => window.removeEventListener('storage', refreshData);
     }, [refreshData]);
 
-    const updateProfile = (data: Partial<Candidate>) => {
-        if (!currentCandidate) return;
-        const allCandidates = StorageService.get<Candidate[]>(KEYS.CANDIDATES) || [];
-        const updatedCandidates = allCandidates.map(c =>
-            c.email === currentCandidate.email ? { ...c, ...data } : c
-        );
-        StorageService.set(KEYS.CANDIDATES, updatedCandidates);
-        refreshData();
+    const updateProfile = async (data: Partial<Candidate>) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+
+        try {
+            // Mapping frontend field names to DB column names
+            const dbPayload: any = { ...data };
+
+            if ('jobId' in data) {
+                dbPayload.job_id = data.jobId;
+                delete dbPayload.jobId;
+            }
+            if ('columnId' in data) {
+                dbPayload.column_id = data.columnId;
+                delete dbPayload.columnId;
+            }
+            if ('avatarColor' in data) {
+                dbPayload.avatar_color = data.avatarColor;
+                delete dbPayload.avatarColor;
+            }
+            if ('textColor' in data) {
+                dbPayload.text_color = data.textColor;
+                delete dbPayload.textColor;
+            }
+
+            // Critical: Remove fields that don't exist in DB or shouldn't be updated here
+            if ('applied_at' in dbPayload) delete dbPayload.applied_at;
+            if ('feedbacks' in dbPayload) delete dbPayload.feedbacks;
+            if ('completeness' in dbPayload) delete dbPayload.completeness;
+            if ('resumeName' in dbPayload) delete dbPayload.resumeName; // resume_name doesn't exist
+
+            const { error } = await supabase
+                .from('candidates')
+                .update(dbPayload)
+                .eq('user_id', session.user.id);
+
+            if (error) throw error;
+
+            refreshData();
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            alert('Erro ao atualizar perfil.');
+        }
     };
 
     return {

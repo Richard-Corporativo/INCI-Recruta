@@ -1,54 +1,42 @@
 import { useState, useEffect, useCallback } from 'react';
-import { StorageService, KEYS } from '../lib/storage';
+import { UserService } from '../src/services/UserService';
+import { useAuth } from '../context/AuthContext';
 import { User } from '../types';
 
 export const useUsers = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const { user: currentUser, refreshProfile } = useAuth();
+
+    const loadUsers = useCallback(async () => {
+        setIsLoading(true);
+        const data = await UserService.getUsers();
+        setUsers(data);
+        setIsLoading(false);
+    }, []);
 
     useEffect(() => {
-        const load = async () => {
-            setIsLoading(true);
-            StorageService.initialize();
+        loadUsers();
+    }, [loadUsers]);
 
-            // --> otimizado: Simulando latência de rede para feedback visual (Fake Loading)
-            await new Promise(resolve => setTimeout(resolve, 800));
+    const addUser = useCallback(async (user: Omit<User, 'id'>) => {
+        await UserService.addUser(user);
+        await loadUsers(); // Refresh to show new user
+    }, [loadUsers]);
 
-            const data = StorageService.get<User[]>(KEYS.USERS);
-            if (data) setUsers(data);
-            setIsLoading(false);
-        };
-        load();
-    }, []);
+    const updateUser = useCallback(async (id: string, updates: Partial<User>) => {
+        await UserService.updateUser(id, updates);
+        await loadUsers();
+        // If we updated our own profile, refresh the Auth context
+        if (currentUser && id === currentUser.id) {
+            await refreshProfile();
+        }
+    }, [loadUsers, currentUser, refreshProfile]);
 
-    const addUser = useCallback((user: Omit<User, 'id' | 'lastAccess'>) => {
-        setUsers(prev => {
-            const newUser: User = {
-                ...user,
-                id: Math.random().toString(36).substring(2, 11),
-                lastAccess: 'Nunca'
-            };
-            const updated = [...prev, newUser];
-            StorageService.set(KEYS.USERS, updated);
-            return updated;
-        });
-    }, []);
+    const deleteUser = useCallback(async (id: string) => {
+        await UserService.deleteUser(id);
+        await loadUsers();
+    }, [loadUsers]);
 
-    const updateUser = useCallback((id: string, updates: Partial<User>) => {
-        setUsers(prev => {
-            const updated = prev.map(u => (u.id === id ? { ...u, ...updates } : u));
-            StorageService.set(KEYS.USERS, updated);
-            return updated;
-        });
-    }, []);
-
-    const deleteUser = useCallback((id: string) => {
-        setUsers(prev => {
-            const updated = prev.filter(u => u.id !== id);
-            StorageService.set(KEYS.USERS, updated);
-            return updated;
-        });
-    }, []);
-
-    return { users, isLoading, addUser, updateUser, deleteUser };
+    return { users, isLoading, addUser, updateUser, deleteUser, refresh: loadUsers };
 };

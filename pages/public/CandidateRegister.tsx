@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TermsModal from '../../components/candidate/TermsModal';
-import { StorageService, KEYS } from '../../lib/storage';
+import { supabase } from '../../lib/supabase';
+import { useToast } from '../../components/ui/Toast';
 import { Candidate } from '../../types';
 
 const CandidateRegister: React.FC = () => {
     const navigate = useNavigate();
+    const { success, error } = useToast();
     const [step, setStep] = useState(1);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         cpf: '',
@@ -52,38 +56,63 @@ const CandidateRegister: React.FC = () => {
         setStep(prev => prev - 1);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsLoading(true);
 
-        const allCandidates = StorageService.get<Candidate[]>(KEYS.CANDIDATES) || [];
+        try {
+            // 1. Sign up user in Supabase Auth
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: formData.email,
+                password: formData.password,
+                options: {
+                    emailRedirectTo: `${window.location.origin}/#/login`,
+                    data: {
+                        name: formData.name,
+                        role: 'candidate'
+                    }
+                }
+            });
 
-        // Basic check for existing email
-        if (allCandidates.some(c => c.email === formData.email)) {
-            alert('Este e-mail já está cadastrado.');
-            return;
+            // Check if user already exists
+            if (authError) {
+                if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
+                    error('Este email já está cadastrado. Faça login para acessar sua conta.');
+                    setTimeout(() => navigate('/login'), 2000);
+                    return;
+                }
+                throw authError;
+            }
+
+            if (!authData.user) throw new Error('Não foi possível criar o usuário.');
+
+            // 2. Automatically sign in the user (no email confirmation required)
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+                email: formData.email,
+                password: formData.password
+            });
+
+            if (signInError) {
+                // If auto-login fails, show success message and redirect to login
+                setIsSuccess(true);
+                success('Cadastro realizado! Faça login para acessar sua conta.');
+                setTimeout(() => navigate('/login'), 2000);
+                return;
+            }
+
+            // 3. Navigate directly to dashboard
+            success('Cadastro realizado com sucesso! Bem-vindo!');
+            navigate('/candidate/dashboard');
+
+        } catch (err: any) {
+            // Only log unexpected errors
+            if (!err.message?.includes('already registered')) {
+                console.error('Erro no cadastro:', err);
+            }
+            error(`Erro ao cadastrar: ${err.message || 'Erro desconhecido'}`);
+        } finally {
+            setIsLoading(false);
         }
-
-        const newCandidate: Candidate = {
-            id: Math.random().toString(36).substring(7),
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            location: `${formData.city}, ${formData.state}`,
-            time: new Date().toISOString(),
-            applied_at: new Date().toLocaleDateString('pt-BR'),
-            columnId: 'received', // Default column for newcomers or generic pool
-            initials: formData.name.split(' ').map(n => n[0]).join('').substring(0, 2),
-            avatarColor: 'bg-primary',
-            textColor: 'text-white',
-            // @ts-ignore - adding password for mock auth
-            password: formData.password
-        };
-
-        StorageService.set(KEYS.CANDIDATES, [...allCandidates, newCandidate]);
-        localStorage.setItem('recruitSys_candidate_email', formData.email);
-
-        alert('Cadastro concluído com sucesso!');
-        navigate('/candidate/dashboard');
     };
 
     const steps = [
@@ -245,8 +274,12 @@ const CandidateRegister: React.FC = () => {
                     <button type="button" onClick={prevStep} className="text-slate-500 hover:text-slate-900 font-semibold text-xs">
                         Voltar
                     </button>
-                    <button onClick={handleSubmit} className="bg-primary text-white px-12 h-14 font-semibold text-sm hover:bg-slate-900 transition-colors rounded-md shadow-lg shadow-primary/20">
-                        Finalizar cadastro
+                    <button
+                        onClick={handleSubmit}
+                        disabled={isLoading}
+                        className="bg-primary text-white px-12 h-14 font-semibold text-sm hover:bg-slate-900 transition-colors rounded-md shadow-lg shadow-primary/20 disabled:bg-primary/50 disabled:cursor-not-allowed"
+                    >
+                        {isLoading ? 'Cadastrando...' : 'Finalizar cadastro'}
                     </button>
                 </div>
             </div>
@@ -268,10 +301,31 @@ const CandidateRegister: React.FC = () => {
                     ))}
                 </div>
 
-                <div className="bg-white border border-slate-200 p-8 md:p-12 rounded-2xl shadow-sm">
-                    {step === 1 && renderStep1()}
-                    {step === 2 && renderStep2()}
-                    {step === 3 && renderStep3()}
+                <div className="bg-white border border-slate-200 p-8 md:p-12 rounded-2xl shadow-sm min-h-[400px] flex flex-col">
+                    {isSuccess ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in duration-500">
+                            <div className="size-20 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-8">
+                                <span className="material-symbols-outlined text-[44px] filled">mark_email_read</span>
+                            </div>
+                            <h2 className="text-2xl font-bold text-slate-900 mb-4">Verifique seu e-mail</h2>
+                            <p className="text-slate-500 max-w-md mx-auto mb-10 leading-relaxed">
+                                Enviamos um link de confirmação para <strong className="text-slate-900">{formData.email}</strong>.
+                                Acesse seu e-mail para ativar sua conta e concluir a candidatura.
+                            </p>
+                            <button
+                                onClick={() => navigate('/login')}
+                                className="bg-primary text-white h-12 px-8 font-bold rounded-lg hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+                            >
+                                Ir para Login
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            {step === 1 && renderStep1()}
+                            {step === 2 && renderStep2()}
+                            {step === 3 && renderStep3()}
+                        </>
+                    )}
                 </div>
 
                 <div className="mt-8 text-center">

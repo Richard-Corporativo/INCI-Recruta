@@ -13,9 +13,9 @@ const HeroSection: React.FC = () => {
                         <span className="text-xs font-bold text-white/80">Vagas disponíveis hoje</span>
                     </div>
                     <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white leading-tight">
-                        Banco de talentos & carreiras
+                        Venha Construir o Futuro da Educação Conosco!
                     </h1>
-                    <p className="text-base text-white/90 font-medium leading-relaxed max-w-xl">
+                    <p className="text-base text-white/90 font-regular leading-relaxed max-w-xl">
                         Ambiente oficial de recrutamento. Acompanhe processos seletivos e novas oportunidades em tempo real.
                     </p>
                 </div>

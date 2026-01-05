@@ -32,14 +32,20 @@ const Toast: React.FC<ToastProps> = ({ message, type = 'success', duration = 300
     };
 
     return (
-        <div className={`fixed bottom-8 right-8 z-[100] flex items-center gap-3 px-5 py-4 rounded-lg bg-card border border-border text-foreground shadow-2xl transition-all duration-300 ease-in-out transform ${isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-4 opacity-0 scale-95'}`}>
-            <span className={`material-symbols-outlined transition-colors ${iconColors[type]}`}>{icons[type]}</span>
-            <span className="text-sm font-semibold tracking-tight transition-colors">{message}</span>
+        <div className={`fixed top-8 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-6 py-3.5 rounded-full border-2 shadow-xl transition-all duration-500 ease-out transform ${isVisible ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-4 opacity-0 scale-95'} 
+            ${type === 'success' ? 'bg-emerald-600 border-emerald-500 text-white' : ''}
+            ${type === 'error' ? 'bg-rose-600 border-rose-500 text-white' : ''}
+            ${type === 'info' ? 'bg-slate-900 border-slate-800 text-white' : ''}
+        `}>
+            <div className="size-7 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[18px] text-white">{icons[type]}</span>
+            </div>
+            <span className="text-sm font-bold tracking-tight text-white whitespace-nowrap">{message}</span>
             <button
                 onClick={() => setIsVisible(false)}
-                className="ml-4 p-1 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="ml-2 p-1 rounded-full text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 outline-none"
             >
-                <span className="material-symbols-outlined text-[18px]">close</span>
+                <span className="material-symbols-outlined text-base">close</span>
             </button>
         </div>
     );
