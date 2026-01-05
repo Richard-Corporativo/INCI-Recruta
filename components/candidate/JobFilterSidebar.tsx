@@ -1,154 +1,134 @@
 import React from 'react';
 
-const JobFilterSidebar: React.FC = () => {
+interface JobFilterSidebarProps {
+    filters: {
+        areas: string[];
+        levels: string[];
+        models: string[];
+    };
+    onFilterChange: (type: 'areas' | 'levels' | 'models', value: string) => void;
+    onClear: () => void;
+    totalResults: number;
+}
+
+const JobFilterSidebar: React.FC<JobFilterSidebarProps> = ({ filters, onFilterChange, onClear, totalResults }) => {
     return (
         <aside className="w-full lg:w-[280px] shrink-0 lg:sticky lg:top-24">
             {/* Mobile Filter Accordion */}
             <details className="lg:hidden group mb-4">
-                <summary className="flex items-center justify-between p-4 bg-white dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark cursor-pointer select-none">
+                <summary className="flex items-center justify-between p-4 bg-white text-slate-900 border border-slate-300 cursor-pointer select-none transition-colors rounded-lg shadow-sm">
                     <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-primary">tune</span>
-                        <span className="font-bold text-sm">Filtrar Vagas</span>
+                        <span className="material-symbols-outlined text-primary transition-colors">tune</span>
+                        <span className="font-semibold text-sm tracking-tight">Filtrar vagas</span>
                     </div>
                     <span className="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
                 </summary>
-                <div className="mt-2 p-4 bg-white dark:bg-card-dark rounded-lg border border-border-light dark:border-border-dark shadow-lg">
-                    <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-lg">Filtros</h3>
-                        <button className="text-sm text-primary font-medium hover:underline">Limpar</button>
+                <div className="mt-2 p-5 bg-white text-slate-900 border border-slate-300 transition-all rounded-lg">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="font-semibold text-lg text-slate-900 tracking-tight">Filtros</h3>
+                        <button onClick={onClear} className="text-xs font-semibold text-primary hover:text-slate-900 transition-colors">Limpar</button>
                     </div>
                     <div className="flex flex-col gap-2">
-                        {/* Example Mobile Filters - Simplified */}
-                        <details className="group/acc border-b border-border-light dark:border-border-dark py-2" open>
-                            <summary className="flex cursor-pointer items-center justify-between py-2">
-                                <span className="text-sm font-bold">Área</span>
-                                <span className="material-symbols-outlined text-gray-400 group-open/acc:rotate-180 transition-transform text-[20px]">expand_more</span>
-                            </summary>
-                            <div className="pt-2 pb-3 flex flex-col gap-2">
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                    <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600" />
-                                    <span className="text-sm text-gray-600 dark:text-gray-300">Tecnologia (5)</span>
+                        {/* Mobile Filters Area */}
+                        <div className="pt-2 pb-3 flex flex-col gap-3">
+                            <p className="text-xs font-semibold text-slate-400 mb-1">Área de atuação</p>
+                            {['Tecnologia', 'Marketing', 'Design', 'Recursos Humanos', 'Financeiro'].map(area => (
+                                <label key={area} className="flex items-center gap-3 cursor-pointer group/label">
+                                    <input
+                                        type="checkbox"
+                                        checked={filters.areas.includes(area)}
+                                        onChange={() => onFilterChange('areas', area)}
+                                        className="form-checkbox h-4 w-4 text-primary rounded border-slate-300 bg-white focus:ring-0 transition-colors"
+                                    />
+                                    <span className={`text-xs font-semibold ${filters.areas.includes(area) ? 'text-primary' : 'text-slate-500'} group-hover/label:text-slate-900 transition-colors`}>{area}</span>
                                 </label>
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                    <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600" />
-                                    <span className="text-sm text-gray-600 dark:text-gray-300">Marketing (3)</span>
-                                </label>
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                    <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600" />
-                                    <span className="text-sm text-gray-600 dark:text-gray-300">Design (2)</span>
-                                </label>
-                            </div>
-                        </details>
-                        <button className="w-full mt-4 bg-primary text-white font-bold py-2 rounded-lg">Aplicar Filtros</button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </details>
 
             {/* Desktop Filter Sidebar */}
-            <div className="hidden lg:flex flex-col gap-4 bg-white dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-5 shadow-sm">
-                <div className="flex justify-between items-center border-b border-border-light dark:border-border-dark pb-4">
-                    <h3 className="font-bold text-lg text-[#111418] dark:text-white">Filtros</h3>
-                    <button className="text-xs font-bold text-primary hover:text-primary/80 uppercase tracking-wide">Limpar</button>
+            <div className="hidden lg:flex flex-col gap-4 bg-white text-slate-900 border border-slate-200 p-6 transition-all rounded-2xl shadow-sm">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-5">
+                    <h3 className="font-semibold text-lg text-slate-900 tracking-tight">Filtros</h3>
+                    {(filters.areas.length > 0 || filters.models.length > 0) && (
+                        <button onClick={onClear} className="text-xs font-semibold text-primary hover:text-slate-900 transition-colors animate-in fade-in slide-in-from-right-2 duration-300">Limpar</button>
+                    )}
                 </div>
 
-                <div className="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-250px)] custom-scrollbar pr-2">
+                <div className="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-280px)] custom-scrollbar pr-3 transition-colors">
                     {/* Filter Group: Área */}
-                    <details className="group/acc py-2 border-b border-border-light dark:border-border-dark" open>
-                        <summary className="flex cursor-pointer items-center justify-between py-2 select-none hover:text-primary transition-colors">
-                            <span className="text-sm font-semibold">Área</span>
-                            <span className="material-symbols-outlined text-gray-400 group-open/acc:rotate-180 transition-transform text-[20px]">expand_more</span>
-                        </summary>
-                        <div className="pt-2 pb-1 flex flex-col gap-2 pl-1">
-                            <label className="flex items-center gap-3 cursor-pointer group/item">
-                                <input type="checkbox" defaultChecked className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600 group-hover/item:border-primary transition-colors" />
-                                <span className="text-sm text-gray-600 dark:text-gray-300">Tecnologia (8)</span>
-                            </label>
-                            <label className="flex items-center gap-3 cursor-pointer group/item">
-                                <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600 group-hover/item:border-primary transition-colors" />
-                                <span className="text-sm text-gray-600 dark:text-gray-300">Recursos Humanos (2)</span>
-                            </label>
-                            <label className="flex items-center gap-3 cursor-pointer group/item">
-                                <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600 group-hover/item:border-primary transition-colors" />
-                                <span className="text-sm text-gray-600 dark:text-gray-300">Financeiro (1)</span>
-                            </label>
-                            <label className="flex items-center gap-3 cursor-pointer group/item">
-                                <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600 group-hover/item:border-primary transition-colors" />
-                                <span className="text-sm text-gray-600 dark:text-gray-300">Marketing (3)</span>
-                            </label>
-                            <label className="flex items-center gap-3 cursor-pointer group/item">
-                                <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600 group-hover/item:border-primary transition-colors" />
-                                <span className="text-sm text-gray-600 dark:text-gray-300">Design (2)</span>
-                            </label>
+                    <div className="py-4 border-b border-slate-200">
+                        <h4 className="flex items-center justify-between py-2 select-none text-xs font-bold text-slate-400 mb-2">
+                            Área de atuação
+                        </h4>
+                        <div className="flex flex-col gap-3 pl-1">
+                            {['Tecnologia', 'Marketing', 'Design', 'Recursos Humanos', 'Financeiro'].map(area => (
+                                <label key={area} className="flex items-center gap-3 cursor-pointer group/item">
+                                    <input
+                                        type="checkbox"
+                                        checked={filters.areas.includes(area)}
+                                        onChange={() => onFilterChange('areas', area)}
+                                        className="form-checkbox h-4 w-4 text-primary rounded border-slate-300 bg-white focus:ring-0 transition-colors"
+                                    />
+                                    <span className={`text-xs font-semibold ${filters.areas.includes(area) ? 'text-primary' : 'text-slate-500'} group-hover/item:text-slate-900 transition-colors`}>
+                                        {area}
+                                    </span>
+                                </label>
+                            ))}
                         </div>
-                    </details>
+                    </div>
 
-                    {/* Filter Group: Senioridade */}
-                    <details className="group/acc py-2 border-b border-border-light dark:border-border-dark">
-                        <summary className="flex cursor-pointer items-center justify-between py-2 select-none hover:text-primary transition-colors">
-                            <span className="text-sm font-semibold">Senioridade</span>
-                            <span className="material-symbols-outlined text-gray-400 group-open/acc:rotate-180 transition-transform text-[20px]">expand_more</span>
-                        </summary>
-                        <div className="pt-2 pb-1 flex flex-col gap-2 pl-1">
-                            <label className="flex items-center gap-3 cursor-pointer group/item">
-                                <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600" />
-                                <span className="text-sm text-gray-600 dark:text-gray-300">Júnior</span>
-                            </label>
-                            <label className="flex items-center gap-3 cursor-pointer group/item">
-                                <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600" />
-                                <span className="text-sm text-gray-600 dark:text-gray-300">Pleno</span>
-                            </label>
-                            <label className="flex items-center gap-3 cursor-pointer group/item">
-                                <input type="checkbox" defaultChecked className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600" />
-                                <span className="text-sm text-gray-600 dark:text-gray-300">Sênior</span>
-                            </label>
+                    {/* Filter Group: Modalidade */}
+                    <div className="py-4 border-b border-slate-200">
+                        <h4 className="flex items-center justify-between py-2 select-none text-xs font-bold text-slate-400 mb-2">
+                            Modalidade
+                        </h4>
+                        <div className="flex flex-col gap-3 pl-1">
+                            {['Remoto', 'Híbrido', 'Presencial'].map(model => (
+                                <label key={model} className="flex items-center gap-3 cursor-pointer group/item">
+                                    <input
+                                        type="checkbox"
+                                        checked={filters.models.includes(model)}
+                                        onChange={() => onFilterChange('models', model)}
+                                        className="form-checkbox h-4 w-4 text-primary rounded border-slate-300 bg-white focus:ring-0 transition-colors"
+                                    />
+                                    <span className={`text-xs font-semibold ${filters.models.includes(model) ? 'text-primary' : 'text-slate-500'} group-hover/item:text-slate-900 transition-colors`}>
+                                        {model}
+                                    </span>
+                                </label>
+                            ))}
                         </div>
-                    </details>
+                    </div>
 
-                    {/* Filter Group: Modelo */}
-                    <details className="group/acc py-2 border-b border-border-light dark:border-border-dark">
-                        <summary className="flex cursor-pointer items-center justify-between py-2 select-none hover:text-primary transition-colors">
-                            <span className="text-sm font-semibold">Modelo</span>
-                            <span className="material-symbols-outlined text-gray-400 group-open/acc:rotate-180 transition-transform text-[20px]">expand_more</span>
-                        </summary>
-                        <div className="pt-2 pb-1 flex flex-col gap-2 pl-1">
-                            <label className="flex items-center gap-3 cursor-pointer group/item">
-                                <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600" />
-                                <span className="text-sm text-gray-600 dark:text-gray-300">Remoto</span>
-                            </label>
-                            <label className="flex items-center gap-3 cursor-pointer group/item">
-                                <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600" />
-                                <span className="text-sm text-gray-600 dark:text-gray-300">Híbrido</span>
-                            </label>
-                            <label className="flex items-center gap-3 cursor-pointer group/item">
-                                <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600" />
-                                <span className="text-sm text-gray-600 dark:text-gray-300">Presencial</span>
-                            </label>
+                    {/* Filter Group: Contrato */}
+                    <div className="py-4 border-b border-slate-200">
+                        <h4 className="flex items-center justify-between py-2 select-none text-xs font-bold text-slate-400 mb-2">
+                            Contrato
+                        </h4>
+                        <div className="flex flex-col gap-3 pl-1">
+                            {['PJ', 'CLT'].map(contract => (
+                                <label key={contract} className="flex items-center gap-3 cursor-pointer group/item">
+                                    <input
+                                        type="checkbox"
+                                        checked={filters.models.includes(contract)}
+                                        onChange={() => onFilterChange('models', contract)}
+                                        className="form-checkbox h-4 w-4 text-primary rounded border-slate-300 bg-white focus:ring-0 transition-colors"
+                                    />
+                                    <span className={`text-xs font-semibold ${filters.models.includes(contract) ? 'text-primary' : 'text-slate-500'} group-hover/item:text-slate-900 transition-colors`}>
+                                        {contract}
+                                    </span>
+                                </label>
+                            ))}
                         </div>
-                    </details>
-
-                    {/* Filter Group: Local */}
-                    <details className="group/acc py-2">
-                        <summary className="flex cursor-pointer items-center justify-between py-2 select-none hover:text-primary transition-colors">
-                            <span className="text-sm font-semibold">Local</span>
-                            <span className="material-symbols-outlined text-gray-400 group-open/acc:rotate-180 transition-transform text-[20px]">expand_more</span>
-                        </summary>
-                        <div className="pt-2 pb-1 flex flex-col gap-2 pl-1">
-                            <label className="flex items-center gap-3 cursor-pointer group/item">
-                                <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600" />
-                                <span className="text-sm text-gray-600 dark:text-gray-300">São Paulo, SP</span>
-                            </label>
-                            <label className="flex items-center gap-3 cursor-pointer group/item">
-                                <input type="checkbox" className="form-checkbox h-4 w-4 text-primary rounded border-gray-300 focus:ring-primary dark:bg-gray-800 dark:border-gray-600" />
-                                <span className="text-sm text-gray-600 dark:text-gray-300">Rio de Janeiro, RJ</span>
-                            </label>
-                        </div>
-                    </details>
+                    </div>
                 </div>
 
-                <div className="pt-2">
-                    <button className="w-full bg-primary hover:bg-primary/90 text-white font-bold h-10 px-4 rounded-lg transition-colors">
-                        Aplicar filtros
-                    </button>
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                    <p className="text-xs text-center text-slate-400 font-bold">
+                        {totalResults} {totalResults === 1 ? 'Vaga encontrada' : 'Vagas encontradas'}
+                    </p>
                 </div>
             </div>
         </aside>

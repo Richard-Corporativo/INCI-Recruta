@@ -44,19 +44,19 @@ const CreateRole: React.FC = () => {
         </div>
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">Criar Novo Cargo</h1>
+            <h1 className="text-3xl font-semibold text-foreground tracking-tight">Criar Novo Cargo</h1>
             <p className="text-muted-foreground text-sm mt-1">Preencha os detalhes abaixo para cadastrar uma nova função no sistema.</p>
           </div>
           <div className="flex gap-3">
             <button
               onClick={() => navigate('/roles')}
-              className="px-4 py-2 text-sm font-bold text-foreground bg-background border border-border rounded-base hover:bg-accent transition-all duration-200 ease-in-out shadow-sm active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="px-4 py-2 text-sm font-semibold text-foreground bg-background border border-border rounded-base hover:bg-accent transition-all duration-200 ease-in-out shadow-sm active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               Cancelar
             </button>
             <button
               onClick={handleSubmit}
-              className="flex items-center gap-2 bg-primary text-primary-foreground border border-border/40 px-5 py-2 rounded-base text-sm font-bold shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/90 active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="flex items-center gap-2 bg-primary text-primary-foreground border border-border/40 px-5 py-2 rounded-base text-sm font-semibold shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/90 active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <span className="material-symbols-outlined text-[20px]">save</span>
               Criar Cargo
@@ -78,11 +78,11 @@ const CreateRole: React.FC = () => {
                   <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <span className="material-symbols-outlined text-sm">badge</span>
                   </span>
-                  <h3 className="text-lg font-bold text-foreground">Dados Cadastrais</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Dados Cadastrais</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-foreground" htmlFor="title">
+                    <label className="text-sm font-semibold text-foreground" htmlFor="title">
                       Nome do Cargo <span className="text-destructive">*</span>
                     </label>
                     <input
@@ -92,7 +92,7 @@ const CreateRole: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-foreground" htmlFor="code">
+                    <label className="text-sm font-semibold text-foreground" htmlFor="code">
                       Código do Cargo <span className="text-destructive">*</span>
                     </label>
                     <input
@@ -102,7 +102,7 @@ const CreateRole: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-foreground" htmlFor="area">
+                    <label className="text-sm font-semibold text-foreground" htmlFor="area">
                       Área <span className="text-destructive">*</span>
                     </label>
                     <input
@@ -112,7 +112,7 @@ const CreateRole: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-foreground" htmlFor="department">
+                    <label className="text-sm font-semibold text-foreground" htmlFor="department">
                       Departamento <span className="text-destructive">*</span>
                     </label>
                     <input
@@ -130,11 +130,11 @@ const CreateRole: React.FC = () => {
                   <span className="flex size-8 items-center justify-center rounded-full bg-muted border border-border text-foreground">
                     <span className="material-symbols-outlined text-sm">category</span>
                   </span>
-                  <h3 className="text-lg font-bold text-foreground">Classificação</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Classificação</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-foreground">
+                    <label className="text-sm font-semibold text-foreground">
                       Senioridade Padrão <span className="text-destructive">*</span>
                     </label>
                     <div className="grid grid-cols-3 gap-2">
@@ -145,7 +145,7 @@ const CreateRole: React.FC = () => {
                             checked={formData.seniority === level}
                             onChange={handleInputChange}
                           />
-                          <div className="flex items-center justify-center rounded-base border border-border bg-background py-2.5 text-sm font-bold text-muted-foreground hover:bg-accent peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary transition-all duration-200 ease-in-out">
+                          <div className="flex items-center justify-center rounded-base border border-border bg-background py-2.5 text-sm font-semibold text-muted-foreground hover:bg-accent peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary transition-all duration-200 ease-in-out">
                             {level}
                           </div>
                         </label>
@@ -161,11 +161,11 @@ const CreateRole: React.FC = () => {
                   <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <span className="material-symbols-outlined text-sm">description</span>
                   </span>
-                  <h3 className="text-lg font-bold text-foreground">Descrição do Cargo</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Descrição do Cargo</h3>
                 </div>
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-foreground" htmlFor="mission">
+                    <label className="text-sm font-semibold text-foreground" htmlFor="mission">
                       Missão <span className="text-destructive">*</span>
                     </label>
                     <textarea
@@ -175,7 +175,7 @@ const CreateRole: React.FC = () => {
                     ></textarea>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-foreground" htmlFor="responsibilities">
+                    <label className="text-sm font-semibold text-foreground" htmlFor="responsibilities">
                       Responsabilidades <span className="text-destructive">*</span>
                     </label>
                     <textarea

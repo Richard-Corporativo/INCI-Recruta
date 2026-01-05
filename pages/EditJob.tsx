@@ -76,9 +76,9 @@ const EditJob: React.FC = () => {
         <div className="size-16 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-4">
           <span className="material-symbols-outlined text-[32px]">error</span>
         </div>
-        <h2 className="text-2xl font-bold text-foreground">Vaga não encontrada</h2>
+        <h2 className="text-2xl font-semibold text-foreground">Vaga não encontrada</h2>
         <p className="text-muted-foreground mt-2 mb-6">Não foi possível localizar as informações para esta vaga.</p>
-        <button onClick={() => navigate('/jobs')} className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-base font-bold shadow-sm hover:bg-primary/90 transition-all">
+        <button onClick={() => navigate('/jobs')} className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-base font-semibold shadow-sm hover:bg-primary/90 transition-all">
           <span className="material-symbols-outlined text-[20px]">arrow_back</span>
           Voltar para Vagas
         </button>
@@ -101,20 +101,20 @@ const EditJob: React.FC = () => {
         </div>
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">Editar Contexto da Vaga</h1>
+            <h1 className="text-3xl font-semibold text-foreground tracking-tight">Editar Contexto da Vaga</h1>
             <p className="text-muted-foreground text-sm mt-1">Atualize as informações e o contexto estratégico desta oportunidade.</p>
           </div>
           <div className="flex gap-3">
             <button
               onClick={() => navigate(`/jobs/${id}`)}
-              className="px-4 py-2 text-sm font-bold text-foreground bg-background border border-border rounded-base hover:bg-accent transition-all duration-200 shadow-sm active:translate-y-[1px]"
+              className="px-4 py-2 text-sm font-semibold text-foreground bg-background border border-border rounded-base hover:bg-accent transition-all duration-200 shadow-sm active:translate-y-[1px]"
             >
               Cancelar
             </button>
             <button
               onClick={handleSubmit}
               disabled={isLoading}
-              className="flex items-center gap-2 bg-primary text-primary-foreground border border-border/40 px-5 py-2 rounded-base text-sm font-bold shadow-sm transition-all duration-200 hover:bg-primary/90 active:translate-y-[1px] disabled:opacity-50"
+              className="flex items-center gap-2 bg-primary text-primary-foreground border border-border/40 px-5 py-2 rounded-base text-sm font-semibold shadow-sm transition-all duration-200 hover:bg-primary/90 active:translate-y-[1px] disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[20px]">save</span>
               {isLoading ? 'Salvando...' : 'Salvar Alterações'}
@@ -135,18 +135,18 @@ const EditJob: React.FC = () => {
                   <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <span className="material-symbols-outlined text-sm">badge</span>
                   </span>
-                  <h3 className="text-lg font-bold text-foreground">Informações Básicas</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Informações Básicas</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-foreground" htmlFor="title">Título da Vaga</label>
+                    <label className="text-sm font-semibold text-foreground" htmlFor="title">Título da Vaga</label>
                     <input
                       className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
                       id="title" name="title" type="text" value={formData.title} onChange={handleInputChange} required
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-foreground" htmlFor="department">Departamento</label>
+                    <label className="text-sm font-semibold text-foreground" htmlFor="department">Departamento</label>
                     <input
                       className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
                       id="department" name="department" type="text" value={formData.department} onChange={handleInputChange} required
@@ -161,18 +161,18 @@ const EditJob: React.FC = () => {
                   <span className="flex size-8 items-center justify-center rounded-full bg-muted border border-border text-foreground">
                     <span className="material-symbols-outlined text-sm">location_on</span>
                   </span>
-                  <h3 className="text-lg font-bold text-foreground">Localização e Contrato</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Localização e Contrato</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-foreground" htmlFor="location">Cidade/UF</label>
+                    <label className="text-sm font-semibold text-foreground" htmlFor="location">Cidade/UF</label>
                     <input
                       className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
                       id="location" name="location" type="text" value={formData.location} onChange={handleInputChange} required
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-foreground" htmlFor="model">Modelo de Trabalho</label>
+                    <label className="text-sm font-semibold text-foreground" htmlFor="model">Modelo de Trabalho</label>
                     <select
                       className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3 cursor-pointer"
                       id="model" name="model" value={formData.model} onChange={handleInputChange} required
@@ -191,10 +191,10 @@ const EditJob: React.FC = () => {
                   <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <span className="material-symbols-outlined text-sm">description</span>
                   </span>
-                  <h3 className="text-lg font-bold text-foreground">Contexto Estratégico</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Contexto Estratégico</h3>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-foreground" htmlFor="context">Descrição da Vaga</label>
+                  <label className="text-sm font-semibold text-foreground" htmlFor="context">Descrição da Vaga</label>
                   <textarea
                     className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 p-3 min-h-[200px] resize-none"
                     id="context" name="context" rows={8} value={formData.context} onChange={handleInputChange} required

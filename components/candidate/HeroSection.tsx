@@ -2,27 +2,37 @@ import React from 'react';
 
 const HeroSection: React.FC = () => {
     return (
-        <>
-            <div className="w-full relative bg-gradient-to-r from-[#197fe6] to-[#0f4c8a] dark:from-[#0f4c8a] dark:to-[#082a4d] pt-16 pb-24 px-4 overflow-hidden mb-8 transition-colors duration-200">
-                <div
-                    className="absolute inset-0 z-0 opacity-10"
-                    style={{
-                        backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCzK9t_MUNRZsDgov4OTEphAY31K6gy3rG0MaF2fwzZcFrXMoo84rM40GW9222oEXP7mG8Pq2062qvMIyQ2OYFQaVZwn3WzgHAA0p3KbmvSUU68n6Etj2ePLV0lKLH7IcYUedgGtSYp7NRB7Jte2pt_VbCN849IMr04aG6XsVUBX-77SYvjEFFFpfqVwttnrzcj_aHpKpbGc1juJQiVMfIpTiWybY_hUqgNatQgo3tLy8a2E12OhK2FlgAcat5QWhvXgOT6WOw5iWHk')",
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center'
-                    }}
-                ></div>
-                <div className="absolute inset-0 z-0 bg-black/20"></div>
-                <div className="relative z-10 max-w-[1280px] mx-auto w-full flex flex-col items-center text-center">
-                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
-                        Temos vagas abertas esperando por você!
+        <section className="w-full bg-primary py-12 md:py-16 text-white relative overflow-hidden">
+            {/* Subtle Texture for "Management/Legibility" feel */}
+            <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,hsl(var(--primary-foreground)/0.1)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--primary-foreground)/0.1)_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+
+            <div className="relative z-10 mx-auto max-w-7xl px-6 flex flex-col md:flex-row items-center justify-between gap-10">
+                <div className="flex flex-col gap-3 text-center md:text-left max-w-3xl">
+                    <div className="inline-flex items-center justify-center md:justify-start gap-2 mb-1">
+                        <span className="flex h-2 w-2 rounded-full bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]" />
+                        <span className="text-xs font-bold text-white/80">Vagas disponíveis hoje</span>
+                    </div>
+                    <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white leading-tight">
+                        Banco de talentos & carreiras
                     </h1>
-                    <p className="text-white/90 text-lg md:text-xl font-medium max-w-2xl">
-                        Busque oportunidades e acompanhe suas candidaturas no portal.
+                    <p className="text-base text-white/90 font-medium leading-relaxed max-w-xl">
+                        Ambiente oficial de recrutamento. Acompanhe processos seletivos e novas oportunidades em tempo real.
                     </p>
                 </div>
+
+                {/* Elements from previous version (Indicators) instead of Buttons */}
+                <div className="flex flex-wrap items-center justify-center md:justify-end gap-8 text-white/90">
+                    <div className="flex flex-col items-center md:items-end gap-1.5 opacity-80 hover:opacity-100 transition-opacity">
+                        <span className="material-symbols-outlined text-3xl">verified_user</span>
+                        <span className="text-[10px] font-bold">Dados seguros</span>
+                    </div>
+                    <div className="flex flex-col items-center md:items-end gap-1.5 opacity-80 hover:opacity-100 transition-opacity">
+                        <span className="material-symbols-outlined text-3xl">speed</span>
+                        <span className="text-[10px] font-bold">Alta performance</span>
+                    </div>
+                </div>
             </div>
-        </>
+        </section>
     );
 };
 

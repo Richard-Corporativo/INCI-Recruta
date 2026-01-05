@@ -1,19 +1,23 @@
 import React, { useState } from 'react';
 import { useAudit } from '../hooks/useAudit';
 import { useAuth } from '../hooks/useAuth';
+import { useCandidates } from '../hooks/useCandidates';
 import BaseModal from './BaseModal';
 
 interface ScheduleInterviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   candidateName: string;
+  candidateId?: string;
+  onSuccess?: (data?: any) => void;
 }
 
-const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen, onClose, candidateName }) => {
+const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen, onClose, candidateName, candidateId, onSuccess }) => {
   const { addLog } = useAudit();
   const { user } = useAuth();
+  const { updateCandidate } = useCandidates();
   const [formData, setFormData] = useState({
-    type: 'Entrevista Gestor',
+    type: 'Entrevista RH',
     status: 'Agendada',
     date: '',
     time: '',
@@ -24,106 +28,139 @@ const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen,
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (candidateId) {
+      updateCandidate(candidateId, {
+        nextInterview: {
+          type: formData.type,
+          date: formData.date,
+          time: formData.time
+        }
+      });
+    }
+
     addLog({
       action: 'Agendamento de Entrevista',
-      details: `Entrevista ${formData.type} agendada para ${candidateName} em ${formData.date} às ${formData.time}`,
+      details: `${formData.type} agendada em ${formData.date} às ${formData.time}. Entrevistador: ${formData.interviewer}. Local: ${formData.location}`,
       user_name: user?.name || 'Sistema',
       entity_type: 'Candidato',
-      entity_id: candidateName // No futuro usar ID
+      entity_id: candidateId || candidateName
     });
+
+    onSuccess?.(formData);
     onClose();
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="max-w-lg">
-      <div className="flex flex-col max-h-[90vh]">
+    <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="max-w-xl">
+      <div className="relative w-full max-w-xl bg-card rounded-lg shadow-2xl border border-border overflow-hidden transform transition-all animate-in fade-in zoom-in duration-300 ease-in-out">
+        <div className="h-1 w-full bg-primary absolute top-0 left-0"></div>
+
         <div className="flex items-center justify-between border-b border-border px-6 py-4 shrink-0 bg-card">
-          <div className="flex flex-col gap-0.5">
-            <h3 className="text-lg font-bold text-foreground leading-none">Agendar Entrevista</h3>
-            <p className="text-xs text-muted-foreground font-bold">Candidato: {candidateName}</p>
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+              <span className="material-symbols-outlined">calendar_today</span>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-foreground leading-none">Agendar Entrevista</h3>
+              <p className="text-xs text-muted-foreground font-semibold mt-1">Candidato: {candidateName}</p>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-base p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200"
+            className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar text-foreground bg-card">
-          <form id="schedule-form" className="space-y-5" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2 sm:col-span-1">
-                <label className="block text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1.5">Tipo de Entrevista</label>
+
+        <div className="p-8 space-y-6">
+          <form id="schedule-form" className="space-y-6" onSubmit={handleSubmit}>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="col-span-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Tipo de Entrevista</label>
                 <select
-                  className="w-full rounded-md border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all duration-200"
+                  className="w-full h-11 px-4 rounded-md border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all hover:border-ring"
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                 >
                   <option>Entrevista RH</option>
-                  <option>Entrevista Gestor</option>
                   <option>Entrevista Técnica</option>
+                  <option>Entrevista Gestor</option>
+                  <option>Apresentação de Case</option>
                 </select>
               </div>
-              <div className="col-span-2 sm:col-span-1">
-                <label className="block text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1.5">Status</label>
+              <div className="col-span-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Status Inicial</label>
                 <select
-                  className="w-full rounded-md border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all duration-200"
+                  className="w-full h-11 px-4 rounded-md border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all hover:border-ring"
                   value={formData.status}
                   onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 >
                   <option>Agendada</option>
                   <option>Realizada</option>
-                  <option>Remarcada</option>
-                  <option>Cancelada</option>
-                  <option>Faltou</option>
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2 sm:col-span-1">
-                <label className="block text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1.5">Data</label>
+
+            <div className="grid grid-cols-2 gap-6">
+              <div className="col-span-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Data</label>
                 <input
-                  className="w-full rounded-md border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all duration-200"
+                  required
+                  className="w-full h-11 px-4 rounded-md border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all hover:border-ring"
                   type="date"
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 />
               </div>
-              <div className="col-span-2 sm:col-span-1">
-                <label className="block text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1.5">Hora</label>
+              <div className="col-span-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Hora</label>
                 <input
-                  className="w-full rounded-md border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all duration-200"
+                  required
+                  className="w-full h-11 px-4 rounded-md border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all hover:border-ring"
                   type="time"
                   value={formData.time}
                   onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                 />
               </div>
             </div>
+
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1.5">Entrevistador</label>
-              <input
-                className="block w-full rounded-md border border-border bg-background py-2 px-3 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all duration-200"
-                placeholder="Nome do entrevistador"
-                type="text"
-                value={formData.interviewer}
-                onChange={(e) => setFormData({ ...formData, interviewer: e.target.value })}
-              />
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Entrevistadores</label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[20px]">group</span>
+                <input
+                  required
+                  className="w-full h-11 pl-11 pr-4 rounded-md border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all hover:border-ring"
+                  placeholder="Ex: João Silva, Maria Souza"
+                  type="text"
+                  value={formData.interviewer}
+                  onChange={(e) => setFormData({ ...formData, interviewer: e.target.value })}
+                />
+              </div>
             </div>
+
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1.5">Local ou Link</label>
-              <input
-                className="block w-full rounded-md border border-border bg-background py-2 px-3 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all duration-200"
-                placeholder="Cole o link da reunião ou sala..."
-                type="text"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              />
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Local ou Link da Videochamada</label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[20px]">videocam</span>
+                <input
+                  required
+                  className="w-full h-11 pl-11 pr-4 rounded-md border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all hover:border-ring"
+                  placeholder="Cole o link do Google Meet, Zoom ou sala física..."
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                />
+              </div>
             </div>
+
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1.5">Observações</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Notas do Agendamento</label>
               <textarea
-                className="block w-full rounded-md border border-border bg-background py-2 px-3 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all duration-200 placeholder:text-muted-foreground"
-                placeholder="Instruções para o candidato ou notas internas..."
+                className="w-full rounded-md border border-border bg-background p-4 text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all hover:border-ring resize-none"
+                placeholder="Informações relevantes para o candidato ou entrevistador..."
                 rows={3}
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -131,20 +168,21 @@ const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen,
             </div>
           </form>
         </div>
-        <div className="flex items-center justify-end gap-3 border-t border-border px-6 py-4 bg-muted/30 shrink-0">
+
+        <div className="flex items-center justify-end gap-3 px-8 py-6 bg-muted/30 border-t border-border">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 text-sm font-bold text-foreground bg-background border border-border rounded-base hover:bg-muted transition-all duration-200 active:translate-y-[1px]"
+            className="h-11 px-6 text-sm font-semibold text-foreground bg-background border border-border rounded-base hover:bg-accent transition-all active:scale-95"
           >
             Cancelar
           </button>
           <button
             type="submit"
             form="schedule-form"
-            className="px-6 py-2.5 text-sm font-bold text-primary-foreground bg-primary border border-border/40 hover:bg-primary/90 rounded-base shadow-sm transition-all duration-200 flex items-center gap-2 active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="h-11 px-8 text-sm font-semibold text-primary-foreground bg-primary rounded-base shadow-sm hover:bg-primary/90 transition-all flex items-center gap-2 active:scale-95"
           >
             <span className="material-symbols-outlined text-[18px]">event_available</span>
-            Salvar Agendamento
+            Confirmar Agendamento
           </button>
         </div>
       </div>

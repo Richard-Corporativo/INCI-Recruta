@@ -29,12 +29,12 @@ const Roles: React.FC = () => {
         </div>
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">Biblioteca de Cargos</h1>
+            <h1 className="text-3xl font-semibold text-foreground">Biblioteca de cargos</h1>
             <p className="text-muted-foreground text-sm mt-1">Gerencie a estrutura de cargos e requisitos pré-definidos para novas vagas.</p>
           </div>
-          <Link to="/roles/new" className="flex items-center justify-center gap-2 bg-primary text-primary-foreground border border-border/40 px-5 py-2.5 rounded-base text-sm font-bold shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/90 active:translate-y-[1px]">
+          <Link to="/roles/new" className="flex items-center justify-center gap-2 bg-primary text-primary-foreground border border-border/40 px-5 py-2.5 rounded-base text-sm font-semibold shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/90 active:translate-y-[1px]">
             <span className="material-symbols-outlined text-[20px]">add</span>
-            <span>Novo Cargo</span>
+            <span>Novo cargo</span>
           </Link>
         </div>
       </header>
@@ -46,7 +46,7 @@ const Roles: React.FC = () => {
           <div className="bg-card p-5 rounded-lg border border-border shadow-sm mb-6 max-w-4xl">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
               <div className="md:col-span-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Busca</label>
+                <label className="text-xs font-semibold text-muted-foreground">Busca</label>
                 <div className="relative mt-1.5">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground material-symbols-outlined text-[20px]">search</span>
                   <input
@@ -59,8 +59,8 @@ const Roles: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Status</label>
-                <select className="w-full mt-1.5 px-3 py-2 bg-background border border-border rounded-base text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 text-foreground font-bold cursor-pointer">
+                <label className="text-xs font-semibold text-muted-foreground">Status</label>
+                <select className="w-full mt-1.5 px-3 py-2 bg-background border border-border rounded-base text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 text-foreground font-semibold cursor-pointer">
                   <option value="all">Todos os Status</option>
                   <option value="active">Ativo</option>
                   <option value="inactive">Inativo</option>
@@ -69,7 +69,7 @@ const Roles: React.FC = () => {
               <div>
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="w-full h-[38px] px-4 text-xs font-bold text-muted-foreground hover:text-foreground transition-all duration-200 border border-transparent hover:bg-muted rounded-base"
+                  className="w-full h-[38px] px-4 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all duration-200 border border-transparent hover:bg-muted rounded-base"
                 >
                   Limpar Filtros
                 </button>
@@ -81,10 +81,10 @@ const Roles: React.FC = () => {
           <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
             <table className="w-full text-left border-collapse">
               <thead className="bg-muted border-b border-border">
-                <tr className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                  <th className="px-6 py-5">Identificação / Código</th>
-                  <th className="px-6 py-5">Departamento / Área</th>
-                  <th className="px-6 py-5 text-center">Vagas Ativas</th>
+                <tr className="text-[11px] font-semibold text-muted-foreground">
+                  <th className="px-6 py-5">Identificação / código</th>
+                  <th className="px-6 py-5">Departamento / área</th>
+                  <th className="px-6 py-5 text-center">Vagas ativas</th>
                   <th className="px-6 py-5">Status</th>
                   <th className="px-6 py-5 text-right">Ações</th>
                 </tr>
@@ -94,20 +94,20 @@ const Roles: React.FC = () => {
                   <tr key={role.id} className="group hover:bg-muted/40 transition-all duration-200 ease-in-out">
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-foreground leading-tight">{role.title}</span>
-                        <span className="text-xs text-muted-foreground mt-1 italic font-bold uppercase tracking-wider">{role.code}</span>
+                        <span className="text-sm font-semibold text-foreground leading-tight">{role.title}</span>
+                        <span className="text-xs text-muted-foreground mt-1 italic font-semibold">{role.code}</span>
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded bg-muted text-foreground border border-border text-xs font-bold">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded bg-muted text-foreground border border-border text-xs font-semibold">
                         {role.department}
                       </span>
                     </td>
                     <td className="px-6 py-5 text-center">
-                      <span className="text-sm font-bold text-foreground">{role.activeJobsCount || 0}</span>
+                      <span className="text-sm font-semibold text-foreground">{role.activeJobsCount || 0}</span>
                     </td>
                     <td className="px-6 py-5">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${role.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-muted text-muted-foreground border border-border'}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold ${role.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-muted text-muted-foreground border border-border'}`}>
                         <span className={`size-1.5 rounded-full ${role.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground'}`}></span>
                         {role.status === 'active' ? 'Ativo' : 'Inativo'}
                       </span>
@@ -125,6 +125,7 @@ const Roles: React.FC = () => {
                           onClick={() => handleDelete(role.id, role.title)}
                           className="flex items-center justify-center size-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-base transition-all duration-200"
                           title="Excluir Cargo"
+                          aria-label={`Excluir cargo ${role.title}`}
                         >
                           <span className="material-symbols-outlined text-[20px]">delete</span>
                         </button>
@@ -135,7 +136,7 @@ const Roles: React.FC = () => {
               </tbody>
             </table>
             <div className="px-6 py-4 border-t border-border bg-muted/20">
-              <span className="text-xs text-muted-foreground font-bold italic">
+              <span className="text-xs text-muted-foreground font-semibold italic">
                 Mostrando {filteredRoles.length} cargos na biblioteca
               </span>
             </div>

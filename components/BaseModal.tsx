@@ -29,13 +29,13 @@ const BaseModal: React.FC<BaseModalProps> = ({ isOpen, onClose, children, maxWid
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-background/80 backdrop-blur-sm transition-opacity duration-200"
+                className="absolute inset-0 bg-background/80 backdrop-blur-sm transition-opacity duration-300 ease-in-out"
                 onClick={onClose}
             ></div>
 
             {/* Modal Container */}
-            <div className={`relative w-full ${maxWidth} bg-card rounded-lg shadow-2xl border border-border overflow-hidden transform transition-all animate-in fade-in zoom-in duration-200`}>
-                <div className="h-1 w-full bg-primary absolute top-0 left-0"></div>
+            <div className={`relative w-full ${maxWidth} bg-card rounded-lg shadow-2xl border border-border overflow-hidden transform transition-all animate-in fade-in zoom-in duration-300 ease-in-out`}>
+                <div className="h-1 w-full bg-primary absolute top-0 left-0 transition-all"></div>
                 {children}
             </div>
         </div>,

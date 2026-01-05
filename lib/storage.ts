@@ -6,6 +6,7 @@ const KEYS = {
     ROLES: 'recruitsys_roles',
     AUDIT: 'recruitsys_audit',
     USERS: 'recruitsys_users',
+    SETTINGS: 'recruitsys_settings',
     INITIALIZED: 'recruitsys_initialized_v2'
 };
 
@@ -13,7 +14,10 @@ export const StorageService = {
     get<T>(key: string): T | null {
         try {
             const data = localStorage.getItem(key);
-            return data ? JSON.parse(data) : null;
+            if (data) {
+                return JSON.parse(data);
+            }
+            return null;
         } catch (e) {
             console.error(`Error reading ${key} from localStorage`, e);
             return null;
@@ -23,6 +27,9 @@ export const StorageService = {
     set<T>(key: string, data: T): void {
         try {
             localStorage.setItem(key, JSON.stringify(data));
+            window.dispatchEvent(new CustomEvent('recruitsys_storage_change', {
+                detail: { key, data }
+            }));
         } catch (e) {
             console.error(`Error writing ${key} to localStorage`, e);
         }
@@ -40,12 +47,11 @@ export const StorageService = {
     importData(jsonString: string): boolean {
         try {
             const data = JSON.parse(jsonString);
-            // Basic validation: check if at least one of our keys exists
             const hasValidKeys = Object.values(KEYS).some(key => key in data);
             if (!hasValidKeys) return false;
 
             Object.entries(data).forEach(([key, value]) => {
-                localStorage.setItem(key, JSON.stringify(value));
+                this.set(key, value); // Usa o set otimizado
             });
             return true;
         } catch (e) {
@@ -57,7 +63,6 @@ export const StorageService = {
     initialize() {
         if (localStorage.getItem(KEYS.INITIALIZED)) return;
 
-        // Initialize with empty data, keeping only default admin account
         const defaultAdmin: User = {
             id: '1',
             name: 'Administrador',
@@ -73,6 +78,14 @@ export const StorageService = {
         this.set(KEYS.ROLES, []);
         this.set(KEYS.USERS, [defaultAdmin]);
         this.set(KEYS.AUDIT, []);
+        this.set(KEYS.SETTINGS, {
+            manager_permissions: {
+                move_to_finalist: true,
+                mark_not_selected: true,
+                return_candidate_stage: false,
+                close_job: false
+            }
+        });
         this.set(KEYS.INITIALIZED, 'true');
     }
 };

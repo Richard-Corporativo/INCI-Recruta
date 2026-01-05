@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { StorageService, KEYS } from '../lib/storage';
 import { Role } from '../types';
 
@@ -11,30 +11,36 @@ export const useRoles = () => {
         if (data) setRoles(data);
     }, []);
 
-    const addRole = (role: Omit<Role, 'id' | 'updated_at'>) => {
-        const newRole: Role = {
-            ...role,
-            id: Math.random().toString(36).substr(2, 9),
-            updated_at: 'Hoje'
-        };
-        const updated = [...roles, newRole];
-        setRoles(updated);
-        StorageService.set(KEYS.ROLES, updated);
-    };
+    const addRole = useCallback((role: Omit<Role, 'id' | 'updated_at'>) => {
+        setRoles(prev => {
+            const newRole: Role = {
+                ...role,
+                id: Math.random().toString(36).substring(2, 11),
+                updated_at: 'Hoje'
+            };
+            const updated = [...prev, newRole];
+            StorageService.set(KEYS.ROLES, updated);
+            return updated;
+        });
+    }, []);
 
-    const updateRole = (id: string, roleData: Partial<Role>) => {
-        const updated = roles.map(role =>
-            role.id === id ? { ...role, ...roleData, updated_at: 'Hoje' } : role
-        );
-        setRoles(updated);
-        StorageService.set(KEYS.ROLES, updated);
-    };
+    const updateRole = useCallback((id: string, roleData: Partial<Role>) => {
+        setRoles(prev => {
+            const updated = prev.map(role =>
+                role.id === id ? { ...role, ...roleData, updated_at: 'Hoje' } : role
+            );
+            StorageService.set(KEYS.ROLES, updated);
+            return updated;
+        });
+    }, []);
 
-    const deleteRole = (id: string) => {
-        const updated = roles.filter(role => role.id !== id);
-        setRoles(updated);
-        StorageService.set(KEYS.ROLES, updated);
-    };
+    const deleteRole = useCallback((id: string) => {
+        setRoles(prev => {
+            const updated = prev.filter(role => role.id !== id);
+            StorageService.set(KEYS.ROLES, updated);
+            return updated;
+        });
+    }, []);
 
     return { roles, addRole, updateRole, deleteRole };
 };

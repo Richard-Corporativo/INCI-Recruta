@@ -13,16 +13,7 @@ interface MoveStageModalProps {
   onSuccess?: () => void;
 }
 
-const STAGES: { id: KanbanColumnId, title: string }[] = [
-  { id: 'received', title: 'Recebido' },
-  { id: 'screening', title: 'Em Triagem' },
-  { id: 'technical', title: 'Avaliação Téc.' },
-  { id: 'hr_interview', title: 'Entrevista RH' },
-  { id: 'manager_interview', title: 'Entrevista Gestor' },
-  { id: 'finalist', title: 'Finalista' },
-  { id: 'hired', title: 'Contratado' },
-  { id: 'rejected', title: 'Não Selecionado' },
-];
+import { COLUMNS_CONFIG } from '../constants';
 
 const MoveStageModal: React.FC<MoveStageModalProps> = ({ isOpen, onClose, candidateName, currentStage, candidateInitials, candidateId, onSuccess }) => {
   const [selectedStage, setSelectedStage] = useState<KanbanColumnId | ''>('');
@@ -40,64 +31,64 @@ const MoveStageModal: React.FC<MoveStageModalProps> = ({ isOpen, onClose, candid
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="max-w-md">
-      <div className="p-6 bg-card">
+      <div className="p-6 bg-card transition-colors relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-all duration-200 z-10"
+          className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-all duration-200 ease-in-out z-10 p-2 rounded-full hover:bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="material-symbols-outlined">close</span>
         </button>
-        <div className="mb-6 border-b border-border pb-4">
-          <h3 className="text-lg font-bold text-foreground leading-6">Mover Etapa</h3>
-          <div className="mt-3 flex items-center gap-3 bg-muted/50 p-3 rounded-lg border border-border">
-            <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold border border-primary/20">
+        <div className="mb-6 border-b border-border pb-4 transition-colors">
+          <h3 className="text-lg font-semibold text-foreground leading-6">Mover Etapa</h3>
+          <div className="mt-3 flex items-center gap-3 bg-muted/50 p-3 rounded-lg border border-border transition-colors">
+            <div className="size-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold shadow-sm">
               {initials}
             </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-foreground">{candidateName}</span>
-              <span className="text-xs text-muted-foreground">Atual: <span className="font-bold text-primary">{currentStage}</span></span>
+            <div className="flex flex-col transition-colors">
+              <span className="text-sm font-semibold text-foreground">{candidateName}</span>
+              <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wide">Atual: <span className="text-primary">{currentStage}</span></span>
             </div>
           </div>
         </div>
         <div className="space-y-5">
           <div>
-            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
+            <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 transition-colors">
               Selecionar nova etapa
             </label>
             <div className="relative">
               <select
                 value={selectedStage}
                 onChange={(e) => setSelectedStage(e.target.value as KanbanColumnId)}
-                className="block w-full rounded-md border border-border bg-background py-2.5 pl-3 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all duration-200 shadow-sm"
+                className="block w-full h-11 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all duration-200 ease-in-out shadow-sm hover:border-ring"
               >
                 <option value="">Selecione...</option>
-                {STAGES.map((stage) => (
+                {COLUMNS_CONFIG.map((stage) => (
                   <option key={stage.id} value={stage.id} disabled={stage.title === currentStage}>{stage.title}</option>
                 ))}
               </select>
             </div>
-            <div className="mt-2 flex items-start gap-1.5">
+            <div className="mt-2 flex items-start gap-1.5 transition-colors">
               <span className="material-symbols-outlined text-[14px] text-primary mt-0.5">lock_open</span>
-              <p className="text-[11px] text-muted-foreground leading-tight font-bold">
+              <p className="text-[11px] text-muted-foreground leading-tight font-semibold transition-colors">
                 <span className="text-foreground">Acesso Admin:</span> Você pode mover este candidato para qualquer etapa do pipeline.
               </p>
             </div>
           </div>
           <div>
-            <label className="flex justify-between items-center text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">
+            <label className="flex justify-between items-center text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 transition-colors">
               <span>Nota / Motivo</span>
             </label>
             <textarea
-              className="block w-full rounded-md border border-border bg-background py-2.5 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all duration-200 shadow-sm resize-none"
+              className="block w-full rounded-md border border-border bg-background py-2.5 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all duration-200 ease-in-out shadow-sm resize-none hover:border-ring"
               placeholder="Adicione uma nota interna sobre esta movimentação (opcional)..."
               rows={3}
             ></textarea>
           </div>
         </div>
-        <div className="mt-8 flex items-center justify-end gap-3 pt-4 border-t border-border">
+        <div className="mt-8 flex items-center justify-end gap-3 pt-6 border-t border-border transition-colors">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 text-sm font-bold text-foreground bg-background border border-border rounded-base hover:bg-muted transition-all duration-200 active:translate-y-[1px]"
+            className="h-10 px-6 text-sm font-semibold text-foreground bg-background border border-border rounded-base hover:bg-accent transition-all duration-200 ease-in-out active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             type="button"
           >
             Cancelar
@@ -105,7 +96,7 @@ const MoveStageModal: React.FC<MoveStageModalProps> = ({ isOpen, onClose, candid
           <button
             disabled={!selectedStage}
             onClick={handleConfirm}
-            className="px-6 py-2.5 text-sm font-bold text-primary-foreground bg-primary border border-border/40 hover:bg-primary/90 disabled:opacity-50 rounded-base shadow-sm transition-all duration-200 flex items-center gap-2 active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="h-10 px-6 text-sm font-semibold text-primary-foreground bg-primary border border-border/40 hover:bg-primary/90 disabled:opacity-50 disabled:scale-100 rounded-base shadow-sm transition-all duration-200 ease-in-out flex items-center gap-2 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             type="button"
           >
             <span>Confirmar Mover</span>

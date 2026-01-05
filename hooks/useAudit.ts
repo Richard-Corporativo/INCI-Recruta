@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { StorageService, KEYS } from '../lib/storage';
 import { AuditLog } from '../types';
 
@@ -11,17 +11,18 @@ export const useAudit = () => {
         if (data) setLogs(data);
     }, []);
 
-    const addLog = (log: Omit<AuditLog, 'id' | 'timestamp'>) => {
-        const data = StorageService.get<AuditLog[]>(KEYS.AUDIT) || [];
-        const newLog: AuditLog = {
-            ...log,
-            id: Math.random().toString(36).substr(2, 9),
-            timestamp: new Date().toISOString()
-        };
-        const updated = [newLog, ...data];
-        setLogs(updated);
-        StorageService.set(KEYS.AUDIT, updated);
-    };
+    const addLog = useCallback((log: Omit<AuditLog, 'id' | 'timestamp'>) => {
+        setLogs(prev => {
+            const newLog: AuditLog = {
+                ...log,
+                id: Math.random().toString(36).substring(2, 11),
+                timestamp: new Date().toISOString()
+            };
+            const updated = [newLog, ...prev];
+            StorageService.set(KEYS.AUDIT, updated);
+            return updated;
+        });
+    }, []);
 
     return { logs, addLog };
 };

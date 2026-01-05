@@ -1,133 +1,215 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import HeroSection from '../../components/candidate/HeroSection';
 import JobFilterSidebar from '../../components/candidate/JobFilterSidebar';
 import JobCardPublic, { PublicJob } from '../../components/candidate/JobCardPublic';
 
-const MOCK_JOBS: PublicJob[] = [
-    {
-        id: '1',
-        title: 'Desenvolvedor Front-end Sênior',
-        department: 'Tecnologia • Engenharia de Software',
-        location: 'São Paulo (Híbrido)',
-        type: 'CLT',
-        level: 'Sênior',
-        tags: ['React', 'TypeScript', 'Tailwind'],
-        isUrgent: true,
-    },
-    {
-        id: '2',
-        title: 'Product Designer Pleno',
-        department: 'Design • Produto',
-        location: 'Remoto',
-        type: 'PJ',
-        level: 'Pleno',
-        tags: ['Figma', 'UX Research'],
-        isNew: true,
-    },
-    {
-        id: '3',
-        title: 'Analista de Marketing Jr',
-        department: 'Marketing • Growth',
-        location: 'Rio de Janeiro (Presencial)',
-        type: 'CLT',
-        level: 'Júnior',
-        tags: ['Google Ads', 'Analytics'],
-    }
-];
+import { StorageService, KEYS } from '../../lib/storage';
+import { Job } from '../../types';
+
+// Helper to map Job to JobCardPublic format if they differ slightly
+const mapJobToPublic = (job: Job): PublicJob => ({
+    id: job.id.toString(),
+    title: job.title,
+    department: `${job.department}`,
+    location: `${job.location} (${job.model})`,
+    type: job.contract,
+    level: job.seniority || 'Sênior',
+    tags: [job.model, job.contract, job.urgency === 'Alta' ? 'Urgente' : ''].filter(Boolean),
+    isUrgent: job.urgency === 'Alta',
+    isNew: true // Placeholder logic
+});
 
 const JobsList: React.FC = () => {
-    const [jobs] = useState<PublicJob[]>(MOCK_JOBS);
+    const navigate = useNavigate();
+    const [allJobs, setAllJobs] = React.useState<PublicJob[]>([]);
+    const [filteredJobs, setFilteredJobs] = React.useState<PublicJob[]>([]);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [searchQuery, setSearchQuery] = React.useState('');
+    const [locationFilter, setLocationFilter] = React.useState('');
+    const [sidebarFilters, setSidebarFilters] = useState<{
+        areas: string[];
+        levels: string[];
+        models: string[];
+    }>({
+        areas: [],
+        levels: [],
+        models: []
+    });
+
+    React.useEffect(() => {
+        const data = StorageService.get<Job[]>(KEYS.JOBS) || [];
+        const activeJobs = data
+            .filter(j => j.status === 'Ativa')
+            .map(mapJobToPublic);
+        setAllJobs(activeJobs);
+        setFilteredJobs(activeJobs);
+        setIsLoading(false);
+    }, []);
+
+    const applyFilters = React.useCallback(() => {
+        let results = [...allJobs];
+
+        if (searchQuery) {
+            results = results.filter(j =>
+                j.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                j.department.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+
+        if (locationFilter) {
+            results = results.filter(j => j.location.toLowerCase().includes(locationFilter.toLowerCase()));
+        }
+
+        if (sidebarFilters.areas.length > 0) {
+            results = results.filter(j => sidebarFilters.areas.includes(j.department));
+        }
+
+        if (sidebarFilters.models.length > 0) {
+            results = results.filter(j => sidebarFilters.models.some(m => j.tags.includes(m)));
+        }
+
+        setFilteredJobs(results);
+    }, [allJobs, searchQuery, locationFilter, sidebarFilters]);
+
+    React.useEffect(() => {
+        applyFilters();
+    }, [applyFilters]);
 
     const handleApply = (id: string) => {
-        alert(`Initiating application for job ${id}`);
+        navigate(`/vagas/${id}/candidatar`);
     };
 
     const handleDetails = (id: string) => {
-        console.log(`View details for job ${id}`);
+        navigate(`/vagas/${id}`);
+    };
+
+    const handleClearFilters = () => {
+        setSearchQuery('');
+        setLocationFilter('');
+        setSidebarFilters({ areas: [], levels: [], models: [] });
+    };
+
+    const handleSidebarFilterChange = (type: 'areas' | 'levels' | 'models', value: string) => {
+        setSidebarFilters(prev => {
+            const current = prev[type];
+            const updated = current.includes(value)
+                ? current.filter(v => v !== value)
+                : [...current, value];
+            return { ...prev, [type]: updated };
+        });
     };
 
     return (
-        <div className="flex flex-col w-full">
+        <div className="flex flex-col w-full bg-slate-50 transition-colors duration-200">
             <HeroSection />
 
-            <div className="layout-container flex h-full grow flex-col max-w-[1280px] mx-auto w-full px-4 lg:px-8 py-5">
+            {/* Trust Bar */}
+            <div className="w-full bg-slate-100 border-b border-slate-200 py-6 overflow-hidden">
+                <div className="max-w-[1280px] mx-auto px-8 flex flex-wrap justify-center md:justify-between items-center gap-8 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+                    <span className="text-sm font-semibold text-slate-500">Empresas do Grupo:</span>
+                    <div className="flex flex-wrap justify-center gap-12 items-center">
+                        <div className="flex items-center gap-2 font-semibold text-xl text-slate-800">INCI <span className="text-primary">Tech</span></div>
+                        <div className="flex items-center gap-2 font-semibold text-xl text-slate-800">INCI <span className="text-primary">Edu</span></div>
+                        <div className="flex items-center gap-2 font-semibold text-xl text-slate-800">INCI <span className="text-primary">Labs</span></div>
+                        <div className="flex items-center gap-2 font-semibold text-xl text-slate-800">INCI <span className="text-primary">Brasil</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="layout-container flex h-full grow flex-col max-w-[1280px] mx-auto w-full px-4 lg:px-8 py-10">
 
                 {/* Breadcrumb */}
-                <div className="flex flex-wrap gap-2 py-4 px-2">
-                    <a className="text-[#637588] dark:text-gray-400 text-sm font-medium leading-normal hover:text-primary" href="#">Home</a>
-                    <span className="text-[#637588] dark:text-gray-400 text-sm font-medium leading-normal">/</span>
-                    <span className="text-[#111418] dark:text-white text-sm font-medium leading-normal">Vagas</span>
-                </div>
+                <nav className="flex items-center gap-2 mb-8 px-2 text-xs font-semibold text-slate-400">
+                    <Link className="hover:text-primary transition-colors" to="/vagas">Home</Link>
+                    <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+                    <span className="text-primary">Vagas disponíveis</span>
+                </nav>
 
-                <div className="flex flex-col lg:flex-row gap-8 relative items-start">
-                    <JobFilterSidebar />
+                <div className="flex flex-col lg:flex-row gap-12 relative items-start">
+                    <JobFilterSidebar
+                        filters={sidebarFilters}
+                        onFilterChange={handleSidebarFilterChange}
+                        onClear={handleClearFilters}
+                        totalResults={filteredJobs.length}
+                    />
 
                     <main className="flex-1 min-w-0">
-                        {/* Search Form Area */}
-                        <div className="mb-8">
-                            <form className="flex flex-col gap-4" onSubmit={(e) => e.preventDefault()}>
-                                <div className="flex flex-col md:flex-row w-full items-stretch rounded-2xl shadow-lg border border-border-light dark:border-border-dark bg-white dark:bg-card-dark overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary transition-all p-1 gap-1 md:gap-0">
-                                    <div className="flex-1 flex items-center px-4 h-14 md:h-16 border-b md:border-b-0 md:border-r border-border-light dark:border-border-dark relative">
-                                        <span className="material-symbols-outlined text-primary text-2xl">search</span>
+                        {/* Search Area */}
+                        <div className="mb-12 bg-white border border-slate-200 p-8 rounded-2xl shadow-sm">
+                            <form className="flex flex-col gap-6" onSubmit={(e) => e.preventDefault()}>
+                                <div className="flex flex-col lg:flex-row w-full items-stretch border border-slate-200 bg-white rounded-xl overflow-hidden p-2 gap-2">
+                                    <div className="flex-1 flex items-center px-4 h-12 lg:h-14 relative border border-slate-100 bg-slate-50 rounded-lg">
+                                        <span className="material-symbols-outlined text-slate-400 text-xl">search</span>
                                         <input
-                                            className="w-full bg-transparent border-none focus:ring-0 text-[#111418] dark:text-white placeholder:text-gray-400 h-full text-base ml-2 font-medium focus:outline-none"
+                                            className="w-full bg-transparent border-none focus:ring-0 text-slate-900 placeholder:text-slate-400 h-full text-sm ml-3 font-semibold focus:outline-none"
                                             name="q"
-                                            placeholder="Cargo, palavras-chave ou área"
+                                            placeholder="Cargo ou habilidade..."
                                             type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
                                         />
                                     </div>
-                                    <div className="md:w-[260px] flex items-center px-4 h-14 md:h-16 relative bg-gray-50/50 dark:bg-white/5 md:bg-transparent">
-                                        <span className="material-symbols-outlined text-gray-400 text-2xl">location_on</span>
-                                        <select className="w-full bg-transparent border-none focus:ring-0 text-[#111418] dark:text-white text-base ml-2 cursor-pointer appearance-none font-medium z-10 focus:outline-none" name="local">
-                                            <option className="text-gray-500" value="">Cidade</option>
-                                            <option value="sp">São Paulo, SP</option>
-                                            <option value="rj">Rio de Janeiro, RJ</option>
-                                            <option value="bh">Belo Horizonte, MG</option>
-                                            <option value="remoto">Remoto</option>
+                                    <div className="lg:w-[280px] flex items-center px-4 h-12 lg:h-14 relative border border-slate-100 bg-slate-50 rounded-lg">
+                                        <span className="material-symbols-outlined text-slate-400 text-xl">location_on</span>
+                                        <select
+                                            className="w-full bg-transparent border-none focus:ring-0 text-slate-900 text-sm ml-2 cursor-pointer appearance-none font-semibold focus:outline-none"
+                                            name="local"
+                                            value={locationFilter}
+                                            onChange={(e) => setLocationFilter(e.target.value)}
+                                        >
+                                            <option value="">Qualquer lugar</option>
+                                            <option value="Remoto">Remoto</option>
+                                            <option value="Híbrido">Híbrido</option>
+                                            <option value="Presencial">Presencial</option>
                                         </select>
-                                        <span className="material-symbols-outlined text-gray-400 text-sm absolute right-4 pointer-events-none">expand_more</span>
+                                        <span className="material-symbols-outlined text-slate-400 text-sm absolute right-4 pointer-events-none">expand_more</span>
                                     </div>
-                                    <div className="p-1 md:pl-2 flex-none">
-                                        <button className="w-full md:w-auto h-full px-8 bg-primary hover:bg-primary/90 text-white text-base font-bold rounded-xl transition-all shadow-sm" type="submit">
-                                            Pesquisar vagas
-                                        </button>
-                                    </div>
+                                    <button className="flex-none h-12 lg:h-14 px-8 bg-primary text-white font-semibold text-xs hover:bg-slate-900 transition-colors rounded-lg active:scale-95" type="submit">
+                                        Buscar
+                                    </button>
                                 </div>
 
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <button className="group flex items-center gap-2 pl-4 pr-3 py-1.5 bg-white dark:bg-card-dark border border-border-light dark:border-border-dark rounded-full text-sm font-semibold text-gray-600 dark:text-gray-300 hover:border-primary hover:text-primary transition-all shadow-sm" type="button">
-                                        Tipo de vaga
-                                        <span className="material-symbols-outlined text-[20px] text-gray-400 group-hover:text-primary">expand_more</span>
-                                    </button>
-                                    <div className="h-6 w-px bg-gray-300 dark:bg-gray-700 mx-1 hidden sm:block"></div>
-                                    <button className="group flex items-center gap-1.5 pl-4 pr-2 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-sm font-bold hover:bg-primary/20 transition-all" type="button">
-                                        Últimos 30 dias
-                                        <span className="material-symbols-outlined text-[18px]">close</span>
-                                    </button>
-                                    <button className="group flex items-center gap-1.5 pl-4 pr-2 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-sm font-bold hover:bg-primary/20 transition-all" type="button">
-                                        Presencial
-                                        <span className="material-symbols-outlined text-[18px]">close</span>
-                                    </button>
-                                    <button className="group flex items-center gap-1.5 pl-4 pr-2 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-sm font-bold hover:bg-primary/20 transition-all" type="button">
-                                        Tecnologia
-                                        <span className="material-symbols-outlined text-[18px]">close</span>
-                                    </button>
-                                    <button className="text-sm font-medium text-gray-500 hover:text-primary underline ml-2 decoration-transparent hover:decoration-current transition-all">Limpar todos</button>
-                                </div>
+                                {/* Active Filters */}
+                                {(searchQuery || locationFilter || sidebarFilters.areas.length > 0 || sidebarFilters.models.length > 0) && (
+                                    <div className="flex flex-wrap items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <span className="text-xs font-semibold text-slate-400 mr-2">Ativos:</span>
+                                        {searchQuery && (
+                                            <button onClick={() => setSearchQuery('')} className="group flex items-center gap-2 pl-3 pr-2 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-lg text-xs font-semibold hover:bg-primary hover:text-white transition-all">
+                                                Busca: {searchQuery}
+                                                <span className="material-symbols-outlined text-[14px]">close</span>
+                                            </button>
+                                        )}
+                                        {locationFilter && (
+                                            <button onClick={() => setLocationFilter('')} className="group flex items-center gap-2 pl-3 pr-2 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-lg text-xs font-semibold hover:bg-primary hover:text-white transition-all">
+                                                {locationFilter}
+                                                <span className="material-symbols-outlined text-[14px]">close</span>
+                                            </button>
+                                        )}
+                                        <button onClick={handleClearFilters} className="text-xs font-semibold text-slate-400 hover:text-primary transition-colors ml-2 border-b border-transparent hover:border-primary pb-px">Limpar tudo</button>
+                                    </div>
+                                )}
                             </form>
                         </div>
 
-                        <div className="flex justify-between items-end mb-4 border-b border-border-light dark:border-border-dark pb-2">
-                            <h2 className="text-[#111418] dark:text-white text-xl lg:text-2xl font-bold leading-tight">
-                                Vagas Disponíveis (12)
+                        {/* Results Header */}
+                        <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-200">
+                            <h2 className="text-slate-900 text-3xl font-semibold">
+                                Oportunidades <span className="text-primary">abertas</span>
                             </h2>
-                            <span className="text-sm text-gray-500 pb-1 hidden sm:block">
-                                Mostrando 1-3 de 12
-                            </span>
+                            <div className="flex items-center gap-4 text-xs font-semibold text-slate-400">
+                                <span>{filteredJobs.length} Resultados</span>
+                                <div className="h-4 w-px bg-slate-300"></div>
+                                <select className="bg-transparent border-none focus:ring-0 cursor-pointer hover:text-primary transition-colors text-slate-600 font-semibold">
+                                    <option>Mais recentes</option>
+                                    <option>Urgentes primeiro</option>
+                                </select>
+                            </div>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4">
-                            {jobs.map(job => (
+                        {/* Job Grid - Cards */}
+                        <div className="grid grid-cols-1 gap-6">
+                            {filteredJobs.map(job => (
                                 <JobCardPublic
                                     key={job.id}
                                     job={job}
@@ -136,64 +218,38 @@ const JobsList: React.FC = () => {
                                 />
                             ))}
 
-                            {/* HTML Skeleton Example */}
-                            <article className="flex flex-col md:flex-row gap-5 p-5 bg-white dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark animate-pulse">
-                                <div className="flex flex-col flex-1 gap-3">
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex flex-col w-full">
-                                            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
-                                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-                                        </div>
+                            {/* No Results State */}
+                            {filteredJobs.length === 0 && (
+                                <div className="flex flex-col items-center justify-center py-20 px-4 text-center border-2 border-dashed border-slate-200 bg-slate-50 rounded-3xl animate-in fade-in zoom-in duration-500">
+                                    <div className="size-20 bg-white border border-slate-200 flex items-center justify-center mb-6 rounded-full">
+                                        <span className="material-symbols-outlined text-4xl text-slate-300 font-semibold">rocket_launch</span>
                                     </div>
-                                    <div className="flex flex-wrap gap-6 mt-1">
-                                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-                                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
-                                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2 mt-2">
-                                        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
-                                        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
-                                    </div>
-                                </div>
-                                <div className="flex md:flex-col gap-3 mt-2 md:mt-0 md:min-w-[140px] md:justify-center border-t md:border-t-0 md:border-l border-border-light dark:border-border-dark pt-4 md:pt-0 md:pl-5">
-                                    <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg w-full"></div>
-                                    <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded-lg w-full"></div>
-                                </div>
-                            </article>
-
-                            {/* No Results State (Hidden when jobs exist) */}
-                            {jobs.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-t border-border-light dark:border-border-dark mt-10">
-                                    <div className="size-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                                        <span className="material-symbols-outlined text-4xl text-gray-400">search_off</span>
-                                    </div>
-                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Nenhuma vaga encontrada</h3>
-                                    <p className="text-gray-500 dark:text-gray-400 max-w-md mb-6">Não encontramos vagas com os filtros atuais. Tente remover alguns filtros ou buscar por outros termos.</p>
+                                    <h3 className="text-2xl font-semibold text-slate-900 mb-3">Sem vagas encontradas</h3>
+                                    <p className="text-slate-500 text-base max-w-md mb-8 font-medium">Tente ajustar seus filtros ou mude sua busca para encontrar novas oportunidades.</p>
                                     <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                                        <button className="px-6 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                        <button onClick={handleClearFilters} className="h-14 px-8 border border-slate-300 bg-white text-slate-900 font-semibold text-xs hover:bg-slate-50 transition-colors rounded-xl active:scale-95">
                                             Limpar filtros
                                         </button>
-                                        <a className="px-6 py-2.5 rounded-lg bg-primary text-white font-bold hover:bg-primary/90 transition-colors flex items-center justify-center" href="#">
-                                            Cadastrar no Banco de Talentos
-                                        </a>
                                     </div>
                                 </div>
                             )}
                         </div>
 
                         {/* Pagination */}
-                        <div className="flex justify-center items-center gap-2 mt-8">
-                            <button className="flex items-center justify-center size-10 rounded-lg border border-border-light dark:border-border-dark text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" disabled>
-                                <span className="material-symbols-outlined">chevron_left</span>
-                            </button>
-                            <button className="flex items-center justify-center size-10 rounded-lg bg-primary text-white font-bold shadow-sm">1</button>
-                            <button className="flex items-center justify-center size-10 rounded-lg border border-border-light dark:border-border-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-medium transition-colors">2</button>
-                            <button className="flex items-center justify-center size-10 rounded-lg border border-border-light dark:border-border-dark text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-medium transition-colors">3</button>
-                            <span className="text-gray-400 px-1">...</span>
-                            <button className="flex items-center justify-center size-10 rounded-lg border border-border-light dark:border-border-dark text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                <span className="material-symbols-outlined">chevron_right</span>
-                            </button>
-                        </div>
+                        {filteredJobs.length > 0 && (
+                            <nav className="flex justify-center items-center gap-2 mt-16 py-8 border-t border-slate-200">
+                                <button className="flex items-center justify-center size-12 border border-slate-200 text-slate-400 hover:bg-white hover:text-primary hover:border-primary transition-colors disabled:opacity-30 rounded-lg" disabled>
+                                    <span className="material-symbols-outlined">chevron_left</span>
+                                </button>
+                                <button className="flex items-center justify-center size-12 bg-primary text-white font-semibold text-sm rounded-lg">1</button>
+                                <button className="flex items-center justify-center size-12 border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-white hover:text-primary hover:border-primary transition-colors rounded-lg">2</button>
+                                <button className="flex items-center justify-center size-12 border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-white hover:text-primary hover:border-primary transition-colors rounded-lg">3</button>
+                                <span className="text-slate-300 font-semibold px-2">...</span>
+                                <button className="flex items-center justify-center size-12 border border-slate-200 text-slate-400 hover:bg-white hover:text-primary hover:border-primary transition-colors rounded-lg">
+                                    <span className="material-symbols-outlined">chevron_right</span>
+                                </button>
+                            </nav>
+                        )}
 
                     </main>
                 </div>

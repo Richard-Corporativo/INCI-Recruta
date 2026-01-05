@@ -1,5 +1,4 @@
 import React from 'react';
-import { Bookmark, MapPin, FileText, Briefcase } from 'lucide-react';
 
 export interface PublicJob {
     id: string;
@@ -21,70 +20,81 @@ interface JobCardPublicProps {
 
 const JobCardPublic: React.FC<JobCardPublicProps> = ({ job, onApply, onDetails }) => {
     return (
-        <article className="group flex flex-col md:flex-row gap-5 p-5 bg-white dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark hover:border-primary/50 hover:shadow-md transition-all">
-            <div className="flex flex-col flex-1 gap-2">
-                <div className="flex justify-between items-start">
-                    <div className="flex flex-col">
-                        <div className="flex items-center gap-2 mb-1">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors">
-                                {job.title}
-                            </h3>
-                            {job.isUrgent && (
-                                <span className="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                    Urgente
-                                </span>
-                            )}
-                            {job.isNew && (
-                                <span className="bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                    Novo
-                                </span>
-                            )}
-                        </div>
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+        <article className="group relative flex flex-col md:flex-row gap-8 p-8 bg-card text-card-foreground rounded-lg border border-border shadow-sm transition-all duration-300 hover:border-primary/50 hover:shadow-md">
+            {/* Visual Indicator for New/Urgent */}
+            <div className="flex flex-col flex-1 gap-4">
+                <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center gap-3">
+                        {job.isUrgent && (
+                            <span className="bg-destructive/10 text-destructive border border-destructive/20 text-xs font-semibold px-2.5 py-1 rounded-md">
+                                Urgente
+                            </span>
+                        )}
+                        {job.isNew && (
+                            <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-transparent text-xs font-semibold px-2.5 py-1 rounded-md">
+                                Nova vaga
+                            </span>
+                        )}
+                        {/* Area tag moved here for better hierarchy */}
+                        <span className="text-sm font-semibold text-primary">
                             {job.department}
-                        </p>
+                        </span>
                     </div>
-                    <button aria-label="Salvar vaga" className="text-gray-400 hover:text-primary transition-colors p-1">
-                        <Bookmark size={20} />
-                    </button>
+
+                    {/* Primary Title */}
+                    <h3 className="text-2xl font-semibold text-foreground group-hover:text-primary transition-colors tracking-tight">
+                        {job.title}
+                    </h3>
                 </div>
 
-                <div className="flex flex-wrap gap-x-6 gap-y-2 mt-1 text-sm text-gray-600 dark:text-gray-300">
-                    <div className="flex items-center gap-1.5" title="Localização">
-                        <MapPin size={18} className="text-gray-400" />
+                {/* Metadata */}
+                <div className="flex flex-wrap gap-x-8 gap-y-3 text-sm text-muted-foreground font-medium">
+                    <div className="flex items-center gap-2" title="Localização">
+                        <span className="material-symbols-outlined text-[20px] text-muted-foreground/70">location_on</span>
                         <span>{job.location}</span>
                     </div>
-                    <div className="flex items-center gap-1.5" title="Tipo de Contrato">
-                        <FileText size={18} className="text-gray-400" />
+                    <div className="flex items-center gap-2" title="Tipo de Contrato">
+                        <span className="material-symbols-outlined text-[20px] text-muted-foreground/70">description</span>
                         <span>{job.type}</span>
                     </div>
-                    <div className="flex items-center gap-1.5" title="Senioridade">
-                        <Briefcase size={18} className="text-gray-400" />
+                    <div className="flex items-center gap-2" title="Senioridade">
+                        <span className="material-symbols-outlined text-[20px] text-muted-foreground/70">work_history</span>
                         <span>{job.level}</span>
                     </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 mt-3">
+                {/* Tags for Context */}
+                <div className="flex flex-wrap gap-2 pt-2">
                     {job.tags.map((tag) => (
-                        <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200 text-xs font-medium">
+                        <span key={tag} className="inline-flex items-center px-3 py-1 rounded-md bg-muted text-muted-foreground border border-border text-xs font-semibold transition-colors group-hover:bg-primary/5 group-hover:text-primary group-hover:border-primary/20">
                             {tag}
                         </span>
                     ))}
                 </div>
             </div>
 
-            <div className="flex md:flex-col gap-3 mt-2 md:mt-0 md:min-w-[140px] md:justify-center border-t md:border-t-0 md:border-l border-border-light dark:border-border-dark pt-4 md:pt-0 md:pl-5">
+            {/* Actions Area */}
+            <div className="flex md:flex-col gap-4 min-w-[180px] md:justify-center border-t md:border-t-0 md:border-l border-border pt-6 md:pt-0 md:pl-8">
                 <button
                     onClick={() => onApply(job.id)}
-                    className="flex-1 md:flex-none justify-center items-center h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm"
+                    className="flex-1 md:flex-none justify-center items-center h-12 px-6 rounded-base bg-primary text-primary-foreground text-sm font-semibold transition-all hover:bg-primary/90 shadow-lg shadow-primary/20 hover:shadow-xl active:scale-95 whitespace-nowrap text-xs"
                 >
-                    Candidatar-se
+                    Candidatar-se agora
                 </button>
                 <button
                     onClick={() => onDetails(job.id)}
-                    className="flex-1 md:flex-none justify-center items-center h-10 px-4 rounded-lg border border-border-light dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors bg-transparent"
+                    className="flex-1 md:flex-none justify-center items-center h-12 px-6 rounded-base border border-border bg-card text-card-foreground text-sm font-semibold transition-all hover:bg-muted hover:border-ring active:scale-95 text-xs"
                 >
                     Ver detalhes
+                </button>
+
+                {/* Secondary Interaction - Save */}
+                <button
+                    aria-label="Salvar vaga"
+                    className="hidden md:flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors mt-2"
+                >
+                    <span className="material-symbols-outlined text-[18px]">bookmark</span>
+                    Salvar para depois
                 </button>
             </div>
         </article>

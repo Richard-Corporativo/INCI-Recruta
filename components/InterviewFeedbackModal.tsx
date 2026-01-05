@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAudit } from '../hooks/useAudit';
 import { useAuth } from '../hooks/useAuth';
 import { useCandidates } from '../hooks/useCandidates';
-import { KANBAN_COLUMNS } from '../pages/Jobs';
 import { KanbanColumnId } from '../types';
+import { COLUMNS_CONFIG } from '../constants';
 import BaseModal from './BaseModal';
 
 interface InterviewFeedbackModalProps {
@@ -14,6 +14,7 @@ interface InterviewFeedbackModalProps {
   role?: string;
   candidateId?: string;
   currentStage?: string;
+  targetStage?: KanbanColumnId;
   onSuccess?: () => void;
 }
 
@@ -25,175 +26,218 @@ const InterviewFeedbackModal: React.FC<InterviewFeedbackModalProps> = ({
   role = "",
   candidateId,
   currentStage,
+  targetStage,
   onSuccess
 }) => {
   const { addLog } = useAudit();
   const { user } = useAuth();
-  const { moveCandidate } = useCandidates();
+  const { addFeedback } = useCandidates();
 
   const [rating, setRating] = useState(0);
-  const [recommendation, setRecommendation] = useState<'approve' | 'hold' | 'reject'>('approve');
+  const [recommendation, setRecommendation] = useState<'advance' | 'hold' | 'reject'>('advance');
   const [strengths, setStrengths] = useState('');
-  const [weaknesses, setWeaknesses] = useState('');
+  const [concerns, setConcerns] = useState('');
   const [selectedStage, setSelectedStage] = useState<KanbanColumnId | ''>('');
 
-  // Pre-fill selected stage based on recommendation or current stage logic could go here
-  // For now, we leave it empty or user selects.
+  useEffect(() => {
+    if (targetStage) {
+      setSelectedStage(targetStage);
+    } else {
+      setSelectedStage('');
+    }
+    // Clean form on open
+    if (isOpen) {
+      setRating(0);
+      setRecommendation('advance');
+      setStrengths('');
+      setConcerns('');
+    }
+  }, [targetStage, isOpen]);
+
+  useEffect(() => {
+    if (isOpen && !targetStage && recommendation === 'advance') {
+      // Tentar inferir a próxima etapa se não houver alvo definido (abertura manual)
+      if (currentStage) {
+        const currentColumn = COLUMNS_CONFIG.find(c => c.title === currentStage);
+        if (currentColumn) {
+          const currentIndex = COLUMNS_CONFIG.findIndex(c => c.id === currentColumn.id);
+          if (currentIndex !== -1 && currentIndex < COLUMNS_CONFIG.length - 1) {
+            setSelectedStage(COLUMNS_CONFIG[currentIndex + 1].id);
+          }
+        }
+      }
+    } else if (isOpen && !targetStage && recommendation !== 'advance') {
+      setSelectedStage(''); // Reset se não for avançar
+    }
+  }, [recommendation, currentStage, targetStage, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Log the feedback
-    addLog({
-      action: 'Feedback de Entrevista',
-      details: `Feedback registrado para ${candidateName}: Nota ${rating}/5, Recomendação: ${recommendation}. ${selectedStage ? `Movido para: ${selectedStage}` : ''}`,
-      user_name: user?.name || 'Sistema',
-      entity_type: 'Candidato',
-      entity_id: candidateName
-    });
+    if (candidateId) {
+      addFeedback(candidateId, {
+        rating,
+        strengths,
+        concerns,
+        recommendation,
+        stage: selectedStage || undefined, // Use hook's move logic
+        createdBy: user?.name || 'Sistema'
+      });
 
-    // Execute Move if stage selected
-    if (selectedStage && candidateId) {
-      moveCandidate(candidateId, selectedStage);
+      addLog({
+        action: 'Feedback de Entrevista',
+        details: `Feedback registrado para ${candidateName}: Nota ${rating}/5, Recomendação: ${recommendation}. ${selectedStage ? `Movido para: ${selectedStage}` : ''}`,
+        user_name: user?.name || 'Sistema',
+        entity_type: 'Candidato',
+        entity_id: candidateId
+      });
     }
 
     onSuccess?.();
     onClose();
   };
 
+  const initials = candidateInitials || candidateName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} maxWidth="max-w-2xl">
-      <div className="flex flex-col max-h-[90vh]">
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-card shrink-0">
-          <h2 className="text-lg font-bold text-foreground">Registrar Feedback & Mover</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-all duration-200">
-            <span className="material-symbols-outlined">close</span>
-          </button>
-        </div>
-
-        <div className="p-6 overflow-y-auto custom-scrollbar text-foreground bg-card">
-          <div className="flex items-center gap-4 mb-6 p-4 bg-muted/50 rounded-lg border border-border">
-            <div className="size-12 rounded-full bg-slate-800 text-white flex items-center justify-center text-lg font-bold shrink-0">
-              {candidateInitials || candidateName.split(' ').map(n => n[0]).join('')}
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-foreground">{candidateName}</h3>
-              <p className="text-sm text-muted-foreground">Candidato para <span className="font-bold text-foreground">{role || 'Vaga não especificada'}</span></p>
-            </div>
-          </div>
-
-          <form id="feedback-form" className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label className="block text-sm font-semibold mb-2">Nota Geral</label>
-              <div className="flex gap-1 items-center">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setRating(star)}
-                    className={`${rating >= star ? 'text-yellow-400 hover:text-yellow-500' : 'text-slate-300 dark:text-slate-600 hover:text-yellow-400'} transition-colors focus:outline-none`}
-                  >
-                    <span className={`material-symbols-outlined text-3xl ${rating >= star ? 'filled' : ''}`}>star</span>
-                  </button>
-                ))}
-                {rating > 0 && (
-                  <span className="ml-2 px-2 py-0.5 rounded text-xs font-bold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300">
-                    {rating === 5 ? 'Excelente' : rating === 4 ? 'Muito Bom' : rating === 3 ? 'Bom' : rating === 2 ? 'Regular' : 'Ruim'}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-bold mb-2">Pontos Fortes</label>
-                <textarea
-                  className="w-full rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 placeholder:text-muted-foreground resize-none shadow-sm p-3 transition-all duration-200"
-                  placeholder="O que se destacou no candidato?"
-                  rows={4}
-                  value={strengths}
-                  onChange={(e) => setStrengths(e.target.value)}
-                ></textarea>
-              </div>
-              <div>
-                <label className="block text-sm font-bold mb-2">Pontos de Atenção</label>
-                <textarea
-                  className="w-full rounded-md border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 placeholder:text-muted-foreground resize-none shadow-sm p-3 transition-all duration-200"
-                  placeholder="Onde o candidato precisa melhorar?"
-                  rows={4}
-                  value={weaknesses}
-                  onChange={(e) => setWeaknesses(e.target.value)}
-                ></textarea>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-3">Recomendação</label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <label className={`relative flex flex-col items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all shadow-sm group ${recommendation === 'approve' ? 'border-green-500 bg-green-50/50 dark:bg-green-900/10' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-green-300'}`}>
-                  <input type="radio" className="sr-only" checked={recommendation === 'approve'} onChange={() => setRecommendation('approve')} />
-                  <div className={`size-10 rounded-full flex items-center justify-center mb-2 ${recommendation === 'approve' ? 'bg-green-100 dark:bg-green-800' : 'bg-slate-100 dark:bg-slate-700'}`}>
-                    <span className={`material-symbols-outlined text-2xl ${recommendation === 'approve' ? 'text-green-600 dark:text-green-300' : 'text-slate-400'}`}>thumb_up</span>
-                  </div>
-                  <span className={`font-bold text-sm ${recommendation === 'approve' ? 'text-green-700 dark:text-green-300' : 'text-slate-500'}`}>Avançar</span>
-                </label>
-
-                <label className={`relative flex flex-col items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all shadow-sm group ${recommendation === 'hold' ? 'border-slate-400 bg-slate-50 dark:bg-slate-800' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300'}`}>
-                  <input type="radio" className="sr-only" checked={recommendation === 'hold'} onChange={() => setRecommendation('hold')} />
-                  <div className={`size-10 rounded-full flex items-center justify-center mb-2 ${recommendation === 'hold' ? 'bg-slate-200 dark:bg-slate-600' : 'bg-slate-100 dark:bg-slate-700'}`}>
-                    <span className={`material-symbols-outlined text-2xl ${recommendation === 'hold' ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400'}`}>pause</span>
-                  </div>
-                  <span className={`font-medium text-sm ${recommendation === 'hold' ? 'dark:text-white' : 'text-slate-500'}`}>Segurar</span>
-                </label>
-
-                <label className={`relative flex flex-col items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all shadow-sm group ${recommendation === 'reject' ? 'border-red-500 bg-red-50/50 dark:bg-red-900/10' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-red-300'}`}>
-                  <input type="radio" className="sr-only" checked={recommendation === 'reject'} onChange={() => setRecommendation('reject')} />
-                  <div className={`size-10 rounded-full flex items-center justify-center mb-2 ${recommendation === 'reject' ? 'bg-red-100 dark:bg-red-800' : 'bg-slate-100 dark:bg-slate-700'}`}>
-                    <span className={`material-symbols-outlined text-2xl ${recommendation === 'reject' ? 'text-red-600 dark:text-red-300' : 'text-slate-400'}`}>thumb_down</span>
-                  </div>
-                  <span className={`font-medium text-sm ${recommendation === 'reject' ? 'text-red-700 dark:text-red-300' : 'text-slate-500'}`}>Reprovar</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Stage Selector */}
-            <div className="bg-muted/30 p-4 rounded-lg border border-border">
-              <label className="block text-sm font-bold mb-2 flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary">move_to_inbox</span>
-                Mover para Etapa (Opcional)
-              </label>
-              <select
-                value={selectedStage}
-                onChange={(e) => setSelectedStage(e.target.value as KanbanColumnId)}
-                className="block w-full rounded-md border border-border bg-background py-2.5 pl-3 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 transition-all duration-200 shadow-sm"
-              >
-                <option value="">Manter na etapa atual ({currentStage || 'Atual'})</option>
-                {KANBAN_COLUMNS.map((col) => (
-                  <option key={col.id} value={col.id}>{col.title}</option>
-                ))}
-              </select>
-            </div>
-          </form>
-        </div>
-
-        <div className="px-6 py-4 bg-muted/30 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
-          <div className="flex flex-col gap-1 w-full sm:w-auto">
-            <p className="text-[10px] text-muted-foreground font-bold italic">Log de auditoria será gerado ao salvar.</p>
-          </div>
-          <div className="flex gap-3 w-full sm:w-auto">
+      <div className="relative w-full max-w-2xl bg-card rounded-lg shadow-2xl border border-border overflow-hidden transform transition-all animate-in fade-in zoom-in duration-300 ease-in-out">
+        <div className="h-1 w-full bg-primary absolute top-0 left-0 transition-all"></div>
+        <div className="flex flex-col max-h-[90vh]">
+          {/* Header */}
+          <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-card shrink-0 transition-colors">
+            <h2 className="text-lg font-semibold text-foreground">Registrar Feedback & Mover</h2>
             <button
               onClick={onClose}
-              className="flex-1 sm:flex-none px-6 py-2.5 text-sm font-bold text-foreground hover:bg-muted rounded-base border border-border bg-background transition-all duration-200 active:translate-y-[1px]"
+              className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-200 ease-in-out outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              Cancelar
+              <span className="material-symbols-outlined">close</span>
             </button>
-            <button
-              type="submit"
-              form="feedback-form"
-              className="flex-1 sm:flex-none px-6 py-2.5 text-sm font-bold text-primary-foreground bg-primary border border-border/40 hover:bg-primary/90 rounded-base shadow-sm transition-all duration-200 flex items-center justify-center gap-2 active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <span className="material-symbols-outlined text-lg">save</span> Confirmar
-            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 overflow-y-auto custom-scrollbar text-foreground bg-card transition-colors">
+            <div className="flex items-center gap-4 mb-6 p-4 bg-muted/50 rounded-lg border border-border transition-colors">
+              <div className="size-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-semibold shrink-0 shadow-sm">
+                {initials}
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-foreground transition-colors">{candidateName}</h3>
+                <p className="text-sm text-muted-foreground transition-colors">Candidato para <span className="font-semibold text-foreground">{role || 'Vaga não especificada'}</span></p>
+              </div>
+            </div>
+
+            <form id="feedback-form" className="space-y-6" onSubmit={handleSubmit}>
+              <div>
+                <label className="block text-sm font-semibold mb-2 transition-colors">Nota Geral</label>
+                <div className="flex gap-1 items-center">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setRating(star)}
+                      className={`${rating >= star ? 'text-primary' : 'text-muted hover:text-primary/50'} transition-all duration-200 ease-in-out focus:outline-none active:scale-90`}
+                    >
+                      <span className={`material-symbols-outlined text-3xl ${rating >= star ? 'filled' : ''}`}>star</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold mb-2 transition-colors">Pontos Fortes</label>
+                  <textarea
+                    className="w-full h-32 rounded-md border border-border bg-background text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 placeholder:text-muted-foreground resize-none shadow-sm p-3 transition-all duration-200 ease-in-out hover:border-ring"
+                    placeholder="O que se destacou no candidato?"
+                    value={strengths}
+                    onChange={(e) => setStrengths(e.target.value)}
+                  ></textarea>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2 transition-colors">Pontos de Atenção</label>
+                  <textarea
+                    className="w-full h-32 rounded-md border border-border bg-background text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 placeholder:text-muted-foreground resize-none shadow-sm p-3 transition-all duration-200 ease-in-out hover:border-ring"
+                    placeholder="Onde o candidato precisa melhorar?"
+                    value={concerns}
+                    onChange={(e) => setConcerns(e.target.value)}
+                  ></textarea>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-3 transition-colors">Recomendação</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <label className={`relative flex flex-col items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ease-in-out shadow-sm group ${recommendation === 'advance' ? 'border-primary bg-primary/5' : 'border-border bg-background hover:border-primary/50'}`}>
+                    <input className="sr-only" type="radio" checked={recommendation === 'advance'} onChange={() => setRecommendation('advance')} />
+                    <div className={`size-10 rounded-full flex items-center justify-center mb-2 transition-colors ${recommendation === 'advance' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground group-hover:bg-foreground/10 group-hover:text-foreground'}`}>
+                      <span className={`material-symbols-outlined text-2xl ${recommendation === 'advance' ? 'filled' : ''}`}>thumb_up</span>
+                    </div>
+                    <span className={`font-semibold text-xs uppercase tracking-wider transition-colors ${recommendation === 'advance' ? 'text-primary' : 'text-muted-foreground'}`}>Avançar</span>
+                  </label>
+
+                  <label className={`relative flex flex-col items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ease-in-out shadow-sm group ${recommendation === 'hold' ? 'border-foreground/50 bg-foreground/5' : 'border-border bg-background hover:border-foreground/30'}`}>
+                    <input className="sr-only" type="radio" checked={recommendation === 'hold'} onChange={() => setRecommendation('hold')} />
+                    <div className={`size-10 rounded-full flex items-center justify-center mb-2 transition-colors ${recommendation === 'hold' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground group-hover:bg-foreground/10 group-hover:text-foreground'}`}>
+                      <span className={`material-symbols-outlined text-2xl ${recommendation === 'hold' ? 'filled' : ''}`}>pause</span>
+                    </div>
+                    <span className={`font-semibold text-xs uppercase tracking-wider transition-colors ${recommendation === 'hold' ? 'text-foreground' : 'text-muted-foreground'}`}>Segurar</span>
+                  </label>
+
+                  <label className={`relative flex flex-col items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ease-in-out shadow-sm group ${recommendation === 'reject' ? 'border-destructive bg-destructive/5' : 'border-border bg-background hover:border-destructive/30'}`}>
+                    <input className="sr-only" type="radio" checked={recommendation === 'reject'} onChange={() => setRecommendation('reject')} />
+                    <div className={`size-10 rounded-full flex items-center justify-center mb-2 transition-colors ${recommendation === 'reject' ? 'bg-destructive text-destructive-foreground' : 'bg-muted text-muted-foreground group-hover:bg-destructive/10 group-hover:text-destructive'}`}>
+                      <span className={`material-symbols-outlined text-2xl ${recommendation === 'reject' ? 'filled' : ''}`}>thumb_down</span>
+                    </div>
+                    <span className={`font-semibold text-xs uppercase tracking-wider transition-colors ${recommendation === 'reject' ? 'text-destructive' : 'text-muted-foreground'}`}>Reprovar</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="bg-muted/30 p-4 rounded-lg border border-border transition-colors">
+                <label className="block text-sm font-semibold mb-3 flex items-center gap-2 transition-colors">
+                  <span className="material-symbols-outlined text-primary">move_to_inbox</span>
+                  Mover para Etapa (Opcional)
+                </label>
+                <select
+                  value={selectedStage}
+                  onChange={(e) => setSelectedStage(e.target.value as KanbanColumnId)}
+                  className="block w-full h-11 px-3 rounded-md border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all duration-200 ease-in-out shadow-sm hover:border-ring"
+                >
+                  <option value="">Manter na etapa atual ({currentStage || 'Atual'})</option>
+                  <option value="received">Recebido</option>
+                  <option value="screening">Em Triagem</option>
+                  <option value="technical">Avaliação Téc.</option>
+                  <option value="hr_interview">Entrevista RH</option>
+                  <option value="manager_interview">Entrevista Gestor</option>
+                  <option value="finalist">Finalista</option>
+                  <option value="hired">Contratado</option>
+                  <option value="rejected">Não Selecionado</option>
+                </select>
+              </div>
+            </form>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 bg-muted/30 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0 transition-colors">
+            <div className="flex flex-col gap-1 w-full sm:w-auto transition-colors">
+              <p className="text-[10px] text-muted-foreground font-semibold italic tracking-wide">LOG DE AUDITORIA SERÁ GERADO AO SALVAR.</p>
+            </div>
+            <div className="flex gap-3 w-full sm:w-auto">
+              <button
+                onClick={onClose}
+                className="flex-1 sm:flex-none h-11 px-6 text-sm font-semibold text-foreground hover:bg-accent rounded-base border border-border bg-background transition-all duration-200 ease-in-out active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                form="feedback-form"
+                className="flex-1 sm:flex-none h-11 px-8 text-sm font-semibold text-primary-foreground bg-primary border border-border/40 hover:bg-primary/90 rounded-base shadow-sm transition-all duration-200 ease-in-out flex items-center justify-center gap-2 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <span className="material-symbols-outlined text-lg">save</span> Confirmar
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -26,9 +26,9 @@ const JobDetail: React.FC = () => {
         <div className="size-16 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mb-4">
           <span className="material-symbols-outlined text-[32px]">error</span>
         </div>
-        <h2 className="text-2xl font-bold text-foreground">Vaga não encontrada</h2>
+        <h2 className="text-2xl font-semibold text-foreground">Vaga não encontrada</h2>
         <p className="text-muted-foreground mt-2 mb-6">Não foi possível localizar as informações para esta vaga.</p>
-        <Link to="/jobs" className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-base font-bold shadow-sm hover:bg-primary/90 transition-all">
+        <Link to="/jobs" className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-base font-semibold shadow-sm hover:bg-primary/90 transition-all">
           <span className="material-symbols-outlined text-[20px]">arrow_back</span>
           Voltar para Vagas
         </Link>
@@ -50,8 +50,8 @@ const JobDetail: React.FC = () => {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-extrabold text-foreground tracking-tight leading-tight">{job.title}</h1>
-              <span className="bg-primary/5 text-primary text-[10px] font-bold px-2 py-0.5 rounded border border-primary/10 tracking-widest uppercase">#{job.id}</span>
+              <h1 className="text-3xl font-semibold text-foreground tracking-tight leading-tight">{job.title}</h1>
+              <span className="bg-primary/5 text-primary text-[10px] font-semibold px-2 py-0.5 rounded border border-primary/10 tracking-widest uppercase">#{job.id}</span>
             </div>
             <div className="flex items-center gap-4 text-muted-foreground">
               <div className="flex items-center gap-1.5">
@@ -70,13 +70,13 @@ const JobDetail: React.FC = () => {
             {/* Primary Action - Conversion Optimization */}
             <button
               onClick={() => navigate('/jobs', { state: { selectedJobId: job.id } })}
-              className="flex items-center justify-center rounded-base h-11 px-6 bg-primary text-primary-foreground hover:bg-primary/90 transition-all gap-2.5 text-sm font-bold shadow-lg shadow-primary/20 active:translate-y-[1px]"
+              className="flex items-center justify-center rounded-base h-11 px-6 bg-primary text-primary-foreground hover:bg-primary/90 transition-all gap-2.5 text-sm font-semibold shadow-lg shadow-primary/20 active:translate-y-[1px]"
             >
               <span className="material-symbols-outlined text-[20px] filled">group</span>
               <span>Gerenciar Candidatos</span>
             </button>
 
-            <Link to={`/jobs/${id}/edit`} className="flex items-center justify-center rounded-base h-11 px-6 bg-background border border-border text-foreground hover:bg-accent transition-all gap-2.5 text-sm font-bold shadow-sm active:translate-y-[1px]">
+            <Link to={`/jobs/${id}/edit`} className="flex items-center justify-center rounded-base h-11 px-6 bg-background border border-border text-foreground hover:bg-accent transition-all gap-2.5 text-sm font-semibold shadow-sm active:translate-y-[1px]">
               <span className="material-symbols-outlined text-[20px]">edit_note</span>
               <span>Editar</span>
             </Link>
@@ -94,19 +94,19 @@ const JobDetail: React.FC = () => {
         <div className="flex gap-3 flex-wrap mt-8">
           <div className="flex h-8 items-center justify-center gap-x-2 rounded-full bg-muted/50 border border-border px-4 transition-colors hover:bg-muted">
             <span className="material-symbols-outlined text-[18px] text-muted-foreground">location_on</span>
-            <p className="text-foreground text-[10px] font-bold uppercase tracking-wider">{job.location} • {job.model}</p>
+            <p className="text-foreground text-[10px] font-semibold uppercase tracking-wider">{job.location} • {job.model}</p>
           </div>
           <div className="flex h-8 items-center justify-center gap-x-2 rounded-full bg-muted/50 border border-border px-4 transition-colors hover:bg-muted">
             <span className="material-symbols-outlined text-[18px] text-muted-foreground">verified_user</span>
-            <p className="text-foreground text-[10px] font-bold uppercase tracking-wider">{job.contract}</p>
+            <p className="text-foreground text-[10px] font-semibold uppercase tracking-wider">{job.contract}</p>
           </div>
           <div className="flex h-8 items-center justify-center gap-x-2 rounded-full bg-destructive/10 border border-destructive/20 px-4">
             <span className="material-symbols-outlined text-[18px] text-destructive">priority_high</span>
-            <p className="text-destructive text-[10px] font-bold uppercase tracking-wider">Urgência {job.urgency}</p>
+            <p className="text-destructive text-[10px] font-semibold uppercase tracking-wider">Urgência {job.urgency}</p>
           </div>
           <div className="flex h-8 items-center justify-center gap-x-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-4">
             <span className="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span>
-            <p className="text-emerald-700 text-[10px] font-bold uppercase tracking-wider">Status {job.status}</p>
+            <p className="text-emerald-700 text-[10px] font-semibold uppercase tracking-wider">Status {job.status}</p>
           </div>
         </div>
       </header>
@@ -117,19 +117,19 @@ const JobDetail: React.FC = () => {
           <div className="lg:col-span-3 flex flex-col gap-8">
             <section className="bg-card rounded-lg shadow-sm border border-border overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="px-8 py-5 border-b border-border bg-muted/30 flex justify-between items-center">
-                <h2 className="text-lg font-bold text-foreground flex items-center gap-3">
+                <h2 className="text-lg font-semibold text-foreground flex items-center gap-3">
                   <span className="material-symbols-outlined text-primary text-[24px]">description</span>
                   Especificações do Cargo
                 </h2>
                 <div className="flex items-center gap-2 px-3 py-1 bg-card rounded-full border border-border">
                   <div className="size-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Visualização Interna</span>
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Visualização Interna</span>
                 </div>
               </div>
 
               <div className="p-10 space-y-12">
                 <article>
-                  <h3 className="text-sm font-bold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
                     <span className="h-px w-6 bg-primary/30"></span>
                     Contexto e Desafios
                   </h3>
@@ -139,7 +139,7 @@ const JobDetail: React.FC = () => {
                 </article>
 
                 <article>
-                  <h3 className="text-sm font-bold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
                     <span className="h-px w-6 bg-primary/30"></span>
                     Missão da Posição
                   </h3>
@@ -162,40 +162,40 @@ const JobDetail: React.FC = () => {
           <aside className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-500">
             <section className="border border-border bg-card shadow-lg rounded-lg overflow-hidden">
               <div className="bg-primary/5 px-6 py-4 border-b border-border">
-                <h2 className="text-sm font-bold text-foreground flex items-center gap-2 uppercase tracking-wider">
+                <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 uppercase tracking-wider">
                   <span className="material-symbols-outlined text-primary text-[20px]">analytics</span>
                   Dados Vitais
                 </h2>
               </div>
               <div className="p-8 space-y-8">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Departamento</p>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest pl-0.5">Departamento</p>
                   <div className="bg-muted/40 p-3 rounded-base border border-border/60">
-                    <p className="text-sm font-bold text-foreground">{job.department}</p>
+                    <p className="text-sm font-semibold text-foreground">{job.department}</p>
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Proposta Salarial</p>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest pl-0.5">Proposta Salarial</p>
                   <div className="bg-muted/40 p-3 rounded-base border border-border/60 flex items-center gap-2">
                     <span className="material-symbols-outlined text-emerald-600 text-[18px]">payments</span>
-                    <p className="text-sm font-bold text-foreground font-mono">R$ {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()}</p>
+                    <p className="text-sm font-semibold text-foreground font-mono">R$ {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()}</p>
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-0.5">Gestor Solicitante</p>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest pl-0.5">Gestor Solicitante</p>
                   <div className="flex items-center gap-3 bg-muted/40 p-3 rounded-base border border-border/60">
-                    <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold border border-primary/20">
+                    <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-semibold border border-primary/20">
                       {manager?.name ? manager.name.substring(0, 2).toUpperCase() : 'NA'}
                     </div>
-                    <p className="text-sm font-bold text-foreground truncate">{manager?.name || 'Não atribuído'}</p>
+                    <p className="text-sm font-semibold text-foreground truncate">{manager?.name || 'Não atribuído'}</p>
                   </div>
                 </div>
               </div>
 
               <div className="p-6 bg-muted/20 border-t border-border mt-auto">
-                <Link to={`/jobs/${id}/edit`} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-base bg-background border border-border text-xs font-bold text-muted-foreground hover:text-primary transition-all uppercase tracking-widest">
+                <Link to={`/jobs/${id}/edit`} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-base bg-background border border-border text-xs font-semibold text-muted-foreground hover:text-primary transition-all uppercase tracking-widest">
                   <span className="material-symbols-outlined text-[16px]">edit</span>
                   Atualizar Dados
                 </Link>
@@ -207,11 +207,11 @@ const JobDetail: React.FC = () => {
               <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined text-[64px]">diversity_1</span>
               </div>
-              <h4 className="text-lg font-bold mb-1 relative z-10">Fila de Triagem</h4>
+              <h4 className="text-lg font-semibold mb-1 relative z-10">Fila de Triagem</h4>
               <p className="text-primary-foreground/80 text-xs font-medium mb-4 relative z-10">Você possui {job.candidates_count} talentos aguardando avaliação nesta vaga.</p>
               <button
                 onClick={() => navigate('/jobs', { state: { selectedJobId: job.id } })}
-                className="w-full py-2 bg-white/10 hover:bg-white/20 rounded border border-white/20 text-[10px] font-bold tracking-widest uppercase transition-all relative z-10"
+                className="w-full py-2 bg-white/10 hover:bg-white/20 rounded border border-white/20 text-[10px] font-semibold tracking-widest uppercase transition-all relative z-10"
               >
                 Ver Candidatos
               </button>
@@ -231,7 +231,7 @@ const JobDetail: React.FC = () => {
                     <span className="material-symbols-outlined text-red-600 dark:text-red-400">warning</span>
                   </div>
                   <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left w-full">
-                    <h3 className="text-lg font-bold leading-6 text-foreground">Encerrar Vaga?</h3>
+                    <h3 className="text-lg font-semibold leading-6 text-foreground">Encerrar Vaga?</h3>
                     <div className="mt-2">
                       <p className="text-sm text-muted-foreground">Encerrar remove a vaga das abertas, mantendo histórico e auditoria. Esta ação não pode ser desfeita facilmente.</p>
                     </div>

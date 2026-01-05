@@ -15,8 +15,8 @@ const ResetPassword: React.FC = () => {
                             <span className="material-symbols-outlined filled">work</span>
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-lg font-bold text-foreground leading-tight">Recrutamento</span>
-                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Interno</span>
+                            <span className="text-lg font-semibold text-foreground leading-tight">Recrutamento</span>
+                            <span className="text-xs font-semibold text-muted-foreground">Interno</span>
                         </div>
                     </div>
                 </div>
@@ -25,7 +25,7 @@ const ResetPassword: React.FC = () => {
                         <div className="inline-flex items-center justify-center size-14 rounded-full bg-muted border border-border text-foreground mb-4 shadow-inner">
                             <span className="material-symbols-outlined text-[28px]">lock_reset</span>
                         </div>
-                        <h1 className="text-2xl font-bold text-foreground mb-2">Redefinir senha</h1>
+                        <h1 className="text-2xl font-semibold text-foreground mb-2">Redefinir senha</h1>
                         <p className="text-sm text-muted-foreground leading-relaxed font-medium">
                             Sua nova senha deve ser diferente das senhas utilizadas anteriormente.
                         </p>
@@ -44,8 +44,8 @@ const ResetPassword: React.FC = () => {
                             </div>
                             <div className="mt-4 bg-muted/30 rounded-lg p-3 border border-border">
                                 <div className="flex justify-between items-end mb-2">
-                                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Força da senha</span>
-                                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Boa</span>
+                                    <span className="text-xs font-semibold text-muted-foreground">Força da senha</span>
+                                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Boa</span>
                                 </div>
                                 <div className="flex gap-1 h-1.5 mb-3 w-full">
                                     <div className="flex-1 bg-emerald-500 rounded-full"></div>
@@ -54,15 +54,15 @@ const ResetPassword: React.FC = () => {
                                     <div className="flex-1 bg-background rounded-full"></div>
                                 </div>
                                 <ul className="space-y-1.5">
-                                    <li className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
+                                    <li className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
                                         <span className="material-symbols-outlined text-[16px] filled">check_circle</span>
                                         <span>Mínimo de 8 caracteres</span>
                                     </li>
-                                    <li className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
+                                    <li className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
                                         <span className="material-symbols-outlined text-[16px] filled">check_circle</span>
                                         <span>Pelo menos uma letra maiúscula</span>
                                     </li>
-                                    <li className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
+                                    <li className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-semibold">
                                         <span className="material-symbols-outlined text-[16px] filled">check_circle</span>
                                         <span>Pelo menos um número</span>
                                     </li>
@@ -85,21 +85,21 @@ const ResetPassword: React.FC = () => {
                                 </button>
                             </div>
                         </div>
-                        <button className="w-full mt-2 bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 px-4 rounded-base shadow-lg shadow-primary/20 transition-all duration-200 ease-in-out active:translate-y-[1px] flex items-center justify-center gap-2" type="button">
+                        <button className="w-full mt-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-4 rounded-base shadow-lg shadow-primary/20 transition-all duration-200 ease-in-out active:translate-y-[1px] flex items-center justify-center gap-2" type="button">
                             <span className="material-symbols-outlined text-[20px]">save</span>
                             Salvar nova senha
                         </button>
                     </form>
                     <div className="mt-8 pt-6 border-t border-border text-center">
-                        <Link to="/login" className="inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground hover:text-foreground transition-all duration-200 ease-in-out group">
+                        <Link to="/login" className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground transition-all duration-200 ease-in-out group">
                             <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
                             Voltar para o login
                         </Link>
                     </div>
                 </div>
                 <div className="mt-8 text-center opacity-60">
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
-                        © 2024 Sistema Interno de RH. Todos os direitos reservados.
+                    <p className="text-xs text-muted-foreground font-medium">
+                        © 2024 Sistema interno de RH. Todos os direitos reservados.
                     </p>
                 </div>
             </main>

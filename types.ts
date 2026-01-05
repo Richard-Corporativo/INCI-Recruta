@@ -4,19 +4,32 @@ export interface Job {
   context: string;
   department: string;
   location: string;
-  model: 'Remoto' | 'Híbrido' | 'Presencial';
-  contract: 'PJ' | 'CLT';
+  model: string;
+  contract: string;
   urgency: 'Alta' | 'Média' | 'Baixa';
   status: 'Ativa' | 'Pausada' | 'Rascunho' | 'Encerrada';
   salary_min: number;
   salary_max: number;
   mission?: string;
+  responsibilities?: string;
+  seniority?: string;
   candidates_count: number;
   created_at: string;
   manager_id?: string;
 }
 
 export type KanbanColumnId = 'received' | 'screening' | 'technical' | 'hr_interview' | 'manager_interview' | 'finalist' | 'hired' | 'rejected';
+
+export interface CandidateFeedback {
+  id: string;
+  rating: number;
+  strengths: string;
+  concerns: string;
+  recommendation: 'advance' | 'hold' | 'reject';
+  stage: string;
+  createdAt: string;
+  createdBy: string;
+}
 
 export interface Candidate {
   id: string;
@@ -28,6 +41,12 @@ export interface Candidate {
   location: string;
   time: string;
   role?: string;
+  summary?: string;
+  linkedin?: string;
+  github?: string;
+  portfolio?: string;
+  resumeName?: string;
+  avatar?: string;
   match?: string;
   avatarColor: string;
   textColor: string;
@@ -36,6 +55,12 @@ export interface Candidate {
   columnId: KanbanColumnId;
   applied_at?: string;
   hired_at?: string;
+  feedbacks?: CandidateFeedback[];
+  nextInterview?: {
+    type: string;
+    date: string;
+    time: string;
+  };
 }
 
 export interface Role {
@@ -62,6 +87,26 @@ export interface User {
   password?: string;
   avatar?: string;
   department?: string;
+  scope?: {
+    vacancy_view_type: 'direct' | 'department';
+    allowed_departments: string[];
+    allowed_role_codes?: string[];
+  };
+  custom_permissions?: {
+    close_job?: boolean;
+    approve_finalist?: boolean;
+    register_feedback?: boolean;
+    view_salaries?: boolean;
+  };
+}
+
+export interface SystemSettings {
+  manager_permissions: {
+    move_to_finalist: boolean;
+    mark_not_selected: boolean;
+    return_candidate_stage: boolean;
+    close_job: boolean;
+  };
 }
 
 export interface AuditLog {
