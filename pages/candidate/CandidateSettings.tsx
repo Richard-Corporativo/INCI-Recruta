@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCandidateData } from '../../hooks/useCandidateData';
@@ -28,12 +29,19 @@ import { Link } from 'react-router-dom';
 
 const CandidateSettings: React.FC = () => {
 >>>>>>> parent of 3015adc (mvp concluido)
+=======
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+
+const CandidateSettings: React.FC = () => {
+>>>>>>> parent of 3015adc (mvp concluido)
     const [notifications, setNotifications] = useState({
         email: true,
         sms: false,
         whatsapp: true
     });
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
     // --> otimizado: Sincronização automática com o cache global do React Query
@@ -95,6 +103,8 @@ const CandidateSettings: React.FC = () => {
         }
     };
 
+=======
+>>>>>>> parent of 3015adc (mvp concluido)
 =======
 >>>>>>> parent of 3015adc (mvp concluido)
 =======
@@ -234,10 +244,14 @@ const CandidateSettings: React.FC = () => {
                             <div className="mt-auto pt-8">
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                                 <button
                                     onClick={() => setShowDeleteModal(true)}
                                     className="w-full h-12 rounded-base bg-destructive text-destructive-foreground text-[11px] font-semibold hover:bg-destructive/90 transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-lg shadow-destructive/10"
                                 >
+=======
+                                <button className="w-full h-12 rounded-base bg-destructive text-destructive-foreground text-[11px] font-semibold hover:bg-destructive/90 transition-all duration-300 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-lg shadow-destructive/10">
+>>>>>>> parent of 3015adc (mvp concluido)
 =======
                                 <button className="w-full h-12 rounded-base bg-destructive text-destructive-foreground text-[11px] font-semibold hover:bg-destructive/90 transition-all duration-300 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-lg shadow-destructive/10">
 >>>>>>> parent of 3015adc (mvp concluido)

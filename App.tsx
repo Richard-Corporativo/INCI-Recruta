@@ -102,6 +102,7 @@ const RoleRedirect = () => {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
@@ -123,6 +124,8 @@ const persister = createSyncStoragePersister({
   key: 'INCI_RECRUTA_CACHE', // Use a specific key to avoid conflicts
 });
 
+=======
+>>>>>>> parent of 3015adc (mvp concluido)
 =======
 >>>>>>> parent of 3015adc (mvp concluido)
 =======
