@@ -43,6 +43,11 @@ import CandidateSettings from './pages/candidate/CandidateSettings';
 import ApplicationDetail from './pages/candidate/ApplicationDetail';
 import DebugAuth from './pages/DebugAuth';
 
+
+// QuickView
+import { QuickViewProvider } from './context/QuickViewContext';
+import QuickViewDrawer from './components/QuickViewDrawer';
+
 // --- Helpers ---
 const RequireAuth = ({ children }: { children?: React.ReactNode }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
@@ -99,9 +104,10 @@ const RoleRedirect = () => {
 const AdminLayout: React.FC = () => (
   <div className="flex min-h-screen w-full bg-background text-foreground transition-all duration-300 ease-in-out">
     <Sidebar />
-    <div className="flex-1 flex flex-col min-w-0 lg:ml-72 transition-all duration-300 ease-in-out">
+    <main className="flex-1 overflow-x-hidden transition-all duration-300 ease-in-out bg-background text-foreground ml-64 p-8">
       <Outlet />
-    </div>
+    </main>
+    <QuickViewDrawer />
   </div>
 );
 
@@ -110,71 +116,73 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <ToastProvider>
-        <Router>
-          <Routes>
-            {/* Base Redirect */}
-            <Route path="/" element={<RoleRedirect />} />
+        <QuickViewProvider>
+          <Router>
+            <Routes>
+              {/* Base Redirect */}
+              <Route path="/" element={<RoleRedirect />} />
 
-            {/* Admin Auth */}
-            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="/admin/login" element={<Login />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/request-access" element={<RequestAccess />} />
-            <Route path="/2fa" element={<TwoFactorAuth />} />
+              {/* Admin Auth */}
+              <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="/admin/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/request-access" element={<RequestAccess />} />
+              <Route path="/2fa" element={<TwoFactorAuth />} />
 
-            {/* Public Routes (Candidate Portal) */}
-            <Route element={<PublicLayout />}>
-              <Route path="/login" element={<CandidateLogin />} />
-              <Route path="/cadastro" element={<CandidateRegister />} />
-              <Route path="/recuperar-senha" element={<CandidateForgotPassword />} />
-              <Route path="/vagas" element={<JobsList />} />
-              <Route path="/vagas/:id" element={<JobDetailPublic />} />
-              <Route path="/vagas/:id/candidatar" element={<JobApplication />} />
-              <Route path="/termos" element={<TermsOfUse />} />
-              <Route path="/privacidade" element={<PrivacyPolicy />} />
-              <Route path="/verificar-email" element={<VerifyEmail />} />
-            </Route>
+              {/* Public Routes (Candidate Portal) */}
+              <Route element={<PublicLayout />}>
+                <Route path="/login" element={<CandidateLogin />} />
+                <Route path="/cadastro" element={<CandidateRegister />} />
+                <Route path="/recuperar-senha" element={<CandidateForgotPassword />} />
+                <Route path="/vagas" element={<JobsList />} />
+                <Route path="/vagas/:id" element={<JobDetailPublic />} />
+                <Route path="/vagas/:id/candidatar" element={<JobApplication />} />
+                <Route path="/termos" element={<TermsOfUse />} />
+                <Route path="/privacidade" element={<PrivacyPolicy />} />
+                <Route path="/verificar-email" element={<VerifyEmail />} />
+              </Route>
 
-            {/* Candidate Protected Routes */}
-            <Route path="/candidate" element={
-              <RequireCandidateAuth>
-                <CandidateLayout />
-              </RequireCandidateAuth>
-            }>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<CandidateDashboard />} />
-              <Route path="applications" element={<MyApplications />} />
-              <Route path="applications/:id" element={<ApplicationDetail />} />
-              <Route path="settings" element={<CandidateSettings />} />
-            </Route>
+              {/* Candidate Protected Routes */}
+              <Route path="/candidate" element={
+                <RequireCandidateAuth>
+                  <CandidateLayout />
+                </RequireCandidateAuth>
+              }>
+                <Route index element={<Navigate to="dashboard" replace />} />
+                <Route path="dashboard" element={<CandidateDashboard />} />
+                <Route path="applications" element={<MyApplications />} />
+                <Route path="applications/:id" element={<ApplicationDetail />} />
+                <Route path="settings" element={<CandidateSettings />} />
+              </Route>
 
-            {/* Admin Protected Routes */}
-            <Route element={
-              <RequireAuth>
-                <AdminLayout />
-              </RequireAuth>
-            }>
-              <Route path="/admin/dashboard" element={<Dashboard />} />
-              <Route path="/jobs" element={<Jobs />} />
-              <Route path="/jobs/new" element={<CreateJob />} />
-              <Route path="/jobs/:id" element={<JobDetail />} />
-              <Route path="/jobs/:id/edit" element={<EditJob />} />
-              <Route path="/jobs/:id/kanban" element={<Kanban />} />
-              <Route path="/roles" element={<Roles />} />
-              <Route path="/roles/new" element={<CreateRole />} />
-              <Route path="/roles/:id/edit" element={<EditRole />} />
-              <Route path="/audit" element={<Audit />} />
-              <Route path="/talent-bank" element={<TalentBank />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/settings/users/:id/edit" element={<EditUser />} />
-            </Route>
+              {/* Admin Protected Routes */}
+              <Route element={
+                <RequireAuth>
+                  <AdminLayout />
+                </RequireAuth>
+              }>
+                <Route path="/admin/dashboard" element={<Dashboard />} />
+                <Route path="/jobs" element={<Jobs />} />
+                <Route path="/jobs/new" element={<CreateJob />} />
+                <Route path="/jobs/:id" element={<JobDetail />} />
+                <Route path="/jobs/:id/edit" element={<EditJob />} />
+                <Route path="/jobs/:id/kanban" element={<Kanban />} />
+                <Route path="/roles" element={<Roles />} />
+                <Route path="/roles/new" element={<CreateRole />} />
+                <Route path="/roles/:id/edit" element={<EditRole />} />
+                <Route path="/audit" element={<Audit />} />
+                <Route path="/talent-bank" element={<TalentBank />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/settings/users/:id/edit" element={<EditUser />} />
+              </Route>
 
-            {/* Global 404 */}
-            <Route path="/debug" element={<DebugAuth />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Router>
+              {/* Global 404 */}
+              <Route path="/debug" element={<DebugAuth />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Router>
+        </QuickViewProvider>
       </ToastProvider>
     </AuthProvider>
   );

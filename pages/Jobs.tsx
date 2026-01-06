@@ -5,55 +5,89 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import Toast from '../components/Toast';
 import { useJobs } from '../hooks/useJobs';
 import { useAuth } from '../hooks/useAuth';
+import { useCandidates } from '../hooks/useCandidates';
+import { useUsers } from '../hooks/useUsers';
 import useDebounce from '../hooks/useDebounce';
+import { useQuickView } from '../context/QuickViewContext';
 
 const Jobs: React.FC = () => {
   const navigate = useNavigate();
   const { jobs, deleteJob, isLoading } = useJobs();
+  const { candidates } = useCandidates();
+  const { users } = useUsers();
   const { user } = useAuth();
+  const { openQuickView } = useQuickView();
 
   const [jobToDelete, setJobToDelete] = useState<string | number | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [searchInputValue, setSearchInputValue] = useState('');
+  const [statusFilter, setStatusFilter] = useState('Todas');
+  const [managerFilter, setManagerFilter] = useState('all');
 
   const debouncedSearchTerm = useDebounce(searchInputValue, 300);
 
-  // Helper para cores de urgência
+  // Distinct colors for Urgency
   const getUrgencyStyles = (urgency: string) => {
     switch (urgency) {
-      case 'Alta': return 'bg-destructive/10 text-destructive border-destructive/20';
-      case 'Média': return 'bg-primary/10 text-primary border-primary/20';
-      case 'Baixa': return 'bg-muted text-muted-foreground border-border';
+      case 'Alta': return 'bg-red-500/10 text-red-600 border-red-200';
+      case 'Média': return 'bg-orange-500/10 text-orange-600 border-orange-200';
+      case 'Baixa': return 'bg-slate-100 text-slate-600 border-slate-200';
       default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
   const getUrgencyDotColor = (urgency: string) => {
     switch (urgency) {
-      case 'Alta': return 'bg-destructive';
-      case 'Média': return 'bg-primary';
-      case 'Baixa': return 'bg-muted-foreground';
+      case 'Alta': return 'bg-red-500';
+      case 'Média': return 'bg-orange-500';
+      case 'Baixa': return 'bg-slate-400';
       default: return 'bg-muted-foreground';
     }
   };
 
+  // Distinct colors for Status
   const getStatusStyles = (status: string) => {
     switch (status) {
-      case 'Ativa': return 'bg-primary/10 text-primary border-primary/20';
-      case 'Pausada': return 'bg-muted text-muted-foreground border-border';
-      case 'Encerrada': return 'bg-destructive/10 text-destructive border-destructive/20';
+      case 'Ativa': return 'bg-emerald-500/10 text-emerald-600 border-emerald-200';
+      case 'Pausada': return 'bg-amber-500/10 text-amber-600 border-amber-200';
+      case 'Encerrada': return 'bg-slate-500/10 text-slate-600 border-slate-200';
+      case 'Rascunho': return 'bg-blue-500/10 text-blue-600 border-blue-200';
       default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
   const getStatusDotColor = (status: string) => {
     switch (status) {
-      case 'Ativa': return 'bg-primary';
-      case 'Pausada': return 'bg-muted-foreground';
-      case 'Encerrada': return 'bg-destructive';
+      case 'Ativa': return 'bg-emerald-500';
+      case 'Pausada': return 'bg-amber-500';
+      case 'Encerrada': return 'bg-slate-500';
+      case 'Rascunho': return 'bg-blue-500';
       default: return 'bg-muted-foreground';
     }
   };
+
+  const filteredJobs = React.useMemo(() => {
+    return jobs.filter(job => {
+      // Search: Title, Dept, Location
+      const matchesSearch = !debouncedSearchTerm ||
+        job.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        job.department.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        job.location.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+
+      // Status Filter
+      const matchesStatus = statusFilter === 'Todas' || job.status === statusFilter;
+
+      // Manager Filter
+      let matchesManager = true;
+      if (managerFilter !== 'all') {
+        matchesManager = job.manager_id === managerFilter;
+      }
+
+      return matchesSearch && matchesStatus && matchesManager;
+    });
+  }, [jobs, debouncedSearchTerm, statusFilter, managerFilter]);
+
+  const isAdmin = user?.role === 'admin' || user?.role === 'recruiter';
 
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden bg-background transition-colors duration-200 ease-in-out">
@@ -93,16 +127,25 @@ const Jobs: React.FC = () => {
             </div>
           </div>
 
-          <div className="w-full md:w-48 px-4 py-2">
+          <div className="w-full md:w-56 px-4 py-2">
             <label className="block text-[11px] font-semibold text-muted-foreground mb-1 flex items-center gap-1 transition-colors">
-              Gestor <span className="material-symbols-outlined text-[10px] text-muted-foreground" title="Permissão restrita">lock</span>
+              Gestor {!isAdmin && <span className="material-symbols-outlined text-[10px] text-muted-foreground" title="Permissão restrita">lock</span>}
             </label>
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-muted-foreground text-[18px]">person</span>
               <div className="relative w-full">
-                <select className="w-full bg-transparent border-none p-0 text-sm font-medium text-muted-foreground focus:ring-0 cursor-not-allowed appearance-none pr-6 outline-none" disabled>
-                  <option>{user?.name || 'Ana Silva'} (Eu)</option>
+                <select
+                  className={`w-full bg-transparent border-none p-0 text-sm font-semibold text-foreground focus:ring-0 appearance-none pr-6 outline-none ${!isAdmin ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
+                  disabled={!isAdmin}
+                  value={managerFilter}
+                  onChange={(e) => setManagerFilter(e.target.value)}
+                >
+                  <option value="all">Todos os Gestores</option>
+                  {users.filter(u => u.role === 'manager' || u.role === 'admin').map(u => (
+                    <option key={u.id} value={u.id}>{u.name} {u.id === user?.id ? '(Eu)' : ''}</option>
+                  ))}
                 </select>
+                {isAdmin && <span className="material-symbols-outlined absolute right-0 top-1/2 -translate-y-1/2 text-[18px] text-muted-foreground pointer-events-none transition-colors">expand_more</span>}
               </div>
             </div>
           </div>
@@ -110,10 +153,16 @@ const Jobs: React.FC = () => {
           <div className="w-full md:w-40 px-4 py-2">
             <label className="block text-[11px] font-semibold text-muted-foreground mb-1 transition-colors">Status</label>
             <div className="relative">
-              <select className="w-full bg-transparent border-none p-0 text-sm font-medium text-foreground focus:ring-0 cursor-pointer appearance-none pr-6 outline-none">
-                <option>Todas</option>
-                <option>Ativas</option>
-                <option>Pausadas</option>
+              <select
+                className="w-full bg-transparent border-none p-0 text-sm font-semibold text-foreground focus:ring-0 cursor-pointer appearance-none pr-6 outline-none"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="Todas">Todas</option>
+                <option value="Ativa">Ativas</option>
+                <option value="Pausada">Pausadas</option>
+                <option value="Encerrada">Encerradas</option>
+                <option value="Rascunho">Rascunhos</option>
               </select>
               <span className="material-symbols-outlined absolute right-0 top-1/2 -translate-y-1/2 text-[20px] text-muted-foreground pointer-events-none transition-colors">expand_more</span>
             </div>
@@ -140,75 +189,89 @@ const Jobs: React.FC = () => {
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Contrato</th>
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Urgência</th>
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Status</th>
+                      <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Prazo Inscrição</th>
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Candidatos</th>
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground text-right transition-colors">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {jobs.filter(job => !debouncedSearchTerm || job.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase())).map((job) => (
-                      <tr
-                        key={job.id}
-                        className="bg-card hover:bg-muted/50 transition-colors duration-200 ease-in-out cursor-pointer group"
-                        onClick={() => navigate(`/jobs/${job.id}/kanban`)}
-                      >
-                        <td className="px-6 py-5">
-                          <div className="flex flex-col">
-                            <span className="text-sm text-foreground font-semibold group-hover:text-primary transition-all duration-200 ease-in-out">
-                              {job.title}
+                    {filteredJobs.map((job) => {
+                      const jobCandidatesCount = candidates.filter(c => c.jobId?.toString() === job.id.toString()).length;
+                      return (
+                        <tr
+                          key={job.id}
+                          className="bg-card hover:bg-muted/50 transition-colors duration-200 ease-in-out cursor-pointer group"
+                          onClick={() => navigate(`/jobs/${job.id}/kanban`)}
+                        >
+                          <td className="px-6 py-5">
+                            <div className="flex flex-col">
+                              <span className="text-sm text-foreground font-semibold group-hover:text-primary transition-all duration-200 ease-in-out">
+                                {job.title}
+                              </span>
+                              <span className="text-xs text-muted-foreground mt-1 transition-colors">{job.context}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5 text-sm text-foreground transition-colors">{job.department}</td>
+                          <td className="px-6 py-5 text-sm text-foreground transition-colors">{job.location}</td>
+                          <td className="px-6 py-5">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-muted text-muted-foreground border border-border transition-colors">
+                              {job.contract}
                             </span>
-                            <span className="text-xs text-muted-foreground mt-1 transition-colors">{job.context}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-5 text-sm text-foreground transition-colors">{job.department}</td>
-                        <td className="px-6 py-5 text-sm text-foreground transition-colors">{job.location}</td>
-                        <td className="px-6 py-5">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-muted text-muted-foreground border border-border transition-colors">
-                            {job.contract}
-                          </span>
-                        </td>
-                        <td className="px-6 py-5">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${getUrgencyStyles(job.urgency)}`}>
-                            <span className={`size-1.5 rounded-full transition-colors ${getUrgencyDotColor(job.urgency)}`}></span> {job.urgency}
-                          </span>
-                        </td>
-                        <td className="px-6 py-5">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${getStatusStyles(job.status)}`}>
-                            <span className={`size-1.5 rounded-full transition-colors ${getStatusDotColor(job.status)}`}></span> {job.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-5">
-                          <div className="flex items-baseline gap-1 transition-colors">
-                            <span className="text-sm font-semibold text-foreground">0</span>
-                            <span className="text-xs text-muted-foreground">ativos</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-5 text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}/kanban`); }}
-                              className="p-2 text-muted-foreground hover:text-primary rounded-lg hover:bg-primary/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                              title="Ver Kanban"
-                            >
-                              <span className="material-symbols-outlined text-[20px]">view_kanban</span>
-                            </button>
-                            <Link
-                              to={`/jobs/${job.id}/edit`}
-                              className="p-2 text-muted-foreground hover:text-primary rounded-lg hover:bg-primary/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                              title="Editar"
-                            >
-                              <span className="material-symbols-outlined text-[20px]">edit</span>
-                            </Link>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setJobToDelete(job.id); }}
-                              className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-destructive/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-destructive"
-                              title="Excluir"
-                            >
-                              <span className="material-symbols-outlined text-[20px]">delete</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="px-6 py-5">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${getUrgencyStyles(job.urgency)}`}>
+                              <span className={`size-1.5 rounded-full transition-colors ${getUrgencyDotColor(job.urgency)}`}></span> {job.urgency}
+                            </span>
+                          </td>
+                          <td className="px-6 py-5">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${getStatusStyles(job.status)}`}>
+                              <span className={`size-1.5 rounded-full transition-colors ${getStatusDotColor(job.status)}`}></span> {job.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-5 text-sm text-foreground transition-colors">
+                            {job.registration_deadline ? new Date(job.registration_deadline).toLocaleDateString() : 'N/A'}
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="flex items-baseline gap-1 transition-colors">
+                              <span className="text-sm font-semibold text-foreground">{jobCandidatesCount}</span>
+                              <span className="text-xs text-muted-foreground">inscritos</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openQuickView('job', job); }}
+                                className="p-2 text-muted-foreground hover:text-primary rounded-lg hover:bg-primary/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                title="Visualização Rápida"
+                              >
+                                <span className="material-symbols-outlined text-[20px]">visibility</span>
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}/kanban`); }}
+                                className="p-2 text-muted-foreground hover:text-primary rounded-lg hover:bg-primary/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                title="Ver Kanban"
+                              >
+                                <span className="material-symbols-outlined text-[20px]">view_kanban</span>
+                              </button>
+                              <Link
+                                to={`/jobs/${job.id}/edit`}
+                                className="p-2 text-muted-foreground hover:text-primary rounded-lg hover:bg-primary/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                title="Editar"
+                              >
+                                <span className="material-symbols-outlined text-[20px]">edit</span>
+                              </Link>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setJobToDelete(job.id); }}
+                                className="p-2 text-muted-foreground hover:text-destructive rounded-lg hover:bg-destructive/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                                title="Excluir"
+                              >
+                                <span className="material-symbols-outlined text-[20px]">delete</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

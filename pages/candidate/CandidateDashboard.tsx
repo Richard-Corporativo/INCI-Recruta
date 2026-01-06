@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCandidateData } from '../../hooks/useCandidateData';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/Toast';
 
 const CandidateDashboard: React.FC = () => {
-    const { currentCandidate, isLoading, updateProfile, completeness } = useCandidateData();
-    const { success, error, warning } = useToast();
-    const [isEditing, setIsEditing] = useState(false);
+    const { currentCandidate, isLoading, completeness } = useCandidateData();
+    const navigate = useNavigate();
     const [formData, setFormData] = useState<any>(null);
 
     useEffect(() => {
@@ -28,53 +28,6 @@ const CandidateDashboard: React.FC = () => {
         }
     }, [currentCandidate]);
 
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            await updateProfile({
-                name: formData.name,
-                phone: formData.phone,
-                location: formData.location,
-                role: formData.role,
-                summary: formData.summary,
-                linkedin: formData.linkedin,
-                github: formData.github,
-                portfolio: formData.portfolio,
-                resumeName: formData.resumeName,
-                avatar: formData.avatar
-            });
-            setIsEditing(false);
-            success('Perfil atualizado com sucesso!');
-        } catch (err: any) {
-            error('Erro ao atualizar perfil: ' + err.message);
-        }
-    };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'resume') => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        if (type === 'resume') {
-            if (file.type !== 'application/pdf') {
-                warning('Por favor, envie apenas arquivos PDF.');
-                return;
-            }
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                warning('O arquivo deve ter no máximo 5MB.');
-                return;
-            }
-        }
-
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            if (type === 'avatar') {
-                setFormData({ ...formData, avatar: reader.result as string });
-            } else {
-                setFormData({ ...formData, resumeName: file.name });
-            }
-        };
-        reader.readAsDataURL(file);
-    };
 
     const renderSkeletons = () => (
         <div className="flex flex-col gap-12 pb-24 animate-pulse">
@@ -117,174 +70,6 @@ const CandidateDashboard: React.FC = () => {
 
     if (isLoading || !formData) return <div className="p-12">{renderSkeletons()}</div>;
 
-    if (isEditing) {
-        return (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-12 pb-20">
-                <div className="flex flex-col gap-3">
-                    <p className="text-xs font-semibold text-primary">Configurações de perfil</p>
-                    <h1 className="text-3xl font-semibold text-foreground">Editar minhas informações</h1>
-                    <p className="text-muted-foreground text-sm font-medium">Um perfil completo aumenta suas chances em 75%.</p>
-                </div>
-
-                <form onSubmit={handleSave} className="bg-card text-card-foreground rounded-lg border border-border overflow-hidden transition-colors shadow-sm">
-                    {/* Multi-Section Form */}
-                    <div className="divide-y divide-border">
-                        {/* Avatar Section */}
-                        <div className="p-8 md:p-12 flex flex-col md:flex-row items-center gap-10">
-                            <div className="size-32 rounded-3xl bg-cover bg-center shrink-0 border-4 border-muted shadow-lg" style={{ backgroundImage: `url('${formData.avatar}')` }}></div>
-                            <div className="flex flex-col gap-4 flex-1">
-                                <label className="flex flex-col gap-2.5">
-                                    <span className="text-xs font-bold text-muted-foreground">Foto de perfil</span>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={e => handleFileChange(e, 'avatar')}
-                                        className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90 transition-all cursor-pointer"
-                                    />
-                                </label>
-                                <p className="text-xs text-muted-foreground font-medium">Envie uma foto profissional para seu perfil.</p>
-                            </div>
-                        </div>
-
-                        {/* Personal Data */}
-                        <div className="p-8 md:p-12 space-y-10">
-                            <h3 className="text-sm font-semibold flex items-center gap-4 text-foreground">
-                                <span className="material-symbols-outlined text-primary text-[24px]">contact_page</span>
-                                Identificação e contato
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <label className="flex flex-col gap-2.5">
-                                    <span className="text-xs font-semibold text-muted-foreground px-1">Nome completo</span>
-                                    <input
-                                        type="text"
-                                        value={formData.name}
-                                        onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                        className="w-full h-12 rounded-md border border-border bg-background px-4 outline-none text-sm font-semibold focus:ring-2 focus:ring-primary/20 transition-all"
-                                    />
-                                </label>
-                                <label className="flex flex-col gap-2.5">
-                                    <span className="text-xs font-semibold text-muted-foreground px-1">Cargo atual / desejado</span>
-                                    <input
-                                        type="text"
-                                        value={formData.role}
-                                        onChange={e => setFormData({ ...formData, role: e.target.value })}
-                                        className="w-full h-12 rounded-md border border-border bg-background px-4 outline-none text-sm font-semibold focus:ring-2 focus:ring-primary/20 transition-all"
-                                    />
-                                </label>
-                                <label className="flex flex-col gap-2.5">
-                                    <span className="text-xs font-semibold text-muted-foreground px-1">WhatsApp de contato</span>
-                                    <input
-                                        type="text"
-                                        value={formData.phone}
-                                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                        className="w-full h-12 rounded-md border border-border bg-background px-4 outline-none text-sm font-semibold focus:ring-2 focus:ring-primary/20 transition-all"
-                                    />
-                                </label>
-                                <label className="flex flex-col gap-2.5">
-                                    <span className="text-xs font-semibold text-muted-foreground px-1">Cidade e UF</span>
-                                    <input
-                                        type="text"
-                                        value={formData.location}
-                                        onChange={e => setFormData({ ...formData, location: e.target.value })}
-                                        className="w-full h-12 rounded-md border border-border bg-background px-4 outline-none text-sm font-semibold focus:ring-2 focus:ring-primary/20 transition-all"
-                                    />
-                                </label>
-                            </div>
-                        </div>
-
-                        {/* Summary */}
-                        <div className="p-8 md:p-12 space-y-8">
-                            <h3 className="text-sm font-semibold flex items-center gap-4 text-foreground">
-                                <span className="material-symbols-outlined text-primary text-[24px]">history_edu</span>
-                                Biografia profissional
-                            </h3>
-                            <textarea
-                                rows={5}
-                                value={formData.summary}
-                                onChange={e => setFormData({ ...formData, summary: e.target.value })}
-                                className="w-full rounded-xl border border-border bg-background p-6 outline-none text-sm font-medium leading-relaxed focus:ring-2 focus:ring-primary/20 transition-all resize-none"
-                                placeholder="Descreva sua experiência, objetivos e principais realizações..."
-                            />
-                        </div>
-
-                        {/* Digital Presence & Resume */}
-                        <div className="p-8 md:p-12 space-y-10">
-                            <h3 className="text-sm font-semibold flex items-center gap-4 text-foreground">
-                                <span className="material-symbols-outlined text-primary text-[24px]">link</span>
-                                Links e documentação
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                <label className="flex flex-col gap-2.5">
-                                    <span className="text-xs font-semibold text-muted-foreground px-1">LinkedIn</span>
-                                    <input
-                                        type="text"
-                                        value={formData.linkedin}
-                                        onChange={e => setFormData({ ...formData, linkedin: e.target.value })}
-                                        className="w-full h-12 rounded-md border border-border bg-background px-4 outline-none text-sm font-semibold focus:ring-2 focus:ring-primary/20 transition-all"
-                                        placeholder="linkedin.com/in/..."
-                                    />
-                                </label>
-                                <label className="flex flex-col gap-2.5">
-                                    <span className="text-xs font-semibold text-muted-foreground px-1">GitHub</span>
-                                    <input
-                                        type="text"
-                                        value={formData.github}
-                                        onChange={e => setFormData({ ...formData, github: e.target.value })}
-                                        className="w-full h-12 rounded-md border border-border bg-background px-4 outline-none text-sm font-semibold focus:ring-2 focus:ring-primary/20 transition-all"
-                                        placeholder="github.com/..."
-                                    />
-                                </label>
-                                <label className="flex flex-col gap-2.5">
-                                    <span className="text-xs font-semibold text-muted-foreground px-1">Portfólio / Site</span>
-                                    <input
-                                        type="text"
-                                        value={formData.portfolio}
-                                        onChange={e => setFormData({ ...formData, portfolio: e.target.value })}
-                                        className="w-full h-12 rounded-md border border-border bg-background px-4 outline-none text-sm font-semibold focus:ring-2 focus:ring-primary/20 transition-all"
-                                        placeholder="seusite.com"
-                                    />
-                                </label>
-                            </div>
-
-                            <div className="flex flex-col gap-2.5 pt-4">
-                                <span className="text-xs font-semibold text-muted-foreground px-1">Arquivo de currículo</span>
-                                <label className="relative group cursor-pointer border-2 border-dashed border-border p-8 rounded-xl bg-muted/5 hover:border-primary/40 transition-all flex flex-col items-center gap-4">
-                                    <input
-                                        type="file"
-                                        accept=".pdf"
-                                        onChange={e => handleFileChange(e, 'resume')}
-                                        className="hidden"
-                                    />
-                                    <span className="material-symbols-outlined text-muted-foreground text-3xl">upload_file</span>
-                                    <div className="text-center">
-                                        <p className="text-sm font-semibold text-foreground">{formData.resumeName}</p>
-                                        <p className="text-xs text-muted-foreground font-semibold mt-1">Clique para enviar novo arquivo (PDF • Máx. 5MB)</p>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Footer Actions */}
-                    <div className="p-8 md:p-12 flex flex-col sm:flex-row justify-end gap-4 bg-muted/20 border-t border-border">
-                        <button
-                            type="button"
-                            onClick={() => setIsEditing(false)}
-                            className="h-12 px-8 rounded-base border border-border bg-background text-foreground font-semibold text-xs hover:bg-accent transition-all active:scale-95 outline-none"
-                        >
-                            Descartar
-                        </button>
-                        <button
-                            type="submit"
-                            className="h-12 px-12 rounded-base bg-primary text-primary-foreground text-xs font-semibold hover:bg-slate-900 transition-all active:scale-95 shadow-lg shadow-primary/10"
-                        >
-                            Atualizar perfil
-                        </button>
-                    </div>
-                </form>
-            </div>
-        );
-    }
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-12 pb-24">
@@ -296,7 +81,7 @@ const CandidateDashboard: React.FC = () => {
                     <p className="text-muted-foreground text-sm font-medium">Veja como seu perfil aparece para os recrutadores da rede.</p>
                 </div>
                 <button
-                    onClick={() => setIsEditing(true)}
+                    onClick={() => navigate('/candidate/settings')}
                     className="h-12 px-8 flex items-center justify-center gap-3 rounded-base bg-foreground text-background text-xs font-semibold hover:bg-foreground/80 transition-all duration-300 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                     <span className="material-symbols-outlined text-[20px]">edit_square</span>
@@ -408,7 +193,7 @@ const CandidateDashboard: React.FC = () => {
                             </p>
                             {completeness < 100 && (
                                 <button
-                                    onClick={() => setIsEditing(true)}
+                                    onClick={() => navigate('/candidate/settings')}
                                     className="h-11 mt-2 flex items-center justify-center rounded-base bg-white text-primary text-xs font-semibold hover:bg-white/90 transition-all active:scale-95 shadow-lg shadow-black/10"
                                 >
                                     Completar agora

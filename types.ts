@@ -1,5 +1,24 @@
+export interface Education {
+  id: string;
+  institution: string;
+  degree: string;
+  startDate: string;
+  endDate: string;
+  description?: string;
+}
+
+export interface Experience {
+  id: string;
+  company: string;
+  role: string;
+  startDate: string;
+  endDate: string;
+  description?: string;
+}
+
 export interface Job {
   id: string | number;
+  role_id?: string;
   title: string;
   context: string;
   department: string;
@@ -12,10 +31,13 @@ export interface Job {
   salary_max: number;
   mission?: string;
   responsibilities?: string;
+  requirements?: string;
+  benefits?: string[];
   seniority?: string;
   candidates_count: number;
   created_at: string;
   manager_id?: string;
+  registration_deadline?: string;
 }
 
 export type KanbanColumnId = 'received' | 'screening' | 'technical' | 'hr_interview' | 'manager_interview' | 'finalist' | 'hired' | 'rejected';
@@ -44,8 +66,14 @@ export interface Candidate {
   linkedin?: string;
   github?: string;
   portfolio?: string;
-  resumeName?: string;
   resume_url?: string;
+  resume_name?: string;
+  user_id?: string;
+  resumeName?: string;
+  skills?: string[];
+  education?: Education[];
+  experience?: Experience[];
+  languages?: string[];
   avatar?: string;
   match?: string;
   avatarColor: string;
@@ -56,7 +84,6 @@ export interface Candidate {
   applied_at?: string;
   hired_at?: string;
   feedbacks?: CandidateFeedback[];
-  user_id?: string;
   nextInterview?: {
     type: string;
     date: string;
@@ -76,6 +103,10 @@ export interface Role {
   mission?: string;
   responsibilities?: string;
   seniority?: string;
+  salary_min?: number;
+  salary_max?: number;
+  requirements?: string;
+  activeJobsCount?: number;
 }
 
 export interface User {
@@ -88,6 +119,18 @@ export interface User {
   password?: string;
   avatar?: string;
   department?: string;
+  // Professional Data
+  phone?: string;
+  location?: string;
+  summary?: string;
+  linkedin?: string;
+  portfolio?: string;
+  resume_url?: string;
+  resume_name?: string;
+  skills?: string[];
+  education?: Education[];
+  experience?: Experience[];
+  languages?: string[];
   scope?: {
     vacancy_view_type: 'direct' | 'department';
     allowed_departments: string[];
@@ -98,6 +141,7 @@ export interface User {
     approve_finalist?: boolean;
     register_feedback?: boolean;
     view_salaries?: boolean;
+    return_candidate_stage?: boolean;
   };
 }
 
@@ -110,6 +154,8 @@ export interface SystemSettings {
   };
 }
 
+export type AuditLogCategory = 'privileges' | 'scope' | 'user_management' | 'system' | 'candidate_movement' | 'job_management';
+
 export interface AuditLog {
   id: string;
   action: string;
@@ -118,4 +164,8 @@ export interface AuditLog {
   details: string;
   entity_type?: string;
   entity_id?: string;
+  affected_user_id?: string;
+  affected_user_name?: string;
+  reason?: string;
+  category?: AuditLogCategory;
 }

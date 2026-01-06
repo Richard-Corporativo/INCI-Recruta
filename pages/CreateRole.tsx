@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useRoles } from '../hooks/useRoles';
+import RequirementsSelector from '../components/RequirementsSelector';
+import DynamicListInput from '../components/DynamicListInput';
+import { DEPARTMENT_AREAS } from '../constants/departments';
 
 const CreateRole: React.FC = () => {
   const navigate = useNavigate();
@@ -14,8 +17,11 @@ const CreateRole: React.FC = () => {
     area: '',
     seniority: 'Pleno',
     mission: '',
-    responsibilities: '',
-    status: 'Ativo'
+    responsibilities: [] as string[],
+    requirements: [] as string[],
+    status: 'Ativo',
+    salary_min: 0,
+    salary_max: 0
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -27,6 +33,8 @@ const CreateRole: React.FC = () => {
     e.preventDefault();
     addRole({
       ...formData,
+      responsibilities: formData.responsibilities.join('\n'),
+      requirements: formData.requirements.join('\n'),
       open_positions: 0
     });
     navigate('/roles');
@@ -113,13 +121,17 @@ const CreateRole: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-foreground" htmlFor="department">
-                      Departamento <span className="text-destructive">*</span>
+                      Área de Atuação <span className="text-destructive">*</span>
                     </label>
-                    <input
+                    <select
                       className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
-                      id="department" name="department" type="text" value={formData.department} onChange={handleInputChange} required
-                      placeholder="Ex: Tecnologia da Informação"
-                    />
+                      id="department" name="department" value={formData.department} onChange={handleInputChange} required
+                    >
+                      <option value="">Selecione uma área</option>
+                      {DEPARTMENT_AREAS.map(area => (
+                        <option key={area} value={area}>{area}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -152,11 +164,64 @@ const CreateRole: React.FC = () => {
                       ))}
                     </div>
                   </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground" htmlFor="status">
+                      Status <span className="text-destructive">*</span>
+                    </label>
+                    <select
+                      className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
+                      id="status" name="status" value={formData.status} onChange={handleInputChange} required
+                    >
+                      <option value="Ativo">Ativo</option>
+                      <option value="Inativo">Inativo</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-3 mt-6">
+                  <label className="text-sm font-semibold text-foreground">
+                    Proposta Salarial (Faixa Mensal)
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">R$</span>
+                      <input
+                        className="w-full h-11 rounded-md border border-border bg-background pl-9 pr-3 text-sm text-foreground font-mono font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                        placeholder="Mínimo" name="salary_min" type="number"
+                        value={formData.salary_min} onChange={(e) => setFormData(prev => ({ ...prev, salary_min: Number(e.target.value) }))}
+                      />
+                    </div>
+                    <span className="text-muted-foreground font-medium">-</span>
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">R$</span>
+                      <input
+                        className="w-full h-11 rounded-md border border-border bg-background pl-9 pr-3 text-sm text-foreground font-mono font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                        placeholder="Máximo" name="salary_max" type="number"
+                        value={formData.salary_max} onChange={(e) => setFormData(prev => ({ ...prev, salary_max: Number(e.target.value) }))}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Section 3: Descrição do Cargo */}
-              <div className="p-6 md:p-8">
+              {/* Section 3: Requisitos e Qualificações */}
+              <div className="p-6 md:p-8 transition-colors">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="size-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/20 transition-all">
+                    <span className="material-symbols-outlined text-[20px]">checklist</span>
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground transition-colors uppercase tracking-tight">Requisitos do Cargo</h3>
+                </div>
+                <div className="space-y-8">
+                  <RequirementsSelector
+                    selectedRequirements={formData.requirements}
+                    onChange={(items) => setFormData(prev => ({ ...prev, requirements: items }))}
+                  />
+                </div>
+              </div>
+
+              {/* Section 4: Descrição do Cargo */}
+              <div className="p-6 md:p-8 transition-colors">
                 <div className="flex items-center gap-2 mb-6">
                   <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <span className="material-symbols-outlined text-sm">description</span>
@@ -164,25 +229,28 @@ const CreateRole: React.FC = () => {
                   <h3 className="text-lg font-semibold text-foreground">Descrição do Cargo</h3>
                 </div>
                 <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground" htmlFor="mission">
+                  <div className="space-y-4">
+                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider transition-colors" htmlFor="mission">
                       Missão <span className="text-destructive">*</span>
                     </label>
                     <textarea
-                      className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 p-3 min-h-[100px] resize-none"
-                      id="mission" name="mission" placeholder="Descreva o propósito principal deste cargo..." rows={3}
+                      className="block w-full h-32 rounded-md border border-border bg-background text-foreground font-medium transition-all duration-200 ease-in-out outline-none hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 p-3.5 text-sm resize-none placeholder:text-muted-foreground"
+                      id="mission" name="mission" placeholder="Descreva o propósito principal deste cargo..."
                       value={formData.mission} onChange={handleInputChange} required
                     ></textarea>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground" htmlFor="responsibilities">
+
+                  <div className="space-y-4">
+                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider transition-colors" htmlFor="responsibilities">
                       Responsabilidades <span className="text-destructive">*</span>
                     </label>
-                    <textarea
-                      className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 p-3 min-h-[180px] resize-none"
-                      id="responsibilities" name="responsibilities" placeholder="Liste as principais atividades..." rows={6}
-                      value={formData.responsibilities} onChange={handleInputChange} required
-                    ></textarea>
+                    <DynamicListInput
+                      label=""
+                      placeholder="Digite uma responsabilidade e pressione Enter"
+                      items={formData.responsibilities}
+                      onChange={(items) => setFormData(prev => ({ ...prev, responsibilities: items }))}
+                      icon="task_alt"
+                    />
                   </div>
                 </div>
               </div>

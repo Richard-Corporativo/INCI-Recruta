@@ -20,7 +20,13 @@ export const useAudit = () => {
                 action: log.action,
                 details: log.details || '',
                 timestamp: log.created_at,
-                user_name: log.user_email || 'Sistema'
+                user_name: log.user_email || 'Sistema',
+                entity_type: log.entity_type,
+                entity_id: log.entity_id,
+                affected_user_id: log.affected_user_id,
+                affected_user_name: log.affected_user_name,
+                reason: log.reason,
+                category: log.category
             })) as AuditLog[]);
         }
         setIsLoading(false);
@@ -39,7 +45,13 @@ export const useAudit = () => {
                 action: log.action,
                 details: log.details,
                 user_id: session?.user?.id,
-                user_email: session?.user?.email || 'Sistema'
+                user_email: session?.user?.email || 'Sistema',
+                entity_type: log.entity_type,
+                entity_id: log.entity_id,
+                affected_user_id: log.affected_user_id,
+                affected_user_name: log.affected_user_name,
+                reason: log.reason,
+                category: log.category
             }]);
 
         if (error) {

@@ -1,13 +1,21 @@
 import React, { useState, useCallback } from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import { Outlet, Link, useNavigate } from 'react-router-dom';
 import TermsModal from '../components/candidate/TermsModal';
+import { useAuth } from '../context/AuthContext';
 
 const PublicLayout: React.FC = () => {
+    const { isAuthenticated, user, logout } = useAuth();
+    const navigate = useNavigate();
     const [termsModal, setTermsModal] = useState<{ isOpen: boolean; type: 'terms' | 'privacy' }>({
         isOpen: false,
         type: 'terms'
     });
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    const handleLogout = async () => {
+        await logout();
+        navigate('/vagas');
+    };
 
     const handleCloseModal = useCallback(() => {
         setTermsModal(prev => ({ ...prev, isOpen: false }));
@@ -45,16 +53,34 @@ const PublicLayout: React.FC = () => {
                         <a className="text-sm font-semibold uppercase tracking-wider text-muted-foreground hover:text-primary focus-visible:text-primary transition-colors duration-200 ease-in-out" href="mailto:contato@incibrasil.com">Contato</a>
                     </div>
                     <div className="flex items-center gap-4">
-                        <Link to="/login">
-                            <button className="flex min-w-[100px] cursor-pointer items-center justify-center rounded-lg h-11 px-5 border border-border bg-background text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out text-sm font-semibold uppercase tracking-tight">
-                                <span>Entrar</span>
-                            </button>
-                        </Link>
-                        <Link to="/cadastro">
-                            <button className="flex min-w-[130px] cursor-pointer items-center justify-center rounded-lg h-11 px-6 bg-primary text-primary-foreground border border-border/40 hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out text-sm font-semibold active:scale-95 uppercase tracking-tight">
-                                <span>Cadastre-se</span>
-                            </button>
-                        </Link>
+                        {isAuthenticated ? (
+                            <>
+                                <Link to={user?.role === 'candidate' ? "/candidate/dashboard" : "/admin/dashboard"}>
+                                    <button className="flex min-w-[100px] cursor-pointer items-center justify-center rounded-lg h-11 px-5 border border-border bg-background text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out text-sm font-semibold uppercase tracking-tight">
+                                        <span>Meu Painel</span>
+                                    </button>
+                                </Link>
+                                <button
+                                    onClick={handleLogout}
+                                    className="flex min-w-[100px] cursor-pointer items-center justify-center rounded-lg h-11 px-5 bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive hover:text-white focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 transition-all duration-200 ease-in-out text-sm font-semibold uppercase tracking-tight"
+                                >
+                                    <span>Sair</span>
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <Link to="/login">
+                                    <button className="flex min-w-[100px] cursor-pointer items-center justify-center rounded-lg h-11 px-5 border border-border bg-background text-foreground hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out text-sm font-semibold uppercase tracking-tight">
+                                        <span>Entrar</span>
+                                    </button>
+                                </Link>
+                                <Link to="/cadastro">
+                                    <button className="flex min-w-[130px] cursor-pointer items-center justify-center rounded-lg h-11 px-6 bg-primary text-primary-foreground border border-border/40 hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out text-sm font-semibold active:scale-95 uppercase tracking-tight">
+                                        <span>Cadastre-se</span>
+                                    </button>
+                                </Link>
+                            </>
+                        )}
                     </div>
                 </div>
 
@@ -84,16 +110,34 @@ const PublicLayout: React.FC = () => {
                                 Contato
                             </a>
                             <div className="flex flex-col gap-4 mt-4">
-                                <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                                    <button className="w-full flex cursor-pointer items-center justify-center rounded-lg h-12 px-5 border border-border bg-background text-foreground hover:bg-accent transition-all text-sm font-semibold uppercase tracking-tight">
-                                        <span>Entrar</span>
-                                    </button>
-                                </Link>
-                                <Link to="/cadastro" onClick={() => setIsMobileMenuOpen(false)}>
-                                    <button className="w-full flex cursor-pointer items-center justify-center rounded-lg h-12 px-6 bg-primary text-primary-foreground border border-border/40 hover:bg-primary/90 transition-all text-sm font-semibold uppercase tracking-tight">
-                                        <span>Cadastre-se</span>
-                                    </button>
-                                </Link>
+                                {isAuthenticated ? (
+                                    <>
+                                        <Link to={user?.role === 'candidate' ? "/candidate/dashboard" : "/admin/dashboard"} onClick={() => setIsMobileMenuOpen(false)}>
+                                            <button className="w-full flex cursor-pointer items-center justify-center rounded-lg h-12 px-5 border border-border bg-background text-foreground hover:bg-accent transition-all text-sm font-semibold uppercase tracking-tight">
+                                                <span>Meu Painel</span>
+                                            </button>
+                                        </Link>
+                                        <button
+                                            onClick={handleLogout}
+                                            className="w-full flex cursor-pointer items-center justify-center rounded-lg h-12 px-6 bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive hover:text-white transition-all text-sm font-semibold uppercase tracking-tight"
+                                        >
+                                            <span>Sair</span>
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                                            <button className="w-full flex cursor-pointer items-center justify-center rounded-lg h-12 px-5 border border-border bg-background text-foreground hover:bg-accent transition-all text-sm font-semibold uppercase tracking-tight">
+                                                <span>Entrar</span>
+                                            </button>
+                                        </Link>
+                                        <Link to="/cadastro" onClick={() => setIsMobileMenuOpen(false)}>
+                                            <button className="w-full flex cursor-pointer items-center justify-center rounded-lg h-12 px-6 bg-primary text-primary-foreground border border-border/40 hover:bg-primary/90 transition-all text-sm font-semibold uppercase tracking-tight">
+                                                <span>Cadastre-se</span>
+                                            </button>
+                                        </Link>
+                                    </>
+                                )}
                             </div>
                         </nav>
                     </div>

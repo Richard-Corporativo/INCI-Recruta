@@ -10,9 +10,10 @@ interface DroppableKanbanColumnProps {
     dotColor: string;
     candidates: Candidate[];
     onCardClick: (candidate: Candidate) => void;
+    onQuickView?: (candidate: Candidate) => void;
 }
 
-const DroppableKanbanColumn: React.FC<DroppableKanbanColumnProps> = ({ id, title, dotColor, candidates, onCardClick }) => {
+const DroppableKanbanColumn: React.FC<DroppableKanbanColumnProps> = ({ id, title, dotColor, candidates, onCardClick, onQuickView }) => {
     const { setNodeRef, isOver } = useDroppable({
         id: id,
     });
@@ -40,6 +41,7 @@ const DroppableKanbanColumn: React.FC<DroppableKanbanColumnProps> = ({ id, title
                             key={candidate.id}
                             candidate={candidate}
                             onClick={onCardClick}
+                            onQuickView={onQuickView}
                         />
                     ))}
                 </SortableContext>

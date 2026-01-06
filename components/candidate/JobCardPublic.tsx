@@ -10,6 +10,7 @@ export interface PublicJob {
     tags: string[];
     isNew?: boolean;
     isUrgent?: boolean;
+    createdAt?: string;
 }
 
 interface JobCardPublicProps {

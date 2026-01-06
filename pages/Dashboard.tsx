@@ -33,34 +33,64 @@ const Dashboard: React.FC = () => {
     return map;
   }, [jobs]);
 
-  const filteredJobs = React.useMemo(() => jobs.filter(job => {
-    if (filters.area && job.department !== filters.area) return false;
-    if (filters.search && !job.title.toLowerCase().includes(filters.search.toLowerCase())) return false;
-    if (filters.urgency && job.urgency !== filters.urgency) return false;
+  // 1. Dynamic Departments derived from data
+  const departments = React.useMemo(() => {
+    const set = new Set<string>();
+    jobs.forEach(j => { if (j.department) set.add(j.department); });
+    return Array.from(set).sort();
+  }, [jobs]);
 
-    if (filters.manager) {
-      const targetManagerId = filters.manager === 'me' ? user?.id : filters.manager;
-      if (job.manager_id !== targetManagerId) return false;
-    }
+  // 2. Helper for period filtering
+  const isWithinPeriod = (dateStr?: string, days?: string) => {
+    if (!dateStr || !days || days === '365' || days === 'custom') return true;
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = (now.getTime() - date.getTime()) / (1000 * 3600 * 24);
+    return diff <= parseInt(days);
+  };
 
-    return true;
-  }), [jobs, filters, user?.id]);
+  const filteredJobs = React.useMemo(() => {
+    return jobs
+      .filter(job => {
+        if (!isWithinPeriod(job.created_at, filters.period)) return false;
+        if (filters.area && job.department !== filters.area) return false;
+        if (filters.search && !job.title.toLowerCase().includes(filters.search.toLowerCase())) return false;
+        if (filters.urgency && job.urgency !== filters.urgency) return false;
 
-  const filteredCandidates = React.useMemo(() => candidates.filter(c => {
-    const job = jobsMap.get(c.jobId);
-    if (!job) return false;
+        if (filters.manager) {
+          const targetManagerId = filters.manager === 'me' ? user?.id : filters.manager;
+          if (job.manager_id !== targetManagerId) return false;
+        }
 
-    if (filters.area && job.department !== filters.area) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [jobs, filters, user?.id]);
 
-    if (filters.manager) {
-      const targetManagerId = filters.manager === 'me' ? user?.id : filters.manager;
-      if (job.manager_id !== targetManagerId) return false;
-    }
+  const filteredCandidates = React.useMemo(() => {
+    return candidates
+      .filter(c => {
+        const job = jobsMap.get(c.jobId!);
+        if (!job) return false;
 
-    if (filters.urgency && job.urgency !== filters.urgency) return false;
+        if (!isWithinPeriod(c.applied_at, filters.period)) return false;
+        if (filters.area && job.department !== filters.area) return false;
 
-    return true;
-  }), [candidates, jobsMap, filters, user?.id]);
+        if (filters.manager) {
+          const targetManagerId = filters.manager === 'me' ? user?.id : filters.manager;
+          if (job.manager_id !== targetManagerId) return false;
+        }
+
+        if (filters.urgency && job.urgency !== filters.urgency) return false;
+
+        return true;
+      })
+      .sort((a, b) => {
+        const dateA = a.applied_at ? new Date(a.applied_at).getTime() : 0;
+        const dateB = b.applied_at ? new Date(b.applied_at).getTime() : 0;
+        return dateB - dateA;
+      });
+  }, [candidates, jobsMap, filters, user?.id]);
 
   const stats = React.useMemo(() => {
     const hired = candidates.filter(c => c.columnId === 'hired' && c.applied_at && c.hired_at);
@@ -149,10 +179,9 @@ const Dashboard: React.FC = () => {
                     onChange={(e) => handleFilterChange('area', e.target.value)}
                   />
                   <datalist id="areas">
-                    <option value="Tecnologia"></option>
-                    <option value="Recursos Humanos"></option>
-                    <option value="Vendas"></option>
-                    <option value="Marketing"></option>
+                    {departments.map(dept => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
                   </datalist>
                 </div>
               </div>
@@ -227,7 +256,7 @@ const Dashboard: React.FC = () => {
                 <h3 className="text-muted-foreground text-sm font-medium mb-1 transition-colors">Candidatos Ativos</h3>
                 <div className="flex items-baseline gap-2">
                   {isLoading ? <Skeleton className="h-9 w-16" /> : <span className="text-3xl font-semibold text-foreground transition-colors">{totalCandidates}</span>}
-                  <span className="text-xs text-muted-foreground transition-colors">Em processo</span>
+                  <span className="text-xs text-muted-foreground transition-colors">No período</span>
                 </div>
               </div>
               <div className="bg-card p-5 rounded-lg border border-border shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group hover:scale-[1.01] active:scale-95">
@@ -326,7 +355,7 @@ const Dashboard: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {jobs.slice(0, 5).map(job => (
+                      {filteredJobs.slice(0, 5).map(job => (
                         <tr key={job.id} className="group hover:bg-muted/50 transition-colors duration-200">
                           <td className="px-4 py-3">
                             <div className="flex flex-col">
@@ -334,8 +363,8 @@ const Dashboard: React.FC = () => {
                               <span className="text-xs text-muted-foreground transition-colors">{job.department} / {job.location}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-muted-foreground transition-colors">
-                            Sistema
+                          <td className="px-4 py-3 text-muted-foreground transition-colors text-sm font-medium">
+                            {users.find(u => u.id === job.manager_id)?.name || 'Sistema'}
                           </td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${job.status === 'Ativa'
@@ -363,7 +392,7 @@ const Dashboard: React.FC = () => {
               <h2 className="text-lg font-semibold text-foreground transition-colors">Candidatos Recentes</h2>
               <div className="bg-card rounded-lg border border-border shadow-sm flex flex-col h-full transition-all duration-200">
                 <div className="flex-1 overflow-y-auto max-h-[400px] p-2 space-y-2 custom-scrollbar">
-                  {candidates.slice(0, 5).map(candidate => (
+                  {filteredCandidates.slice(0, 5).map(candidate => (
                     <div key={candidate.id} className="p-3 hover:bg-muted/50 rounded-lg border border-transparent hover:border-border transition-all duration-200 cursor-pointer group">
                       <div className="flex items-start gap-3">
                         <div className={`size-8 rounded-full ${candidate.avatarColor} ${candidate.textColor} flex items-center justify-center text-xs font-semibold shrink-0 transition-colors`}>

@@ -5,8 +5,9 @@ interface JobFilterSidebarProps {
         areas: string[];
         levels: string[];
         models: string[];
+        contracts: string[];
     };
-    onFilterChange: (type: 'areas' | 'levels' | 'models', value: string) => void;
+    onFilterChange: (type: 'areas' | 'levels' | 'models' | 'contracts', value: string) => void;
     onClear: () => void;
     totalResults: number;
 }
@@ -52,7 +53,7 @@ const JobFilterSidebar: React.FC<JobFilterSidebarProps> = ({ filters, onFilterCh
             <div className="hidden lg:flex flex-col gap-4 bg-white text-slate-900 border border-slate-200 p-6 transition-all rounded-2xl shadow-sm">
                 <div className="flex justify-between items-center border-b border-slate-200 pb-5">
                     <h3 className="font-semibold text-lg text-slate-900 tracking-tight">Filtros</h3>
-                    {(filters.areas.length > 0 || filters.models.length > 0) && (
+                    {(filters.areas.length > 0 || filters.models.length > 0 || filters.contracts.length > 0) && (
                         <button onClick={onClear} className="text-xs font-semibold text-primary hover:text-slate-900 transition-colors animate-in fade-in slide-in-from-right-2 duration-300">Limpar</button>
                     )}
                 </div>
@@ -112,11 +113,11 @@ const JobFilterSidebar: React.FC<JobFilterSidebarProps> = ({ filters, onFilterCh
                                 <label key={contract} className="flex items-center gap-3 cursor-pointer group/item">
                                     <input
                                         type="checkbox"
-                                        checked={filters.models.includes(contract)}
-                                        onChange={() => onFilterChange('models', contract)}
+                                        checked={filters.contracts.includes(contract)}
+                                        onChange={() => onFilterChange('contracts', contract)}
                                         className="form-checkbox h-4 w-4 text-primary rounded border-slate-300 bg-white focus:ring-0 transition-colors"
                                     />
-                                    <span className={`text-xs font-semibold ${filters.models.includes(contract) ? 'text-primary' : 'text-slate-500'} group-hover/item:text-slate-900 transition-colors`}>
+                                    <span className={`text-xs font-semibold ${filters.contracts.includes(contract) ? 'text-primary' : 'text-slate-500'} group-hover/item:text-slate-900 transition-colors`}>
                                         {contract}
                                     </span>
                                 </label>

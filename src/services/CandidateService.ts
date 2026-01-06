@@ -19,7 +19,11 @@ const mapDbToCandidate = (dbCandidate: any): Candidate => ({
     textColor: dbCandidate.text_color || 'text-white',
     applied_at: dbCandidate.applied_at,
     user_id: dbCandidate.user_id,
-    feedbacks: dbCandidate.feedbacks || []
+    feedbacks: dbCandidate.feedbacks || [],
+    skills: dbCandidate.skills || [],
+    languages: dbCandidate.languages || [],
+    education: dbCandidate.education || [],
+    experience: dbCandidate.experience || []
 });
 
 export const CandidateService = {
@@ -58,7 +62,7 @@ export const CandidateService = {
         const filePath = `resumes/${fileName}`;
 
         const { data, error } = await supabase.storage
-            .from('recruit-docs') // Assuming 'recruit-docs' is the bucket name
+            .from('resumes') // Consistent with RLS policies
             .upload(filePath, file);
 
         if (error) {
@@ -67,7 +71,7 @@ export const CandidateService = {
         }
 
         const { data: { publicUrl } } = supabase.storage
-            .from('recruit-docs')
+            .from('resumes')
             .getPublicUrl(filePath);
 
         return publicUrl;
@@ -101,6 +105,22 @@ export const CandidateService = {
             throw error;
         }
 
+        // Sync with public.users profile if user_id exists
+        if (candidate.user_id) {
+            await supabase
+                .from('users')
+                .update({
+                    name: candidate.name,
+                    phone: candidate.phone,
+                    location: candidate.location,
+                    linkedin: candidate.linkedin,
+                    portfolio: candidate.portfolio,
+                    resume_name: candidate.resumeName,
+                    resume_url: (candidate as any).resume_url
+                })
+                .eq('id', candidate.user_id);
+        }
+
         return mapDbToCandidate(data);
     },
 
@@ -128,6 +148,12 @@ export const CandidateService = {
             dbPayload.resume_name = updates.resumeName;
             delete dbPayload.resumeName;
         }
+
+        // Ensure array/json fields are passed correctly
+        if ('skills' in updates) dbPayload.skills = updates.skills;
+        if ('languages' in updates) dbPayload.languages = updates.languages;
+        if ('education' in updates) dbPayload.education = updates.education;
+        if ('experience' in updates) dbPayload.experience = updates.experience;
         if ('applied_at' in dbPayload) delete dbPayload.applied_at;
         if ('feedbacks' in dbPayload) delete dbPayload.feedbacks;
 

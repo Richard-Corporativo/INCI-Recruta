@@ -74,5 +74,15 @@ export const JobService = {
             return false;
         }
         return true;
+    },
+    async syncJobsByRole(roleId: string, updates: { title: string, department: string, salary_min: number, salary_max: number }): Promise<void> {
+        const { error } = await supabase
+            .from('jobs')
+            .update(updates)
+            .eq('role_id', roleId);
+
+        if (error) {
+            console.error('Error syncing jobs with role:', error);
+        }
     }
 };

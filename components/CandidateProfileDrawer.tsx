@@ -23,7 +23,7 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
 }) => {
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'interviews' | 'audit'>('interviews');
+  const [activeTab, setActiveTab] = useState<'profile' | 'interviews' | 'audit'>('profile');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
 
@@ -164,6 +164,16 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
               <section>
                 <div className="border-b border-border flex items-center gap-6 mb-6 transition-colors">
                   <button
+                    onClick={() => setActiveTab('profile')}
+                    className={`pb-3 px-1 text-sm font-semibold border-b-2 transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring ${activeTab === 'profile'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
+                      }`}
+                  >
+                    <span className="material-symbols-outlined text-[18px] mr-2">person</span>
+                    Perfil
+                  </button>
+                  <button
                     onClick={() => setActiveTab('interviews')}
                     className={`pb-3 px-1 text-sm font-semibold border-b-2 transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring ${activeTab === 'interviews'
                       ? 'border-primary text-primary'
@@ -186,6 +196,86 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
                 </div>
 
                 <div className="animate-in fade-in duration-300">
+                  {activeTab === 'profile' && (
+                    <div className="space-y-8">
+                      {/* Summary */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                          <span className="material-symbols-outlined text-primary">history_edu</span>
+                          Sobre
+                        </h4>
+                        <p className="text-sm text-foreground/80 leading-relaxed bg-muted/10 p-4 rounded-lg border border-border">
+                          {candidate.summary || 'Nenhuma biografia informada.'}
+                        </p>
+                      </div>
+
+                      {/* Skills */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                          <span className="material-symbols-outlined text-primary">psychology</span>
+                          Habilidades
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {candidate.skills && candidate.skills.length > 0 ? (
+                            candidate.skills.map(s => (
+                              <span key={s} className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
+                                {s}
+                              </span>
+                            ))
+                          ) : (
+                            <p className="text-sm text-muted-foreground italic">Nenhuma habilidade registrada.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Experience */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                          <span className="material-symbols-outlined text-primary">work_history</span>
+                          Experiência
+                        </h4>
+                        <div className="space-y-3">
+                          {candidate.experience && candidate.experience.length > 0 ? (
+                            candidate.experience.map(exp => (
+                              <div key={exp.id} className="relative pl-4 border-l-2 border-border pb-4 last:pb-0">
+                                <div className="absolute -left-[5px] top-1.5 size-2 rounded-full bg-primary"></div>
+                                <h5 className="text-sm font-bold text-foreground">{exp.role}</h5>
+                                <span className="text-xs font-semibold text-muted-foreground">{exp.company}</span>
+                                <span className="text-[10px] text-muted-foreground ml-2">• {exp.startDate} - {exp.endDate || 'Atual'}</span>
+                                {exp.description && <p className="text-xs text-foreground/80 mt-1 line-clamp-2">{exp.description}</p>}
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-sm text-muted-foreground italic">Nenhuma experiência registrada.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Education */}
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                          <span className="material-symbols-outlined text-primary">school</span>
+                          Formação
+                        </h4>
+                        <div className="space-y-3">
+                          {candidate.education && candidate.education.length > 0 ? (
+                            candidate.education.map(edu => (
+                              <div key={edu.id} className="relative pl-4 border-l-2 border-border pb-4 last:pb-0">
+                                <div className="absolute -left-[5px] top-1.5 size-2 rounded-full bg-primary/50"></div>
+                                <h5 className="text-sm font-bold text-foreground">{edu.degree}</h5>
+                                <span className="text-xs font-semibold text-muted-foreground">{edu.institution}</span>
+                                <span className="text-[10px] text-muted-foreground ml-2">• {edu.startDate} - {edu.endDate || 'Atual'}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-sm text-muted-foreground italic">Nenhuma formação registrada.</p>
+                          )}
+                        </div>
+                      </div>
+
+                    </div>
+                  )}
+
                   {activeTab === 'interviews' ? (
                     <div className="space-y-4">
                       {candidate.feedbacks && candidate.feedbacks.length > 0 ? (

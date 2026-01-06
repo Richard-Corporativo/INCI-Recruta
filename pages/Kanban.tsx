@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useQuickView } from '../context/QuickViewContext';
 import CandidateProfileDrawer from '../components/CandidateProfileDrawer';
 import InterviewFeedbackModal from '../components/InterviewFeedbackModal';
 import ScheduleInterviewModal from '../components/ScheduleInterviewModal';
@@ -6,6 +7,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useJobs } from '../hooks/useJobs';
 import { useCandidates } from '../hooks/useCandidates';
 import { useAuth } from '../hooks/useAuth';
+import { useSettings } from '../hooks/useSettings';
+import { useAudit } from '../hooks/useAudit';
 import { Candidate, KanbanColumnId } from '../types';
 import Toast from '../components/Toast';
 
@@ -34,6 +37,9 @@ const KanbanBoard: React.FC = () => {
   const { jobs } = useJobs();
   const { candidates, refresh, moveCandidate } = useCandidates(id); // Filter by job ID
   const { user } = useAuth();
+  const { settings } = useSettings();
+  const { logs, addLog } = useAudit();
+  const { openQuickView } = useQuickView();
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
@@ -193,6 +199,7 @@ const KanbanBoard: React.FC = () => {
                     dotColor={col.dotColor}
                     candidates={columnCandidates}
                     onCardClick={openProfile}
+                    onQuickView={(candidate) => openQuickView('candidate', candidate)}
                   />
                 );
               })}
@@ -220,9 +227,41 @@ const KanbanBoard: React.FC = () => {
           onClose={() => setIsScheduleModalOpen(false)}
           candidateId={feedbackCandidate?.id}
           candidateName={feedbackCandidate?.name || ''}
-          onSuccess={() => {
+          onSuccess={async () => {
             if (feedbackCandidate && targetStage) {
-              moveCandidate(feedbackCandidate.id, targetStage);
+              const sourceIndex = COLUMNS_CONFIG.findIndex(c => c.id === movingSourceCol);
+              const targetIndex = COLUMNS_CONFIG.findIndex(c => c.id === targetStage);
+
+              if (targetIndex < sourceIndex && user?.role === 'manager') {
+                const isAllowed = user.custom_permissions?.return_candidate_stage ?? settings.manager_permissions.return_candidate_stage;
+                if (!isAllowed) {
+                  setToast({ message: 'Você não tem permissão para retornar candidatos de etapa.', type: 'error' });
+                  setIsScheduleModalOpen(false);
+                  return;
+                }
+                const returnActionsThisMonth = logs.filter(log =>
+                  log.action === 'Retorno de Etapa' &&
+                  log.user_name === user.email &&
+                  new Date(log.timestamp).getMonth() === new Date().getMonth() &&
+                  new Date(log.timestamp).getFullYear() === new Date().getFullYear()
+                ).length;
+                if (returnActionsThisMonth >= 3) {
+                  setToast({ message: 'Limite de 3 retornos de etapa por mês atingido.', type: 'error' });
+                  setIsScheduleModalOpen(false);
+                  return;
+                }
+              }
+
+              await moveCandidate(feedbackCandidate.id, targetStage);
+              await addLog({
+                action: targetIndex < sourceIndex ? 'Retorno de Etapa' : 'Avanço de Etapa',
+                details: `Candidato ${feedbackCandidate.name} movido para ${COLUMNS_CONFIG.find(c => c.id === targetStage)?.title} (Entrevista agendada)`,
+                entity_type: 'candidate',
+                entity_id: feedbackCandidate.id,
+                category: 'candidate_movement',
+                user_name: user?.name || user?.email || 'Gestor',
+                affected_user_name: feedbackCandidate.name
+              });
             }
             refresh();
             setIsScheduleModalOpen(false);
@@ -238,9 +277,45 @@ const KanbanBoard: React.FC = () => {
           currentStage={movingSourceCol ? COLUMNS_CONFIG.find(c => c.id === movingSourceCol)?.title : undefined}
           targetStage={targetStage}
           role={feedbackCandidate?.role}
-          onSuccess={() => {
+          onSuccess={async () => {
             if (feedbackCandidate && targetStage) {
-              moveCandidate(feedbackCandidate.id, targetStage);
+              // Check for backward movement limit
+              const sourceIndex = COLUMNS_CONFIG.findIndex(c => c.id === movingSourceCol);
+              const targetIndex = COLUMNS_CONFIG.findIndex(c => c.id === targetStage);
+
+              if (targetIndex < sourceIndex && user?.role === 'manager') {
+                const isAllowed = user.custom_permissions?.return_candidate_stage ?? settings.manager_permissions.return_candidate_stage;
+
+                if (!isAllowed) {
+                  setToast({ message: 'Você não tem permissão para retornar candidatos de etapa.', type: 'error' });
+                  setIsFeedbackModalOpen(false);
+                  return;
+                }
+
+                const returnActionsThisMonth = logs.filter(log =>
+                  log.action === 'Retorno de Etapa' &&
+                  log.user_name === user.email &&
+                  new Date(log.timestamp).getMonth() === new Date().getMonth() &&
+                  new Date(log.timestamp).getFullYear() === new Date().getFullYear()
+                ).length;
+
+                if (returnActionsThisMonth >= 3) {
+                  setToast({ message: 'Limite de 3 retornos de etapa por mês atingido.', type: 'error' });
+                  setIsFeedbackModalOpen(false);
+                  return;
+                }
+              }
+
+              await moveCandidate(feedbackCandidate.id, targetStage);
+              await addLog({
+                action: targetIndex < sourceIndex ? 'Retorno de Etapa' : 'Avanço de Etapa',
+                details: `Candidato ${feedbackCandidate.name} movido de ${COLUMNS_CONFIG.find(c => c.id === movingSourceCol)?.title} para ${COLUMNS_CONFIG.find(c => c.id === targetStage)?.title}`,
+                entity_type: 'candidate',
+                entity_id: feedbackCandidate.id,
+                category: 'candidate_movement',
+                user_name: user?.name || user?.email || 'Gestor',
+                affected_user_name: feedbackCandidate.name
+              });
             }
             refresh();
             setIsFeedbackModalOpen(false);

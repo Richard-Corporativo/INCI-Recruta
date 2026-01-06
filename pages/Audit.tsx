@@ -147,7 +147,7 @@ const Audit: React.FC = () => {
             </table>
             <div className="px-6 py-4 border-t border-border bg-muted/20">
               <div className="text-xs text-muted-foreground font-semibold">
-                Sincronizado via LocalStorage • {logs.length} entradas registradas
+                Sincronizado via Supabase • {logs.length} entradas registradas
               </div>
             </div>
           </div>

@@ -83,9 +83,30 @@ export const UserService = {
     },
 
     async addUser(user: Omit<User, 'id'>): Promise<User | null> {
-        console.warn('Adding users programmatically requires Supabase Admin API or Edge Functions.');
-        console.warn('Please invite users via the Supabase Dashboard Authentication tab.');
-        alert('Para adicionar usuários, utilize o Painel do Supabase (Authentication > Add User). O sistema sincronizará automaticamente.');
-        return null;
+        console.log('Using Edge Function to create user:', user.email);
+
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+            throw new Error('No active session.');
+        }
+
+        const { data, error } = await supabase.functions.invoke('create-user-admin', {
+            body: {
+                ...user,
+                // Ensure we pass password if it exists in the type, or handle it
+                password: user.password || 'Mudar123!' // Default temp password if not provided
+            },
+            headers: {
+                Authorization: `Bearer ${session.access_token}`
+            }
+        });
+
+        if (error) {
+            console.error('Error creating user:', error);
+            throw error;
+        }
+
+        return data as User;
     }
 };

@@ -3,6 +3,75 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { JobService } from '../../src/services/JobService';
 import { Job } from '../../types';
 
+// Robust benefit icon mapping
+const BENEFIT_ICON_MAP: Record<string, string> = {
+    // Health & Wellness
+    'saúde': 'favorite',
+    'plano de saúde': 'favorite',
+    'assistência médica': 'favorite',
+    'odontológico': 'dentistry',
+    'plano odontológico': 'dentistry',
+
+    // Food & Meal
+    'alimentação': 'restaurant',
+    'refeição': 'restaurant',
+    'vale-refeição': 'restaurant',
+    'vale-alimentação': 'restaurant',
+    'vr': 'restaurant',
+    'va': 'restaurant',
+
+    // Transportation
+    'transporte': 'directions_bus',
+    'vale-transporte': 'directions_bus',
+    'vt': 'directions_bus',
+
+    // Fitness
+    'gym': 'fitness_center',
+    'academia': 'fitness_center',
+    'gympass': 'fitness_center',
+    'wellhub': 'fitness_center',
+
+    // Remote & Flexibility
+    'remoto': 'home_work',
+    'home office': 'home_work',
+    'auxílio home office': 'home_work',
+    'híbrido': 'home_work',
+    'trabalho remoto': 'home_work',
+
+    // Time & Schedule
+    'flexível': 'schedule',
+    'horário flexível': 'schedule',
+    'flexibilidade': 'schedule',
+
+    // Education & Development
+    'educação': 'school',
+    'cursos': 'school',
+    'treinamento': 'school',
+    'desenvolvimento': 'school',
+
+    // Default fallback
+    'default': 'star'
+};
+
+const getBenefitIcon = (benefitText: string): string => {
+    const normalized = benefitText.toLowerCase().trim();
+
+    // Try exact match first
+    if (BENEFIT_ICON_MAP[normalized]) {
+        return BENEFIT_ICON_MAP[normalized];
+    }
+
+    // Try partial match
+    for (const [key, icon] of Object.entries(BENEFIT_ICON_MAP)) {
+        if (normalized.includes(key)) {
+            return icon;
+        }
+    }
+
+    // Fallback
+    return BENEFIT_ICON_MAP['default'];
+};
+
 const JobDetailPublic: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams();
@@ -25,26 +94,31 @@ const JobDetailPublic: React.FC = () => {
                     contract: found.contract,
                     level: found.seniority || 'Sênior',
                     area: found.department,
-                    description: found.context,
+                    description: found.context || "",
+                    mission: found.mission || "",
+                    salary: {
+                        min: found.salary_min,
+                        max: found.salary_max
+                    },
                     responsibilities: found.responsibilities
                         ? found.responsibilities.split('\n').map(r => r.replace(/^- /, ''))
-                        : [
-                            "Participar do desenvolvimento e manutenção de sistemas.",
-                            "Colaborar com a equipe para melhoria contínua.",
-                            found.mission || "Contribuir com a visão e missão do projeto."
-                        ],
-                    requirements: [
-                        "Experiência prévia na área.",
-                        "Conhecimento técnico compatível com o cargo.",
-                        "Vontade de aprender e crescer."
-                    ],
-                    skills: ["Foco", "Agilidade", "Trabalho em Equipe"],
-                    benefits: [
-                        { icon: "favorite", title: "Plano de Saúde", color: "primary" },
-                        { icon: "restaurant", title: "Vale Alimentação", color: "primary" },
-                        { icon: "home_work", title: "Home Office", color: "primary" }
-                    ],
+                        : [],
+                    requirements: found.requirements
+                        ? found.requirements.split('\n').filter((r: string) => r.trim() !== '')
+                        : [],
+                    skills: [],
+                    benefits: Array.isArray(found.benefits) && found.benefits.length > 0
+                        ? found.benefits.map((b: string) => ({
+                            icon: getBenefitIcon(b),
+                            title: b,
+                            color: "primary"
+                        }))
+                        : [],
                     areaDescription: `A área de ${found.department} é fundamental para o sucesso do nosso negócio.`,
+                    registrationDeadline: found.registration_deadline,
+                    // Dynamic stats (use actual data if available, otherwise hide)
+                    candidatesCount: (found as any).candidates_count || null,
+                    responseTime: (found as any).average_response_time || null,
                     steps: [
                         { number: 1, title: "Aplicação", active: true },
                         { number: 2, title: "Entrevista", active: false },
@@ -121,6 +195,21 @@ const JobDetailPublic: React.FC = () => {
                                         <span className="text-sm font-semibold text-slate-900">{job.model}</span>
                                     </div>
                                 </div>
+                                {(job.salary?.min > 0 || job.salary?.max > 0) && (
+                                    <div className="flex items-center gap-3">
+                                        <div className="size-10 bg-white border border-slate-200 flex items-center justify-center text-primary rounded-lg">
+                                            <span className="material-symbols-outlined text-2xl">payments</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-semibold text-slate-500">Faixa Salarial</span>
+                                            <span className="text-sm font-semibold text-slate-900">
+                                                {job.salary.min > 0 ? `R$ ${job.salary.min}` : ''}
+                                                {job.salary.min > 0 && job.salary.max > 0 ? ' - ' : ''}
+                                                {job.salary.max > 0 ? `R$ ${job.salary.max}` : ''}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-3">
                                     <div className="size-10 bg-white border border-slate-200 flex items-center justify-center text-primary rounded-lg">
                                         <span className="material-symbols-outlined text-2xl">calendar_today</span>
@@ -130,7 +219,19 @@ const JobDetailPublic: React.FC = () => {
                                         <span className="text-sm font-semibold text-slate-900">{job.publishedAt}</span>
                                     </div>
                                 </div>
+                                {job.registrationDeadline && (
+                                    <div className="flex items-center gap-3">
+                                        <div className="size-10 bg-white border border-slate-200 flex items-center justify-center text-primary rounded-lg">
+                                            <span className="material-symbols-outlined text-2xl">event</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-semibold text-slate-500">Inscrições até</span>
+                                            <span className="text-sm font-semibold text-slate-900">{new Date(job.registrationDeadline).toLocaleDateString('pt-BR')}</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+
 
                             {/* Info Badges */}
                             <div className="flex flex-wrap gap-2.5 pt-4">
@@ -148,36 +249,45 @@ const JobDetailPublic: React.FC = () => {
                         <div className="grid grid-cols-1 gap-16">
                             <section className="space-y-6">
                                 <h3 className="text-2xl font-semibold text-slate-900 flex items-center gap-3 justify-center sm:justify-start">
-                                    Sobre a Oportunidade
+                                    Missão do Cargo
                                 </h3>
                                 <p className="text-slate-600 text-lg font-normal leading-relaxed max-w-prose">
+                                    {job.mission}
+                                </p>
+                            </section>
+
+                            <section className="space-y-6">
+                                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-3">
+                                    Sobre a Oportunidade
+                                </h3>
+                                <p className="text-slate-600 text-base font-normal leading-relaxed max-w-prose">
                                     {job.description}
                                 </p>
                             </section>
 
-                            <section className="space-y-8">
-                                <h3 className="text-2xl font-semibold text-slate-900 flex items-center gap-3 justify-center sm:justify-start">
+                            <section className="space-y-6">
+                                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-3">
                                     O que você vai fazer
                                 </h3>
-                                <ul className="grid grid-cols-1 gap-4">
+                                <ul className="flex flex-col gap-3">
                                     {job.responsibilities.map((item, idx) => (
-                                        <li key={idx} className="flex items-start gap-4 p-5 border border-slate-200 bg-white rounded-2xl">
-                                            <span className="size-2 bg-primary mt-2 shrink-0 rounded-full" />
-                                            <span className="text-base text-slate-600 font-medium leading-relaxed">{item}</span>
+                                        <li key={idx} className="flex items-center gap-4 px-6 py-4 border border-slate-200 bg-white rounded-xl shadow-sm hover:border-primary/30 transition-all">
+                                            <div className="size-2 bg-blue-700 rounded-full shrink-0"></div>
+                                            <span className="text-sm text-slate-700 font-medium leading-relaxed">{item}</span>
                                         </li>
                                     ))}
                                 </ul>
                             </section>
 
-                            <section className="space-y-8">
-                                <h3 className="text-2xl font-semibold text-slate-900 flex items-center gap-3 justify-center sm:justify-start">
+                            <section className="space-y-6">
+                                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-3">
                                     O que esperamos de você
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {job.requirements.map((item, idx) => (
-                                        <div key={idx} className="flex items-start gap-4 p-6 border border-slate-200 bg-white rounded-2xl">
-                                            <span className="material-symbols-outlined text-primary/60 text-2xl">check</span>
-                                            <span className="text-sm text-slate-900 font-semibold leading-relaxed">{item}</span>
+                                        <div key={idx} className="flex items-center gap-4 px-6 py-4 border border-slate-200 bg-white rounded-xl shadow-sm hover:border-primary/30 transition-all">
+                                            <span className="material-symbols-outlined text-blue-700 text-xl font-bold">check</span>
+                                            <span className="text-sm text-slate-700 font-medium leading-relaxed">{item}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -185,21 +295,25 @@ const JobDetailPublic: React.FC = () => {
                         </div>
 
                         {/* Benefits */}
-                        <section className="space-y-8 p-8 bg-slate-50 border border-slate-200 rounded-3xl">
-                            <h3 className="text-2xl font-semibold text-slate-900 tracking-tight flex items-center gap-3">
-                                Pacote de Vantagens
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {job.benefits.map((benefit, idx) => (
-                                    <div key={idx} className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-xl transition-colors hover:border-primary/50">
-                                        <div className="size-10 bg-primary/10 text-primary flex items-center justify-center rounded-lg">
-                                            <span className="material-symbols-outlined text-xl">{benefit.icon}</span>
-                                        </div>
-                                        <span className="text-slate-900 text-xs font-semibold">{benefit.title}</span>
+                        {job.benefits.length > 0 && (
+                            <section className="space-y-6 pt-6">
+                                <div className="p-8 border border-slate-200 rounded-3xl bg-slate-50/50">
+                                    <h3 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-3 mb-6">
+                                        Pacote de Vantagens
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {job.benefits.map((benefit, idx) => (
+                                            <div key={idx} className="flex items-center gap-4 p-5 bg-white border border-slate-200 rounded-xl transition-colors shadow-sm hover:border-primary/30">
+                                                <div className="size-10 bg-blue-50 text-blue-700 flex items-center justify-center rounded-lg shrink-0">
+                                                    <span className="material-symbols-outlined text-xl">{benefit.icon}</span>
+                                                </div>
+                                                <span className="text-slate-900 text-sm font-semibold">{benefit.title}</span>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
-                        </section>
+                                </div>
+                            </section>
+                        )}
 
                         {/* Process Transparency */}
                         <section className="space-y-12 py-8">
@@ -239,11 +353,11 @@ const JobDetailPublic: React.FC = () => {
                                     <div className="flex flex-col gap-3">
                                         <button
                                             onClick={() => navigate(`/vagas/${id}/candidatar`)}
-                                            className="group flex w-full items-center justify-center h-14 bg-primary text-white text-sm font-semibold rounded-base hover:bg-primary/90 transition-all duration-200 active:scale-95 gap-2 shadow-sm shadow-primary/20"
+                                            className="group flex w-full items-center justify-center h-14 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary/90 transition-all duration-200 active:scale-95 gap-2 shadow-sm shadow-primary/20"
                                         >
                                             Candidatar agora
                                         </button>
-                                        <button className="flex w-full items-center justify-center h-14 bg-white text-slate-700 border border-slate-200 rounded-base hover:bg-slate-50 transition-all duration-200 font-semibold text-xs gap-2 active:scale-95">
+                                        <button className="flex w-full items-center justify-center h-14 bg-white text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all duration-200 font-semibold text-xs gap-2 active:scale-95">
                                             Compartilhar
                                         </button>
                                     </div>
@@ -255,24 +369,34 @@ const JobDetailPublic: React.FC = () => {
                                             <span className="text-slate-400">Status</span>
                                             <span className="text-green-600 bg-green-50 px-2 py-1 rounded-md">Aberta</span>
                                         </div>
-                                        <div className="flex justify-between items-center text-[10px] font-semibold">
-                                            <span className="text-slate-400">Candidatos</span>
-                                            <span className="text-slate-900">+120</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-[10px] font-semibold">
-                                            <span className="text-slate-400">Resposta</span>
-                                            <span className="text-slate-900">~48h</span>
-                                        </div>
+                                        {job.candidatesCount !== null && job.candidatesCount !== undefined && (
+                                            <div className="flex justify-between items-center text-[10px] font-semibold">
+                                                <span className="text-slate-400">Candidatos</span>
+                                                <span className="text-slate-900">+{job.candidatesCount}</span>
+                                            </div>
+                                        )}
+                                        {job.responseTime && (
+                                            <div className="flex justify-between items-center text-[10px] font-semibold">
+                                                <span className="text-slate-400">Resposta</span>
+                                                <span className="text-slate-900">{job.responseTime}</span>
+                                            </div>
+                                        )}
+                                        {job.registrationDeadline && (
+                                            <div className="flex justify-between items-center text-[10px] font-semibold">
+                                                <span className="text-slate-400">Prazo</span>
+                                                <span className="text-primary">{new Date(job.registrationDeadline).toLocaleDateString('pt-BR')}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </aside>
                 </div>
-            </div>
+            </div >
 
             {/* Mobile Bottom Bar Sticky */}
-            <div className="lg:hidden fixed bottom-0 left-0 w-full bg-white border-t border-slate-300 p-4 z-[60]">
+            < div className="lg:hidden fixed bottom-0 left-0 w-full bg-white border-t border-slate-300 p-4 z-[60]" >
                 <div className="flex gap-4 max-w-[1280px] mx-auto">
                     <button
                         onClick={() => navigate(`/vagas/${id}/candidatar`)}
@@ -284,11 +408,11 @@ const JobDetailPublic: React.FC = () => {
                         <span className="material-symbols-outlined">share</span>
                     </button>
                 </div>
-            </div>
+            </div >
 
             {/* Final Space for Mobile Button Margin */}
-            <div className="h-28 lg:hidden"></div>
-        </main>
+            < div className="h-28 lg:hidden" ></div >
+        </main >
     );
 };
 

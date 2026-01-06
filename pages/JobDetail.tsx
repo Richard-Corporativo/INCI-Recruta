@@ -3,6 +3,8 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useJobs } from '../hooks/useJobs';
 import { useUsers } from '../hooks/useUsers';
+import { useAuth } from '../hooks/useAuth';
+import { useSettings } from '../hooks/useSettings';
 
 const JobDetail: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -10,14 +12,22 @@ const JobDetail: React.FC = () => {
   const navigate = useNavigate();
   const { jobs, updateJob, isLoading } = useJobs();
   const { users } = useUsers();
+  const { user } = useAuth();
+  const { settings } = useSettings();
+
+  const canViewSalaries = user?.role === 'admin' || user?.custom_permissions?.view_salaries || settings.manager_permissions.view_salaries;
 
   const job = jobs.find(j => j.id.toString() === id);
   const manager = users.find(u => u.id === job?.manager_id);
 
-  const handleCloseJob = () => {
+  const handleCloseJob = async () => {
     if (!id) return;
-    updateJob(id, { status: 'Encerrada' });
-    setIsModalOpen(false);
+    try {
+      await updateJob(id, { status: 'Encerrada' });
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Error closing job:', error);
+    }
   };
 
   if (isLoading) {
@@ -183,13 +193,15 @@ const JobDetail: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest pl-0.5">Proposta Salarial</p>
-                  <div className="bg-muted/40 p-3 rounded-base border border-border/60 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-emerald-600 text-[18px]">payments</span>
-                    <p className="text-sm font-semibold text-foreground font-mono">R$ {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()}</p>
+                {canViewSalaries && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest pl-0.5">Proposta Salarial</p>
+                    <div className="bg-muted/40 p-3 rounded-base border border-border/60 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-emerald-600 text-[18px]">payments</span>
+                      <p className="text-sm font-semibold text-foreground font-mono">R$ {job.salary_min?.toLocaleString()} - {job.salary_max?.toLocaleString()}</p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="space-y-1">
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest pl-0.5">Gestor Solicitante</p>
@@ -200,6 +212,16 @@ const JobDetail: React.FC = () => {
                     <p className="text-sm font-semibold text-foreground truncate">{manager?.name || 'Não atribuído'}</p>
                   </div>
                 </div>
+
+                {job.registration_deadline && (
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest pl-0.5">Prazo de Inscrição</p>
+                    <div className="bg-muted/40 p-3 rounded-base border border-border/60 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary text-[18px]">event</span>
+                      <p className="text-sm font-semibold text-foreground">{new Date(job.registration_deadline).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="p-6 bg-muted/20 border-t border-border mt-auto">

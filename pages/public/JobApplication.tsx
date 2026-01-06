@@ -35,10 +35,24 @@ const JobApplication: React.FC = () => {
             if (id) {
                 const fetchedJob = await JobService.getJobById(id);
                 setJob(fetchedJob);
+
+                // Check deadline
+                if (fetchedJob?.registration_deadline) {
+                    const deadline = new Date(fetchedJob.registration_deadline);
+                    // Reset hours for comparison
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    deadline.setHours(23, 59, 59, 999);
+
+                    if (today > deadline) {
+                        warning('O prazo para candidatura nesta vaga expirou.');
+                        navigate(`/vagas/${id}`);
+                    }
+                }
             }
         };
         loadJob();
-    }, [id]);
+    }, [id, navigate]);
 
     // Autofill form if user is authenticated
     useEffect(() => {
@@ -137,9 +151,6 @@ const JobApplication: React.FC = () => {
                 resumeUrl = await CandidateService.uploadResume(formData.resume, formData.email);
             }
 
-            // Get current user session if authenticated
-            const session = isAuthenticated ? (await supabase.auth.getSession()).data.session : null;
-
             const newCandidate: Omit<Candidate, 'id'> = {
                 jobId: id,
                 name: formData.name,
@@ -154,7 +165,7 @@ const JobApplication: React.FC = () => {
                 linkedin: formData.linkedin,
                 portfolio: formData.portfolio,
                 resume_url: resumeUrl,
-                user_id: session?.user?.id
+                user_id: user?.id // Use user from useAuth
             };
 
             await CandidateService.addCandidate(newCandidate);
@@ -533,7 +544,12 @@ const JobApplication: React.FC = () => {
                                         <div className="grid grid-cols-1 gap-4">
                                             {[
                                                 { icon: 'location_on', label: `${job?.location} (${job?.model})` },
-                                                { icon: 'payments', label: `R$ ${job?.salary_min} - R$ ${job?.salary_max}` },
+                                                {
+                                                    icon: 'payments',
+                                                    label: (job?.salary_min || job?.salary_max)
+                                                        ? `${job?.salary_min && job.salary_min > 0 ? `R$ ${job.salary_min}` : ''}${job?.salary_min > 0 && job?.salary_max > 0 ? ' - ' : ''}${job?.salary_max && job.salary_max > 0 ? `R$ ${job.salary_max}` : ''}`
+                                                        : 'A combinar'
+                                                },
                                                 { icon: 'schedule', label: 'Tempo integral' }
                                             ].map((item, idx) => (
                                                 <div key={idx} className="flex items-center gap-4 text-xs font-semibold text-muted-foreground/80">
@@ -541,6 +557,12 @@ const JobApplication: React.FC = () => {
                                                     {item.label}
                                                 </div>
                                             ))}
+                                            {job?.registration_deadline && (
+                                                <div className="flex items-center gap-4 text-xs font-semibold text-primary">
+                                                    <span className="material-symbols-outlined text-primary text-[18px]">event</span>
+                                                    Inscrições até {new Date(job.registration_deadline).toLocaleDateString('pt-BR')}
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="bg-muted/30 p-5 rounded-lg border border-border/50">
@@ -557,8 +579,8 @@ const JobApplication: React.FC = () => {
                         </div>
                     </div>
                 </main>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

@@ -2,12 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useJobs } from '../hooks/useJobs';
+import DynamicListInput from '../components/DynamicListInput';
+import BenefitsSelector from '../components/BenefitsSelector';
+import RequirementsSelector from '../components/RequirementsSelector';
+import { JOB_BENEFITS_OPTIONS } from '../constants';
+import Toast from '../components/Toast';
 
 const EditJob: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { jobs, updateJob } = useJobs();
   const [isLoading, setIsLoading] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const job = jobs.find(j => j.id.toString() === id);
 
@@ -21,7 +27,10 @@ const EditJob: React.FC = () => {
     salaryMin: '',
     salaryMax: '',
     context: '',
-    status: ''
+    requirements: [] as string[],
+    benefits: [] as string[],
+    status: '',
+    registrationDeadline: ''
   });
 
   useEffect(() => {
@@ -36,33 +45,47 @@ const EditJob: React.FC = () => {
         salaryMin: job.salary_min.toString(),
         salaryMax: job.salary_max.toString(),
         context: job.context,
-        status: job.status
+        requirements: job.requirements ? job.requirements.split('\n').filter(r => r.trim() !== '') : [],
+        benefits: job.benefits || [],
+        status: job.status,
+        registrationDeadline: job.registration_deadline || ''
       });
     }
   }, [job]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
     setIsLoading(true);
 
-    updateJob(id, {
-      title: formData.title,
-      department: formData.department,
-      location: formData.location,
-      model: formData.model as any,
-      contract: formData.contract as any,
-      urgency: formData.urgency as any,
-      salary_min: Number(formData.salaryMin),
-      salary_max: Number(formData.salaryMax),
-      context: formData.context,
-      status: formData.status as any
-    });
+    try {
+      await updateJob(id, {
+        title: formData.title,
+        department: formData.department,
+        location: formData.location,
+        model: formData.model as any,
+        contract: formData.contract as any,
+        urgency: formData.urgency as any,
+        salary_min: Number(formData.salaryMin),
+        salary_max: Number(formData.salaryMax),
+        context: formData.context,
+        requirements: formData.requirements.join('\n'),
+        benefits: formData.benefits,
+        status: formData.status as any,
+        registration_deadline: formData.registrationDeadline || null
+      });
 
-    setTimeout(() => {
+      setToast({ message: 'Vaga atualizada com sucesso!', type: 'success' });
+
+      setTimeout(() => {
+        setIsLoading(false);
+        navigate(`/jobs/${id}`);
+      }, 1500);
+    } catch (error) {
+      console.error('Error updating job:', error);
+      setToast({ message: 'Erro ao atualizar vaga. Tente novamente.', type: 'error' });
       setIsLoading(false);
-      navigate(`/jobs/${id}`);
-    }, 500);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -124,90 +147,184 @@ const EditJob: React.FC = () => {
       </header>
 
       {/* Main Layout */}
-      <main className="flex-1 overflow-y-auto bg-muted/30 p-8">
-        <div className="max-w-[1200px] mx-auto">
-          {/* Main Form Card */}
-          <div className="bg-card border border-border shadow-sm rounded-lg overflow-hidden">
-            <form className="divide-y divide-border" onSubmit={handleSubmit}>
-              {/* Section 1: Informações Básicas */}
-              <div className="p-6 md:p-8">
-                <div className="flex items-center gap-2 mb-6">
-                  <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <span className="material-symbols-outlined text-sm">badge</span>
-                  </span>
-                  <h3 className="text-lg font-semibold text-foreground">Informações Básicas</h3>
+      <main className="flex-1 overflow-y-auto bg-muted/30 p-4 md:p-8 custom-scrollbar">
+        <div className="max-w-[1200px] mx-auto pb-24">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
+
+            {/* Left Column: Fixed Content Info */}
+            <div className="lg:col-span-5 flex flex-col gap-4">
+              <div className="bg-card border border-border shadow-sm rounded-lg overflow-hidden h-fit sticky top-24 transition-colors">
+                <div className="p-4 bg-muted/20 border-b border-border transition-colors">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="material-symbols-outlined text-primary text-[20px]">info</span>
+                    <h2 className="text-foreground font-semibold text-base transition-colors">Informações do Cargo</h2>
+                  </div>
+                  <div className="bg-primary/5 border border-primary/20 rounded-md p-3 flex gap-3 items-start transition-colors">
+                    <span className="material-symbols-outlined text-primary text-sm mt-0.5">help_outline</span>
+                    <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+                      Algumas informações são herdadas do cargo e servem de base para esta vaga.
+                    </p>
+                  </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground" htmlFor="title">Título da Vaga</label>
+                <div className="p-6 flex flex-col gap-6">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Título (Para referência)</span>
                     <input
-                      className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
-                      id="title" name="title" type="text" value={formData.title} onChange={handleInputChange} required
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      className="w-full h-11 rounded-md border border-border bg-background px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground" htmlFor="department">Departamento</label>
-                    <input
-                      className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
-                      id="department" name="department" type="text" value={formData.department} onChange={handleInputChange} required
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Departamento</span>
+                    <div className="bg-muted px-3 py-2.5 rounded-md text-sm font-medium text-foreground">
+                      {formData.department}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Status da Vaga</span>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      className="w-full h-11 rounded-md border border-border bg-background px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    >
+                      <option value="Ativa">Ativa</option>
+                      <option value="Pausada">Pausada</option>
+                      <option value="Encerrada">Encerrada</option>
+                      <option value="Rascunho">Rascunho</option>
+                    </select>
+                  </div>
+                  <div className="pt-4 border-t border-border mt-2">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Faixa Salarial (R$)</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px] font-bold">MIN</span>
+                        <input
+                          type="number"
+                          name="salaryMin"
+                          value={formData.salaryMin}
+                          onChange={handleInputChange}
+                          className="w-full h-10 pl-10 pr-3 rounded-md border border-border bg-background text-sm font-mono focus:ring-1 focus:ring-primary outline-none"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px] font-bold">MAX</span>
+                        <input
+                          type="number"
+                          name="salaryMax"
+                          value={formData.salaryMax}
+                          onChange={handleInputChange}
+                          className="w-full h-10 pl-10 pr-3 rounded-md border border-border bg-background text-sm font-mono focus:ring-1 focus:ring-primary outline-none"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Editable Context */}
+            <div className="lg:col-span-7 flex flex-col gap-6">
+              <div className="bg-card border border-border shadow-sm p-8 relative rounded-lg transition-colors">
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-primary rounded-t-lg"></div>
+                <div className="mb-8">
+                  <h2 className="text-foreground font-semibold text-2xl transition-colors">Contexto da vaga</h2>
+                  <p className="text-sm text-muted-foreground font-medium transition-colors">Personalize os detalhes desta abertura específica.</p>
+                </div>
+
+                <div className="flex flex-col gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[11px] font-semibold text-muted-foreground transition-colors">Modelo de trabalho <span className="text-destructive">*</span></label>
+                      <select name="model" value={formData.model} onChange={handleInputChange} className="w-full h-11 h-12 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out font-medium hover:border-ring">
+                        <option>Híbrido</option>
+                        <option>Presencial</option>
+                        <option>Remoto</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[11px] font-semibold text-muted-foreground transition-colors">Tipo de contrato <span className="text-destructive">*</span></label>
+                      <select name="contract" value={formData.contract} onChange={handleInputChange} className="w-full h-11 h-12 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out font-medium hover:border-ring">
+                        <option value="CLT">CLT (Efetivo)</option>
+                        <option value="PJ">Pessoa Jurídica (PJ)</option>
+                        <option value="Estágio">Estágio</option>
+                        <option value="Temporário">Temporário</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[11px] font-semibold text-muted-foreground transition-colors">Período de inscrição</label>
+                      <input
+                        name="registrationDeadline"
+                        value={formData.registrationDeadline}
+                        onChange={handleInputChange}
+                        className="w-full h-11 h-12 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out font-medium hover:border-ring"
+                        type="date"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[11px] font-semibold text-muted-foreground transition-colors flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary text-[16px]">location_on</span>
+                        Localidade do escritório <span className="text-destructive">*</span>
+                      </label>
+                      <select name="location" value={formData.location} onChange={handleInputChange} className="w-full h-11 h-12 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out font-medium hover:border-ring">
+                        <option>Juazeiro do Norte - CE</option>
+                        <option>Barbalha - CE</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-muted/20 rounded-lg border border-border transition-colors">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[11px] font-semibold text-muted-foreground transition-colors">Nível de urgência</label>
+                      <div className="flex h-10 p-1 bg-background border border-border rounded-md transition-colors">
+                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, urgency: 'Baixa' }))} className={`flex-1 text-[10px] font-semibold rounded transition-all duration-200 ease-in-out ${formData.urgency === 'Baixa' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted'}`}>Baixa</button>
+                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, urgency: 'Média' }))} className={`flex-1 text-[10px] font-semibold rounded transition-all duration-200 ease-in-out ${formData.urgency === 'Média' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted'}`}>Média</button>
+                        <button type="button" onClick={() => setFormData(prev => ({ ...prev, urgency: 'Alta' }))} className={`flex-1 text-[10px] font-semibold rounded transition-all duration-200 ease-in-out ${formData.urgency === 'Alta' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted'}`}>Alta</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="text-[11px] font-semibold text-muted-foreground transition-colors">
+                      Contexto do projeto / motivo da vaga <span className="text-destructive">*</span>
+                    </label>
+                    <textarea name="context" value={formData.context} onChange={handleInputChange} className="w-full h-32 rounded-md border border-border bg-background p-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out font-medium resize-none hover:border-ring placeholder:text-muted-foreground" placeholder="Explique por que essa vaga existe agora..."></textarea>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <RequirementsSelector
+                      selectedRequirements={formData.requirements}
+                      onChange={(items) => setFormData(prev => ({ ...prev, requirements: items }))}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <BenefitsSelector
+                      selectedBenefits={formData.benefits}
+                      onChange={(items) => setFormData(prev => ({ ...prev, benefits: items }))}
                     />
                   </div>
                 </div>
               </div>
-
-              {/* Section 2: Localização e Contrato */}
-              <div className="p-6 md:p-8">
-                <div className="flex items-center gap-2 mb-6">
-                  <span className="flex size-8 items-center justify-center rounded-full bg-muted border border-border text-foreground">
-                    <span className="material-symbols-outlined text-sm">location_on</span>
-                  </span>
-                  <h3 className="text-lg font-semibold text-foreground">Localização e Contrato</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground" htmlFor="location">Cidade/UF</label>
-                    <select
-                      className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3 cursor-pointer"
-                      id="location" name="location" value={formData.location} onChange={handleInputChange} required
-                    >
-                      <option value="Juazeiro do Norte - CE">Juazeiro do Norte - CE</option>
-                      <option value="Barbalha - CE">Barbalha - CE</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground" htmlFor="model">Modelo de Trabalho</label>
-                    <select
-                      className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3 cursor-pointer"
-                      id="model" name="model" value={formData.model} onChange={handleInputChange} required
-                    >
-                      <option value="Presencial">Presencial</option>
-                      <option value="Híbrido">Híbrido</option>
-                      <option value="Remoto">Remoto</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 3: Contexto Estratégico */}
-              <div className="p-6 md:p-8">
-                <div className="flex items-center gap-2 mb-6">
-                  <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <span className="material-symbols-outlined text-sm">description</span>
-                  </span>
-                  <h3 className="text-lg font-semibold text-foreground">Contexto Estratégico</h3>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-foreground" htmlFor="context">Descrição da Vaga</label>
-                  <textarea
-                    className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 p-3 min-h-[200px] resize-none"
-                    id="context" name="context" rows={8} value={formData.context} onChange={handleInputChange} required
-                  />
-                </div>
-              </div>
-            </form>
-          </div>
+            </div>
+          </form>
         </div>
       </main>
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };

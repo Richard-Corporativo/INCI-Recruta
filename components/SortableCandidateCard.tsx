@@ -6,9 +6,10 @@ import { Candidate } from '../types';
 interface SortableCandidateCardProps {
     candidate: Candidate;
     onClick: (candidate: Candidate) => void;
+    onQuickView?: (candidate: Candidate) => void;
 }
 
-const SortableCandidateCard: React.FC<SortableCandidateCardProps> = ({ candidate, onClick }) => {
+const SortableCandidateCard: React.FC<SortableCandidateCardProps> = ({ candidate, onClick, onQuickView }) => {
     const {
         attributes,
         listeners,
@@ -69,8 +70,22 @@ const SortableCandidateCard: React.FC<SortableCandidateCardProps> = ({ candidate
             </div>
 
             <div className="pt-2 border-t border-border/50 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-all duration-200">
-                <span className="text-[10px] font-bold text-primary">Ver Detalhes</span>
-                <span className="material-symbols-outlined text-muted-foreground text-[14px]">arrow_forward</span>
+                {onQuickView && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onQuickView(candidate);
+                        }}
+                        className="p-1 text-muted-foreground hover:text-primary rounded-full hover:bg-primary/10 transition-colors"
+                        title="Visualização Rápida"
+                    >
+                        <span className="material-symbols-outlined text-[16px]">visibility</span>
+                    </button>
+                )}
+                <div className="flex items-center gap-1 ml-auto">
+                    <span className="text-[10px] font-bold text-primary">Ver Detalhes</span>
+                    <span className="material-symbols-outlined text-muted-foreground text-[14px]">arrow_forward</span>
+                </div>
             </div>
         </div>
     );

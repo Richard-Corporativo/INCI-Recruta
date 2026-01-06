@@ -127,6 +127,15 @@ O sistema utiliza um tema personalizado com suporte a modo claro e escuro:
      VITE_SUPABASE_ANON_KEY=sua_chave
      ```
    - Execute o script SQL em `docs/db_init.sql`.
+   - **Execute as migrations:**
+     ```sql
+     -- No SQL Editor do Supabase, execute:
+     -- migrations/COMPLETE_SETUP.sql
+     ```
+     Ou execute individualmente:
+     - `migrations/001_add_salary_to_roles.sql`
+     - `migrations/002_add_role_id_to_jobs.sql`
+   - **Configure RLS Policies** (ver `GUIA-EXECUCAO-COMPLETA.md`)
 
 3. Para desenvolvimento tradicional com Vite:
    ```bash

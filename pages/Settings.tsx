@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useUsers } from '../hooks/useUsers';
@@ -10,22 +10,143 @@ import UserModal from '../components/UserModal';
 import Toast from '../components/Toast';
 import { StorageService } from '../lib/storage';
 import LogDetailsModal from '../components/LogDetailsModal';
+import { useQuickView } from '../context/QuickViewContext';
 import ConfirmationModal from '../components/ConfirmationModal';
-import { User, AuditLog } from '../types';
+import { User, AuditLog, SystemSettings } from '../types';
 
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState('users');
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const { users, updateUser, deleteUser } = useUsers();
-  const { settings, updateManagerPermission } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const { roles } = useRoles();
-  const { logs } = useAudit();
+  const { logs, addLog } = useAudit();
   const { user: currentUser } = useAuth();
+
+  const [pendingSettings, setPendingSettings] = useState<SystemSettings | null>(null);
+  const [pendingUserPermissions, setPendingUserPermissions] = useState<Record<string, Partial<User>>>({});
+  const [isSaving, setIsSaving] = useState(false);
+
+  const currentSettings = pendingSettings || settings;
+
+  const departments = useMemo(() => {
+    const depts = new Set<string>();
+    roles.forEach(role => {
+      if (role.department) depts.add(role.department);
+    });
+    return Array.from(depts).sort();
+  }, [roles]);
+
+  const handleSaveAll = async () => {
+    setIsSaving(true);
+    try {
+      // 1. Save Global Settings
+      if (pendingSettings) {
+        await updateSettings(pendingSettings);
+        await addLog({
+          action: 'Atualização de Privilégios Globais',
+          details: `Alteradas chaves de permissão para gestores.`,
+          category: 'privileges',
+          user_name: currentUser?.name || 'Admin'
+        });
+      }
+
+      // 2. Save Individual User Scope/Permissions
+      for (const [userId, updates] of Object.entries(pendingUserPermissions)) {
+        await updateUser(userId, updates);
+        const user = users.find(u => u.id === userId);
+
+        // Determine category based on what was updated
+        const hasScope = (updates as Partial<User>).scope !== undefined;
+        const hasPermissions = (updates as Partial<User>).custom_permissions !== undefined;
+        const category = hasScope ? 'scope' : hasPermissions ? 'privileges' : 'user_management';
+
+        await addLog({
+          action: hasScope ? 'Atualização de Escopo' : 'Atualização de Permissões',
+          details: `Alteradas configurações individuais para ${user?.name || userId}.`,
+          category,
+          affected_user_id: userId,
+          affected_user_name: user?.name,
+          user_name: currentUser?.name || 'Admin'
+        });
+      }
+
+      setPendingSettings(null);
+      setPendingUserPermissions({});
+      setToast({ message: 'Todas as configurações foram sincronizadas com sucesso.', type: 'success' });
+    } catch (error) {
+      setToast({ message: 'Erro ao salvar algumas configurações.', type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const updateManagerPermission = (key: keyof SystemSettings['manager_permissions'], value: boolean) => {
+    setPendingSettings(prev => ({
+      ...currentSettings,
+      manager_permissions: {
+        ...currentSettings.manager_permissions,
+        [key]: value
+      }
+    }));
+  };
+
+  const hasPendingChanges = pendingSettings !== null || Object.keys(pendingUserPermissions).length > 0;
+
   const [selectedManagerId, setSelectedManagerId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const { openQuickView } = useQuickView();
+
+  // User filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterRole, setFilterRole] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+
+  // Audit filters
+  const [auditStartDate, setAuditStartDate] = useState('');
+  const [auditEndDate, setAuditEndDate] = useState('');
+  const [auditAuthor, setAuditAuthor] = useState('');
+  const [auditCategory, setAuditCategory] = useState('');
+  const [auditTarget, setAuditTarget] = useState('');
+
+  const filteredLogs = useMemo(() => {
+    return logs.filter(log => {
+      // Author filter
+      const matchesAuthor = !auditAuthor || log.user_name.toLowerCase().includes(auditAuthor.toLowerCase());
+
+      // Category filter
+      const matchesCategory = !auditCategory || log.category === auditCategory;
+
+      // Affected user filter (check both affected_user_name and details)
+      const matchesTarget = !auditTarget ||
+        (log.affected_user_name && log.affected_user_name.toLowerCase().includes(auditTarget.toLowerCase())) ||
+        log.details.toLowerCase().includes(auditTarget.toLowerCase());
+
+      // Date range filter
+      let matchesDateRange = true;
+      if (auditStartDate || auditEndDate) {
+        const logDate = new Date(log.timestamp);
+        logDate.setHours(0, 0, 0, 0);
+
+        if (auditStartDate) {
+          const startDate = new Date(auditStartDate);
+          startDate.setHours(0, 0, 0, 0);
+          matchesDateRange = matchesDateRange && logDate >= startDate;
+        }
+
+        if (auditEndDate) {
+          const endDate = new Date(auditEndDate);
+          endDate.setHours(23, 59, 59, 999);
+          matchesDateRange = matchesDateRange && logDate <= endDate;
+        }
+      }
+
+      return matchesAuthor && matchesCategory && matchesTarget && matchesDateRange;
+    });
+  }, [logs, auditAuthor, auditCategory, auditTarget, auditStartDate, auditEndDate]);
 
   // Initialize selected manager
   React.useEffect(() => {
@@ -89,26 +210,38 @@ const Settings: React.FC = () => {
 
 
 
-  const [deptInput, setDeptInput] = useState('');
+
 
   const handleUpdateScope = (updates: Partial<NonNullable<User['scope']>>) => {
     if (!selectedManagerId) return;
-    const currentScope = selectedManager?.scope || {
+    const userUpdates = pendingUserPermissions[selectedManagerId] || {};
+    const currentScope = userUpdates.scope || selectedManager?.scope || {
       vacancy_view_type: 'direct',
       allowed_departments: [],
       allowed_role_codes: []
     };
-    updateUser(selectedManagerId, {
-      scope: { ...currentScope, ...updates }
-    });
+
+    setPendingUserPermissions(prev => ({
+      ...prev,
+      [selectedManagerId]: {
+        ...userUpdates,
+        scope: { ...currentScope, ...updates }
+      }
+    }));
   };
 
   const handleUpdateUserPermission = (key: keyof NonNullable<User['custom_permissions']>, value: boolean) => {
     if (!selectedManagerId) return;
-    const currentPermissions = selectedManager?.custom_permissions || {};
-    updateUser(selectedManagerId, {
-      custom_permissions: { ...currentPermissions, [key]: value }
-    });
+    const userUpdates = pendingUserPermissions[selectedManagerId] || {};
+    const currentPermissions = userUpdates.custom_permissions || selectedManager?.custom_permissions || {};
+
+    setPendingUserPermissions(prev => ({
+      ...prev,
+      [selectedManagerId]: {
+        ...userUpdates,
+        custom_permissions: { ...currentPermissions, [key]: value }
+      }
+    }));
   };
 
 
@@ -126,10 +259,18 @@ const Settings: React.FC = () => {
               <p className="text-muted-foreground text-sm mt-1">Gerencie usuários, permissões e regras de governança do sistema.</p>
             </div>
             <div className="flex gap-2">
-              <button className="items-center justify-center gap-2 bg-primary text-primary-foreground border border-border/40 font-semibold py-2.5 px-6 rounded-base shadow-sm transition-all duration-200 ease-in-out hover:bg-primary/90 active:translate-y-[1px] hidden sm:inline-flex focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                <span className="material-symbols-outlined text-[20px]">save</span>
-                Salvar alterações
-              </button>
+              {hasPendingChanges && (
+                <button
+                  onClick={handleSaveAll}
+                  disabled={isSaving}
+                  className="items-center justify-center gap-2 bg-primary text-primary-foreground border border-border/40 font-semibold py-2.5 px-6 rounded-base shadow-lg shadow-primary/20 transition-all duration-200 ease-in-out hover:bg-primary/90 active:translate-y-[1px] inline-flex focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 animate-in fade-in zoom-in duration-300"
+                >
+                  <span className={`material-symbols-outlined text-[20px] ${isSaving ? 'animate-spin' : ''}`}>
+                    {isSaving ? 'sync' : 'cloud_done'}
+                  </span>
+                  {isSaving ? 'Sincronizando...' : 'Salvar Alterações'}
+                </button>
+              )}
             </div>
           </div>
 
@@ -162,17 +303,31 @@ const Settings: React.FC = () => {
                   <div className="flex flex-col md:flex-row gap-4 flex-1">
                     <div className="relative flex-1 max-w-md">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground material-symbols-outlined text-[20px]">search</span>
-                      <input className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-base text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200" placeholder="Buscar por nome ou e-mail" type="text" />
+                      <input
+                        className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-base text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200"
+                        placeholder="Buscar por nome ou e-mail"
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
                     </div>
                     <div className="w-full md:w-48">
-                      <select className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer">
+                      <select
+                        value={filterRole}
+                        onChange={(e) => setFilterRole(e.target.value)}
+                        className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer"
+                      >
                         <option value="">Todos os tipos</option>
                         <option value="admin">Admin / Qualidade</option>
                         <option value="manager">Gestor</option>
                       </select>
                     </div>
                     <div className="w-full md:w-48">
-                      <select className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer">
+                      <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer"
+                      >
                         <option value="">Status: Todos</option>
                         <option value="active">Ativo</option>
                         <option value="suspended">Suspenso</option>
@@ -202,52 +357,72 @@ const Settings: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border text-sm">
-                      {users.map((user) => (
-                        <tr key={user.id} className="group hover:bg-muted/40 transition-all duration-200">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="size-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold shrink-0 border border-primary/20">
-                                {user.name.split(' ').map(n => n[0]).join('')}
+                      {users
+                        .filter(u => {
+                          const matchesSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            u.email.toLowerCase().includes(searchTerm.toLowerCase());
+                          const matchesRole = filterRole ? u.role === filterRole : true;
+                          const matchesStatus = filterStatus ? u.status === filterStatus : true;
+                          return matchesSearch && matchesRole && matchesStatus;
+                        })
+                        .map((user) => (
+                          <tr key={user.id} className="group hover:bg-muted/40 transition-all duration-200">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="size-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold shrink-0 border border-primary/20">
+                                  {user.name.split(' ').map(n => n[0]).join('')}
+                                </div>
+                                <div className="flex flex-col">
+                                  <span
+                                    className="font-semibold text-foreground cursor-pointer hover:underline"
+                                    onClick={() => openQuickView('user', user)}
+                                  >
+                                    {user.name}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground font-medium">{user.email}</span>
+                                </div>
                               </div>
-                              <div className="flex flex-col">
-                                <span className="font-semibold text-foreground">{user.name}</span>
-                                <span className="text-xs text-muted-foreground font-medium">{user.email}</span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-muted text-foreground border border-border capitalize">
+                                {user.role}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold ${user.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-destructive/10 text-destructive border border-destructive/20'}`}>
+                                <span className={`size-1.5 rounded-full ${user.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-destructive'}`}></span>
+                                {user.status === 'active' ? 'Ativo' : 'Suspenso'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-muted-foreground font-medium">{user.lastAccess}</td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => openQuickView('user', user)}
+                                  className="p-1.5 text-muted-foreground hover:text-primary transition-all duration-200"
+                                  title="Visualização Rápida"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">visibility</span>
+                                </button>
+                                <Link to={`/settings/users/${user.id}/edit`} className="p-1.5 text-muted-foreground hover:text-primary transition-all duration-200" title="Editar"><span className="material-symbols-outlined text-[18px]">edit</span></Link>
+                                <button
+                                  onClick={() => updateUser(user.id, { status: user.status === 'active' ? 'suspended' : 'active' })}
+                                  className={`p-1.5 transition-all duration-200 ${user.status === 'active' ? 'text-muted-foreground hover:text-destructive' : 'text-muted-foreground hover:text-emerald-500'}`}
+                                  title={user.status === 'active' ? 'Suspender' : 'Ativar'}
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">{user.status === 'active' ? 'block' : 'check_circle'}</span>
+                                </button>
+                                <button
+                                  onClick={() => setUserToDelete(user.id)}
+                                  className="p-1.5 text-muted-foreground hover:text-destructive transition-all duration-200"
+                                  title="Excluir"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                                </button>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-muted text-foreground border border-border capitalize">
-                              {user.role}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold ${user.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-destructive/10 text-destructive border border-destructive/20'}`}>
-                              <span className={`size-1.5 rounded-full ${user.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-destructive'}`}></span>
-                              {user.status === 'active' ? 'Ativo' : 'Suspenso'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-muted-foreground font-medium">{user.lastAccess}</td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Link to={`/settings/users/${user.id}/edit`} className="p-1.5 text-muted-foreground hover:text-primary transition-all duration-200" title="Editar"><span className="material-symbols-outlined text-[18px]">edit</span></Link>
-                              <button
-                                onClick={() => updateUser(user.id, { status: user.status === 'active' ? 'suspended' : 'active' })}
-                                className={`p-1.5 transition-all duration-200 ${user.status === 'active' ? 'text-muted-foreground hover:text-destructive' : 'text-muted-foreground hover:text-emerald-500'}`}
-                                title={user.status === 'active' ? 'Suspender' : 'Ativar'}
-                              >
-                                <span className="material-symbols-outlined text-[18px]">{user.status === 'active' ? 'block' : 'check_circle'}</span>
-                              </button>
-                              <button
-                                onClick={() => setUserToDelete(user.id)}
-                                className="p-1.5 text-muted-foreground hover:text-destructive transition-all duration-200"
-                                title="Excluir"
-                              >
-                                <span className="material-symbols-outlined text-[18px]">delete</span>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>
@@ -301,7 +476,7 @@ const Settings: React.FC = () => {
                   <p className="text-muted-foreground text-sm mt-1">Defina quais ações sensíveis os gestores podem executar autonomamente em seus processos.</p>
                 </div>
                 <div className="divide-y divide-border">
-                  <div className="px-6 py-4 flex items-center justify-between gap-4">
+                  <div className="px-6 py-4 flex items-center justify-between gap-4 transition-colors hover:bg-muted/30">
                     <div className="flex-1">
                       <h3 className="text-foreground font-semibold">Mover candidato para "Finalista"</h3>
                       <p className="text-xs text-muted-foreground font-medium">Permite ao gestor avançar candidatos para a fase final sem validação prévia do RH.</p>
@@ -311,7 +486,7 @@ const Settings: React.FC = () => {
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
-                        checked={settings.manager_permissions.move_to_finalist}
+                        checked={currentSettings.manager_permissions.move_to_finalist}
                         onChange={(e) => updateManagerPermission('move_to_finalist', e.target.checked)}
                         className="sr-only peer"
                         type="checkbox"
@@ -319,7 +494,7 @@ const Settings: React.FC = () => {
                       <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                   </div>
-                  <div className="px-6 py-4 flex items-center justify-between gap-4">
+                  <div className="px-6 py-4 flex items-center justify-between gap-4 transition-colors hover:bg-muted/30">
                     <div className="flex-1">
                       <h3 className="text-foreground font-semibold">Marcar como "Não Selecionado / Banco"</h3>
                       <p className="text-xs text-muted-foreground font-medium">Habilita o gestor a desqualificar candidatos durante o processo de entrevista.</p>
@@ -329,7 +504,7 @@ const Settings: React.FC = () => {
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
-                        checked={settings.manager_permissions.mark_not_selected}
+                        checked={currentSettings.manager_permissions.mark_not_selected}
                         onChange={(e) => updateManagerPermission('mark_not_selected', e.target.checked)}
                         className="sr-only peer"
                         type="checkbox"
@@ -337,7 +512,7 @@ const Settings: React.FC = () => {
                       <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                   </div>
-                  <div className="px-6 py-4 flex items-center justify-between gap-4">
+                  <div className="px-6 py-4 flex items-center justify-between gap-4 transition-colors hover:bg-muted/30">
                     <div className="flex-1">
                       <h3 className="text-foreground font-semibold">Retornar etapa do candidato</h3>
                       <p className="text-xs text-muted-foreground font-medium">Permite voltar um candidato para uma fase anterior (ex: de Entrevista para Triagem).</p>
@@ -347,7 +522,7 @@ const Settings: React.FC = () => {
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
-                        checked={settings.manager_permissions.return_candidate_stage}
+                        checked={currentSettings.manager_permissions.return_candidate_stage}
                         onChange={(e) => updateManagerPermission('return_candidate_stage', e.target.checked)}
                         className="sr-only peer"
                         type="checkbox"
@@ -355,7 +530,7 @@ const Settings: React.FC = () => {
                       <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-ring rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                   </div>
-                  <div className="px-6 py-4 flex items-center justify-between gap-4">
+                  <div className="px-6 py-4 flex items-center justify-between gap-4 transition-colors hover:bg-muted/30">
                     <div className="flex-1">
                       <h3 className="text-foreground font-semibold">Encerrar vaga</h3>
                       <p className="text-xs text-muted-foreground font-medium">Autoridade para fechar a vaga diretamente pelo painel do gestor.</p>
@@ -365,7 +540,7 @@ const Settings: React.FC = () => {
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
-                        checked={settings.manager_permissions.close_job}
+                        checked={currentSettings.manager_permissions.close_job}
                         onChange={(e) => updateManagerPermission('close_job', e.target.checked)}
                         className="sr-only peer"
                         type="checkbox"
@@ -378,8 +553,11 @@ const Settings: React.FC = () => {
 
               <section>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Matriz de Acesso Detalhada</h2>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">Visualização somente leitura</span>
+                  <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Matriz de Acesso Dinâmica</h2>
+                  <div className="flex gap-2">
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20 uppercase tracking-wider">Habilitado Globalmente</span>
+                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded border border-slate-200 uppercase tracking-wider">Desabilitado Globalmente</span>
+                  </div>
                 </div>
                 <div className="bg-card border-border shadow-sm overflow-hidden">
                   <div className="overflow-x-auto">
@@ -387,29 +565,65 @@ const Settings: React.FC = () => {
                       <thead>
                         <tr className="bg-muted border-b border-border">
                           <th className="px-6 py-4 text-xs font-semibold text-muted-foreground w-1/3">Área / funcionalidade</th>
-                          <th className="px-6 py-4 text-xs font-semibold text-muted-foreground text-center w-1/3">Admin / qualidade</th>
-                          <th className="px-6 py-4 text-xs font-semibold text-muted-foreground text-center w-1/3">Gestor</th>
+                          <th className="px-6 py-4 text-xs font-semibold text-muted-foreground text-center w-1/3">Administrador / Qualidade</th>
+                          <th className="px-6 py-4 text-xs font-semibold text-muted-foreground text-center w-1/3">Gestor (Regra Atual)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border text-sm">
                         <tr className="hover:bg-muted/40 transition-colors">
                           <td className="px-6 py-4 text-foreground font-semibold">
                             <div className="flex items-center gap-2">
-                              <span className="material-symbols-outlined text-muted-foreground text-[18px]">work</span> Gestão de Cargos
+                              <span className="material-symbols-outlined text-primary text-[18px]">bolt</span> Mover para Finalista
                             </div>
                           </td>
                           <td className="px-6 py-4 text-center">
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                              <span className="material-symbols-outlined text-[14px]">check</span> Criar e Editar
+                              <span className="material-symbols-outlined text-[14px]">check</span> Total
                             </span>
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-muted text-foreground border border-border">
-                              <span className="material-symbols-outlined text-[14px]">visibility</span> Visualizar Apenas
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${currentSettings.manager_permissions.move_to_finalist ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-muted text-foreground border-border'}`}>
+                              <span className="material-symbols-outlined text-[14px]">{currentSettings.manager_permissions.move_to_finalist ? 'check' : 'lock'}</span>
+                              {currentSettings.manager_permissions.move_to_finalist ? 'Permitido' : 'Bloqueado'}
                             </span>
                           </td>
                         </tr>
-                        {/* ... more rows ... */}
+                        <tr className="hover:bg-muted/40 transition-colors">
+                          <td className="px-6 py-4 text-foreground font-semibold">
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-primary text-[18px]">backspacer</span> Reverter Etapas
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                              <span className="material-symbols-outlined text-[14px]">check</span> Total
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${currentSettings.manager_permissions.return_candidate_stage ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-muted text-foreground border-border'}`}>
+                              <span className="material-symbols-outlined text-[14px]">{currentSettings.manager_permissions.return_candidate_stage ? 'check' : 'lock'}</span>
+                              {currentSettings.manager_permissions.return_candidate_stage ? 'Permitido (Max 3/mês)' : 'Bloqueado'}
+                            </span>
+                          </td>
+                        </tr>
+                        <tr className="hover:bg-muted/40 transition-colors">
+                          <td className="px-6 py-4 text-foreground font-semibold">
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-primary text-[18px]">verified_user</span> Encerrar Vagas
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                              <span className="material-symbols-outlined text-[14px]">check</span> Total
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${currentSettings.manager_permissions.close_job ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-muted text-foreground border-border'}`}>
+                              <span className="material-symbols-outlined text-[14px]">{currentSettings.manager_permissions.close_job ? 'check' : 'lock'}</span>
+                              {currentSettings.manager_permissions.close_job ? 'Permitido' : 'Bloqueado'}
+                            </span>
+                          </td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>
@@ -508,54 +722,72 @@ const Settings: React.FC = () => {
                       <div>
                         <label className="block text-sm font-semibold text-foreground mb-2">Áreas / Departamentos Permitidos</label>
                         <p className="text-xs text-muted-foreground font-medium mb-3">Departamentos onde o gestor pode abrir vagas ou visualizar processos.</p>
-                        <div className="relative">
-                          <div className="flex flex-wrap gap-2 mb-2 p-2 min-h-[46px] bg-background border border-border rounded-base">
+                        <div className="flex flex-col gap-3">
+                          <div className="flex flex-wrap gap-2 p-2 min-h-[46px] bg-background border border-border rounded-base">
+                            {(selectedManager?.scope?.allowed_departments || []).length === 0 && (
+                              <span className="text-xs text-muted-foreground italic flex items-center px-1">Nenhum departamento selecionado</span>
+                            )}
                             {(selectedManager?.scope?.allowed_departments || []).map(dept => (
-                              <span key={dept} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-muted border border-border text-xs font-semibold text-foreground">
+                              <span key={dept} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
                                 {dept} <button onClick={() => handleUpdateScope({ allowed_departments: (selectedManager?.scope?.allowed_departments || []).filter(d => d !== dept) })} className="hover:text-destructive flex items-center transition-colors"><span className="material-symbols-outlined text-[14px]">close</span></button>
                               </span>
                             ))}
-                            <input
-                              value={deptInput}
-                              onChange={(e) => setDeptInput(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' && deptInput.trim()) {
-                                  e.preventDefault();
-                                  const current = selectedManager?.scope?.allowed_departments || [];
-                                  if (!current.includes(deptInput.trim())) {
-                                    handleUpdateScope({ allowed_departments: [...current, deptInput.trim()] });
-                                  }
-                                  setDeptInput('');
+                          </div>
+
+                          <div className="relative group">
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                if (!e.target.value) return;
+                                const current = selectedManager?.scope?.allowed_departments || [];
+                                if (!current.includes(e.target.value)) {
+                                  handleUpdateScope({ allowed_departments: [...current, e.target.value] });
                                 }
                               }}
-                              className="bg-transparent border-none text-sm focus:ring-0 p-0 placeholder:text-muted-foreground min-w-[150px] text-foreground font-medium flex-1"
-                              placeholder="Adicionar departamento..."
-                              type="text"
-                            />
+                              className="w-full px-3 py-2.5 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer appearance-none"
+                            >
+                              <option value="">Selecione um departamento para adicionar...</option>
+                              {departments.filter(d => !(selectedManager?.scope?.allowed_departments || []).includes(d)).map(dept => (
+                                <option key={dept} value={dept}>{dept}</option>
+                              ))}
+                            </select>
+                            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-hover:text-primary transition-colors">add_circle</span>
                           </div>
                         </div>
                       </div>
+                      <div className="h-px bg-slate-100 dark:bg-slate-800"></div>
                       <div>
                         <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                           Cargos do catálogo permitidos <span className="text-xs font-normal text-slate-400 ml-1">(Opcional)</span>
                         </label>
-                        <div className="relative">
-                          <select
-                            value={selectedManager?.scope?.allowed_role_codes || []}
-                            onChange={(e) => {
-                              const selectedOptions = Array.from(e.target.selectedOptions, (option: HTMLOptionElement) => option.value);
-                              handleUpdateScope({ allowed_role_codes: selectedOptions });
-                            }}
-                            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600"
-                            multiple
-                            size={4}
-                          >
-                            {roles.map(role => (
-                              <option key={role.id} value={role.code}>{role.title}</option>
-                            ))}
-                          </select>
-                          <p className="text-xs text-slate-500 mt-1">Segure Ctrl (ou Cmd) para selecionar múltiplos.</p>
+                        <div className="bg-background border border-border rounded-base p-4 space-y-4 max-h-[300px] overflow-y-auto kanban-scroll">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {roles.map(role => {
+                              const isChecked = (selectedManager?.scope?.allowed_role_codes || []).includes(role.code);
+                              return (
+                                <label key={role.id} className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer group ${isChecked ? 'bg-primary/5 border-primary shadow-sm' : 'bg-muted/10 border-border hover:bg-muted/30'}`}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                      const current = selectedManager?.scope?.allowed_role_codes || [];
+                                      const updated = e.target.checked
+                                        ? [...current, role.code]
+                                        : current.filter(c => c !== role.code);
+                                      handleUpdateScope({ allowed_role_codes: updated });
+                                    }}
+                                    className="size-4 rounded border-border text-primary focus:ring-primary/20"
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className={`text-xs font-bold ${isChecked ? 'text-primary' : 'text-foreground'}`}>{role.title}</span>
+                                    <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{role.code} • {role.department}</span>
+                                  </div>
+                                </label>
+                              );
+                            })}
+                          </div>
                         </div>
+                        <p className="text-[10px] text-muted-foreground mt-2 font-medium italic">Se nenhum cargo for selecionado, o gestor verá todos os cargos dos departamentos autorizados.</p>
                       </div>
                     </div>
                   </section>
@@ -578,12 +810,24 @@ const Settings: React.FC = () => {
                     <div className="space-y-5">
                       <div className="flex items-center justify-between group">
                         <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Encerrar Vaga</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Encerrar Vaga</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${(pendingUserPermissions[selectedManagerId!]?.custom_permissions?.close_job !== undefined)
+                              ? 'bg-blue-500/10 text-blue-600 border-blue-200'
+                              : 'bg-slate-100 text-slate-400 border-slate-200'
+                              }`}>
+                              {(pendingUserPermissions[selectedManagerId!]?.custom_permissions?.close_job !== undefined) ? 'Personalizado' : 'Herança Global'}
+                            </span>
+                          </div>
                           <span className="text-xs text-slate-500 dark:text-slate-400">Permite fechar vagas abertas</span>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input
-                            checked={!!selectedManager?.custom_permissions?.close_job}
+                            checked={
+                              pendingUserPermissions[selectedManagerId!]?.custom_permissions?.close_job !== undefined
+                                ? !!pendingUserPermissions[selectedManagerId!]?.custom_permissions?.close_job
+                                : !!selectedManager?.custom_permissions?.close_job || currentSettings.manager_permissions.close_job
+                            }
                             onChange={(e) => handleUpdateUserPermission('close_job', e.target.checked)}
                             className="sr-only peer"
                             type="checkbox"
@@ -594,12 +838,24 @@ const Settings: React.FC = () => {
                       <div className="h-px bg-slate-100 dark:bg-slate-800"></div>
                       <div className="flex items-center justify-between group">
                         <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Aprovar para Finalista</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Aprovar para Finalista</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${(pendingUserPermissions[selectedManagerId!]?.custom_permissions?.approve_finalist !== undefined)
+                              ? 'bg-blue-500/10 text-blue-600 border-blue-200'
+                              : 'bg-slate-100 text-slate-400 border-slate-200'
+                              }`}>
+                              {(pendingUserPermissions[selectedManagerId!]?.custom_permissions?.approve_finalist !== undefined) ? 'Personalizado' : 'Herança Global'}
+                            </span>
+                          </div>
                           <span className="text-xs text-slate-500 dark:text-slate-400">Mover para etapa final</span>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input
-                            checked={!!selectedManager?.custom_permissions?.approve_finalist}
+                            checked={
+                              pendingUserPermissions[selectedManagerId!]?.custom_permissions?.approve_finalist !== undefined
+                                ? !!pendingUserPermissions[selectedManagerId!]?.custom_permissions?.approve_finalist
+                                : !!selectedManager?.custom_permissions?.approve_finalist || currentSettings.manager_permissions.move_to_finalist
+                            }
                             onChange={(e) => handleUpdateUserPermission('approve_finalist', e.target.checked)}
                             className="sr-only peer"
                             type="checkbox"
@@ -610,12 +866,24 @@ const Settings: React.FC = () => {
                       <div className="h-px bg-slate-100 dark:bg-slate-800"></div>
                       <div className="flex items-center justify-between group">
                         <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Registrar Feedback</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Registrar Feedback</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${(pendingUserPermissions[selectedManagerId!]?.custom_permissions?.register_feedback !== undefined)
+                              ? 'bg-blue-500/10 text-blue-600 border-blue-200'
+                              : 'bg-slate-100 text-slate-400 border-slate-200'
+                              }`}>
+                              {(pendingUserPermissions[selectedManagerId!]?.custom_permissions?.register_feedback !== undefined) ? 'Personalizado' : 'Herança Global'}
+                            </span>
+                          </div>
                           <span className="text-xs text-slate-500 dark:text-slate-400">Inserir notas de entrevista</span>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input
-                            checked={!!selectedManager?.custom_permissions?.register_feedback}
+                            checked={
+                              pendingUserPermissions[selectedManagerId!]?.custom_permissions?.register_feedback !== undefined
+                                ? !!pendingUserPermissions[selectedManagerId!]?.custom_permissions?.register_feedback
+                                : !!selectedManager?.custom_permissions?.register_feedback || true // Feedback is usually true by default
+                            }
                             onChange={(e) => handleUpdateUserPermission('register_feedback', e.target.checked)}
                             className="sr-only peer"
                             type="checkbox"
@@ -623,15 +891,59 @@ const Settings: React.FC = () => {
                           <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/30 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
                         </label>
                       </div>
-                      <div className="h-px bg-slate-100 dark:bg-slate-800"></div>
-                      <div className="flex items-center justify-between group opacity-50 cursor-not-allowed">
+                      <div className="flex items-center justify-between group">
                         <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Visualizar Salários</span>
-                          <span className="text-xs text-slate-500 dark:text-slate-400">Restrito a Admin/RH</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Retornar Etapa</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${(pendingUserPermissions[selectedManagerId!]?.custom_permissions?.return_candidate_stage !== undefined)
+                              ? 'bg-blue-500/10 text-blue-600 border-blue-200'
+                              : 'bg-slate-100 text-slate-400 border-slate-200'
+                              }`}>
+                              {(pendingUserPermissions[selectedManagerId!]?.custom_permissions?.return_candidate_stage !== undefined) ? 'Personalizado' : 'Herança Global'}
+                            </span>
+                          </div>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">Voltar candidato para fase anterior (Max 3/mês)</span>
                         </div>
-                        <label className="relative inline-flex items-center cursor-not-allowed">
-                          <input className="sr-only peer" disabled type="checkbox" />
-                          <div className="w-11 h-6 bg-slate-200 rounded-full peer dark:bg-slate-700 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 dark:border-gray-600"></div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            checked={
+                              pendingUserPermissions[selectedManagerId!]?.custom_permissions?.return_candidate_stage !== undefined
+                                ? !!pendingUserPermissions[selectedManagerId!]?.custom_permissions?.return_candidate_stage
+                                : !!selectedManager?.custom_permissions?.return_candidate_stage || currentSettings.manager_permissions.return_candidate_stage
+                            }
+                            onChange={(e) => handleUpdateUserPermission('return_candidate_stage', e.target.checked)}
+                            className="sr-only peer"
+                            type="checkbox"
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/30 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                        </label>
+                      </div>
+                      <div className="h-px bg-slate-100 dark:bg-slate-800"></div>
+                      <div className="flex items-center justify-between group">
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Visualizar Salários</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${(pendingUserPermissions[selectedManagerId!]?.custom_permissions?.view_salaries !== undefined)
+                              ? 'bg-blue-500/10 text-blue-600 border-blue-200'
+                              : 'bg-slate-100 text-slate-400 border-slate-200'
+                              }`}>
+                              {(pendingUserPermissions[selectedManagerId!]?.custom_permissions?.view_salaries !== undefined) ? 'Personalizado' : 'Herança Global'}
+                            </span>
+                          </div>
+                          <span className="text-xs text-slate-500 dark:text-slate-400">Permite ver faixas salariais em cargos e vagas</span>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            checked={
+                              pendingUserPermissions[selectedManagerId!]?.custom_permissions?.view_salaries !== undefined
+                                ? !!pendingUserPermissions[selectedManagerId!]?.custom_permissions?.view_salaries
+                                : !!selectedManager?.custom_permissions?.view_salaries || false
+                            }
+                            onChange={(e) => handleUpdateUserPermission('view_salaries', e.target.checked)}
+                            className="sr-only peer"
+                            type="checkbox"
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/30 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
                         </label>
                       </div>
                     </div>
@@ -649,15 +961,24 @@ const Settings: React.FC = () => {
                   <span className="material-symbols-outlined text-slate-400 text-[20px]">filter_list</span>
                   Filtros de Auditoria
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground">Período</label>
-                    <select className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer">
-                      <option value="30">Últimos 30 dias</option>
-                      <option value="7">Últimos 7 dias</option>
-                      <option value="today">Hoje</option>
-                      <option value="custom">Personalizado</option>
-                    </select>
+                    <label className="text-xs font-semibold text-muted-foreground">Data Inicial</label>
+                    <input
+                      type="date"
+                      value={auditStartDate}
+                      onChange={(e) => setAuditStartDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-medium focus:ring-2 focus:ring-ring transition-all duration-200"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground">Data Final</label>
+                    <input
+                      type="date"
+                      value={auditEndDate}
+                      onChange={(e) => setAuditEndDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-medium focus:ring-2 focus:ring-ring transition-all duration-200"
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-muted-foreground">Quem alterou</label>
@@ -665,31 +986,52 @@ const Settings: React.FC = () => {
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <span className="material-symbols-outlined text-muted-foreground text-[18px]">person_search</span>
                       </span>
-                      <input className="w-full pl-9 pr-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-medium focus:ring-2 focus:ring-ring transition-all duration-200 placeholder:text-muted-foreground" placeholder="Nome ou e-mail" />
+                      <input
+                        value={auditAuthor}
+                        onChange={(e) => setAuditAuthor(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-medium focus:ring-2 focus:ring-ring transition-all duration-200 placeholder:text-muted-foreground"
+                        placeholder="Nome ou e-mail"
+                      />
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground">Tipo de mudança</label>
-                    <select className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer">
-                      <option value="">Todos os tipos</option>
-                      <option value="profile">Perfil de acesso</option>
-                      <option value="scope">Escopo de gestão</option>
+                    <label className="text-xs font-semibold text-muted-foreground">Categoria</label>
+                    <select
+                      value={auditCategory}
+                      onChange={(e) => setAuditCategory(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer"
+                    >
+                      <option value="">Todas as categorias</option>
                       <option value="privileges">Privilégios</option>
+                      <option value="scope">Escopo de Gestão</option>
+                      <option value="user_management">Gestão de Usuários</option>
+                      <option value="candidate_movement">Movimentação de Candidatos</option>
+                      <option value="job_management">Gestão de Vagas</option>
                       <option value="system">Sistema</option>
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-muted-foreground">Usuário afetado</label>
-                    <input className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-medium focus:ring-2 focus:ring-ring transition-all duration-200 placeholder:text-muted-foreground" placeholder="Nome do usuário alvo" />
+                    <input
+                      value={auditTarget}
+                      onChange={(e) => setAuditTarget(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-medium focus:ring-2 focus:ring-ring transition-all duration-200 placeholder:text-muted-foreground"
+                      placeholder="Nome do usuário alvo"
+                    />
                   </div>
                 </div>
                 <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-border">
-                  <button className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">
+                  <button
+                    onClick={() => {
+                      setAuditAuthor('');
+                      setAuditCategory('');
+                      setAuditTarget('');
+                      setAuditStartDate('');
+                      setAuditEndDate('');
+                    }}
+                    className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     Limpar Filtros
-                  </button>
-                  <button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2 px-6 rounded-base transition-all duration-200 text-sm shadow-sm flex items-center gap-2 active:translate-y-[1px]">
-                    <span className="material-symbols-outlined text-[18px]">search</span>
-                    Buscar Logs
                   </button>
                 </div>
               </div>
@@ -702,18 +1044,21 @@ const Settings: React.FC = () => {
                       <thead>
                         <tr className="bg-muted border-b border-border">
                           <th className="px-6 py-4 text-xs font-semibold text-muted-foreground w-48">Quem / quando</th>
-                          <th className="px-6 py-4 text-xs font-semibold text-muted-foreground w-40">Tipo</th>
+                          <th className="px-6 py-4 text-xs font-semibold text-muted-foreground w-32">Categoria</th>
                           <th className="px-6 py-4 text-xs font-semibold text-muted-foreground">O que mudou</th>
+                          <th className="px-6 py-4 text-xs font-semibold text-muted-foreground w-40">Afetado</th>
                           <th className="px-6 py-4 text-xs font-semibold text-muted-foreground w-48">Motivo</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border text-sm">
-                        {logs.length === 0 ? (
+                        {filteredLogs.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground italic font-semibold">Nenhum registro de auditoria encontrado.</td>
+                            <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground italic font-semibold">
+                              Nenhum registro de auditoria encontrado.
+                            </td>
                           </tr>
                         ) : (
-                          logs.map(log => (
+                          filteredLogs.map(log => (
                             <tr key={log.id} className="group hover:bg-muted/40 transition-all duration-200">
                               <td className="px-6 py-4 align-top">
                                 <div className="flex flex-col gap-1">
@@ -730,23 +1075,40 @@ const Settings: React.FC = () => {
                                 </div>
                               </td>
                               <td className="px-6 py-4 align-top">
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-muted text-foreground border border-border capitalize">
-                                  {log.action}
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${log.category === 'privileges' ? 'bg-purple-500/10 text-purple-600 border-purple-200' :
+                                    log.category === 'scope' ? 'bg-blue-500/10 text-blue-600 border-blue-200' :
+                                      log.category === 'user_management' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' :
+                                        log.category === 'candidate_movement' ? 'bg-amber-500/10 text-amber-600 border-amber-200' :
+                                          log.category === 'job_management' ? 'bg-cyan-500/10 text-cyan-600 border-cyan-200' :
+                                            'bg-muted text-foreground border-border'
+                                  }`}>
+                                  {log.category === 'privileges' ? 'Privilégios' :
+                                    log.category === 'scope' ? 'Escopo' :
+                                      log.category === 'user_management' ? 'Usuários' :
+                                        log.category === 'candidate_movement' ? 'Candidatos' :
+                                          log.category === 'job_management' ? 'Vagas' :
+                                            log.category || 'Sistema'}
                                 </span>
                               </td>
                               <td className="px-6 py-4 align-top">
                                 <p className="text-foreground font-medium leading-relaxed">{log.details}</p>
                               </td>
                               <td className="px-6 py-4 align-top">
-                                <span className="text-muted-foreground italic text-xs font-semibold">Automático</span>
+                                {log.affected_user_name ? (
+                                  <div className="flex items-center gap-2">
+                                    <div className="size-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-[9px] font-semibold border border-border">
+                                      {log.affected_user_name.split(' ').map(n => n[0]).join('')}
+                                    </div>
+                                    <span className="text-xs text-foreground font-medium">{log.affected_user_name}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground italic">N/A</span>
+                                )}
                               </td>
-                              <td className="px-6 py-4 align-top text-right">
-                                <button
-                                  onClick={() => setSelectedLog(log)}
-                                  className="text-muted-foreground hover:text-primary transition-colors"
-                                >
-                                  <span className="material-symbols-outlined text-[20px]">info</span>
-                                </button>
+                              <td className="px-6 py-4 align-top">
+                                <span className="text-xs text-muted-foreground font-medium">
+                                  {log.reason || 'Automático'}
+                                </span>
                               </td>
                             </tr>
                           ))
@@ -755,7 +1117,8 @@ const Settings: React.FC = () => {
                     </table>
                   </div>
                   <div className="px-6 py-4 border-t border-border flex justify-between items-center bg-muted/20 text-xs text-muted-foreground font-semibold">
-                    <span>Mostrando {logs.length} registros</span>
+                    <span>Mostrando {filteredLogs.length} de {logs.length} registros</span>
+
                   </div>
                 </div>
               </div>
@@ -771,8 +1134,8 @@ const Settings: React.FC = () => {
                     <span className="material-symbols-outlined">database</span>
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-foreground">Gerenciamento de Dados (Backup)</h2>
-                    <p className="text-muted-foreground text-sm mt-1">Como o sistema utiliza armazenamento local, recomendamos exportar seus dados regularmente para evitar perdas acidentais.</p>
+                    <h2 className="text-lg font-semibold text-foreground">Gerenciamento de Dados (Supabase)</h2>
+                    <p className="text-muted-foreground text-sm mt-1">O sistema está sincronizado com a nuvem (Supabase). Você pode exportar uma cópia local para segurança adicional.</p>
                   </div>
                 </div>
 
@@ -796,7 +1159,7 @@ const Settings: React.FC = () => {
                       <span className="material-symbols-outlined text-[20px] text-primary">file_download</span>
                       Importar Dados
                     </h3>
-                    <p className="text-xs text-muted-foreground mb-4">Carrega dados de um backup anterior. <span className="text-destructive font-semibold">Isso apagará o estado atual!</span></p>
+                    <p className="text-xs text-muted-foreground mb-4">Carrega dados de um backup anterior para sua sessão local. <span className="text-destructive font-semibold">Isso não altera os dados globais do banco!</span></p>
                     <button
                       onClick={handleImportClick}
                       className="w-full py-2.5 bg-background border border-border text-foreground font-semibold rounded-base text-sm transition-all duration-200 ease-in-out hover:bg-muted active:translate-y-[1px]"
@@ -819,7 +1182,7 @@ const Settings: React.FC = () => {
                 <div>
                   <h4 className="text-sm font-semibold text-destructive">Zona de Perigo</h4>
                   <p className="text-sm text-foreground/80 mt-1 font-medium">
-                    Apagar todos os dados locais restaurará o sistema para o estado inicial (dados de demonstração). Esta ação não pode ser desfeita.
+                    Apagar os dados de cache restaurará a sessão local para o estado inicial. Os dados persistidos no Supabase não serão afetados por esta ação.
                   </p>
                   <button
                     onClick={() => setIsResetConfirmOpen(true)}
