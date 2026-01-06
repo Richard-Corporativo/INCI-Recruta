@@ -39,13 +39,13 @@ const TermsModal: React.FC<TermsModalProps> = ({ isOpen, onClose, onAgree, type 
     const termsContent = (
         <div className="space-y-10 text-muted-foreground leading-relaxed transition-colors">
             <p className="text-lg text-foreground font-medium transition-colors">
-                Bem-vindo à plataforma de carreiras da <strong>INCI Brasil</strong>. Ao acessar ou utilizar nosso site, você concorda em cumprir e estar vinculado aos seguintes termos e condições.
+                Bem-vindo à plataforma de carreiras da <strong>INCI Recruta</strong>. Ao acessar ou utilizar nosso site, você concorda em cumprir e estar vinculado aos seguintes termos e condições.
             </p>
 
             <section>
                 <h2 className="text-xl font-semibold text-foreground mb-4 pb-2 border-b border-border transition-colors">1. Definições Gerais</h2>
                 <p>
-                    Para os fins destes Termos de Serviço, "Plataforma" refere-se ao ambiente digital de recrutamento da INCI Brasil. "Candidato" ou "Usuário" refere-se a qualquer pessoa física que cadastra seu currículo ou navega pelas vagas disponíveis. "Serviços" engloba todas as funcionalidades de busca de vagas, aplicação e gestão de perfil profissional oferecidas neste site.
+                    Para os fins destes Termos de Serviço, "Plataforma" refere-se ao ambiente digital de recrutamento da INCI Recruta. "Candidato" ou "Usuário" refere-se a qualquer pessoa física que cadastra seu currículo ou navega pelas vagas disponíveis. "Serviços" engloba todas as funcionalidades de busca de vagas, aplicação e gestão de perfil profissional oferecidas neste site.
                 </p>
             </section>
 

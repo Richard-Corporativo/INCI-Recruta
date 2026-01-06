@@ -85,7 +85,7 @@ const ApplicationDetail: React.FC = () => {
                         <div className="flex flex-wrap items-center gap-6 text-[11px] font-semibold text-muted-foreground">
                             <div className="flex items-center gap-2">
                                 <span className="material-symbols-outlined text-[18px] text-primary">apartment</span>
-                                INCI Brasil
+                                INCI Recruta
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="material-symbols-outlined text-[18px] text-primary">location_on</span>

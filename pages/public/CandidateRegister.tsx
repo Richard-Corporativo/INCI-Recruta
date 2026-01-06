@@ -329,7 +329,7 @@ const CandidateRegister: React.FC = () => {
                 </div>
 
                 <div className="mt-8 text-center">
-                    <p className="text-[10px] font-semibold text-slate-400">© 2024 INCI Brasil • Portal do Candidato</p>
+                    <p className="text-[10px] font-semibold text-slate-400">© 2024 INCI Recruta • Portal do Candidato</p>
                 </div>
             </div>
 

@@ -11,7 +11,7 @@ const NotFound: React.FC = () => {
                 <div className="size-10 rounded-md bg-primary/10 flex items-center justify-center text-primary">
                     <span className="material-symbols-outlined text-2xl font-semibold">work</span>
                 </div>
-                <h2 className="text-xl font-semibold text-foreground">INCI Brasil</h2>
+                <h2 className="text-xl font-semibold text-foreground">INCI Recruta</h2>
             </header>
 
             {/* Main Content */}
@@ -91,7 +91,7 @@ const NotFound: React.FC = () => {
             <footer className="p-8 border-t border-border transition-all duration-200">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
                     <p className="text-muted-foreground text-sm font-medium">
-                        © 2024 INCI Brasil. Todos os direitos reservados.
+                        © 2024 INCI Recruta. Todos os direitos reservados.
                     </p>
                     <div className="flex gap-8 text-sm font-semibold">
                         <Link to="/termos" className="text-muted-foreground hover:text-primary transition-all duration-200 underline-offset-4 focus-visible:ring-2 focus-visible:ring-ring rounded-sm px-1 outline-none">Termos</Link>

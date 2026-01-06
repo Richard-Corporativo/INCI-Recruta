@@ -112,7 +112,7 @@ const MyApplications: React.FC = () => {
                                                 {job?.title || 'Vaga indisponível'}
                                             </h3>
                                             <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-muted-foreground/80">
-                                                <span className="text-foreground">INCI Brasil</span>
+                                                <span className="text-foreground">INCI Recruta</span>
                                                 <span className="size-1 rounded-full bg-border"></span>
                                                 <span>Ref: {app.jobId}</span>
                                                 <span className="size-1 rounded-full bg-border"></span>

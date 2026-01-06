@@ -34,7 +34,7 @@ const PublicLayout: React.FC = () => {
                                 <path d="M24 4C25.7818 14.2173 33.7827 22.2182 44 24C33.7827 25.7818 25.7818 33.7827 24 44C22.2182 33.7827 14.2173 25.7818 4 24C14.2173 22.2182 22.2182 14.2173 24 4Z"></path>
                             </svg>
                         </div>
-                        <h2 className="text-xl font-semibold leading-tight tracking-tight">INCI Brasil</h2>
+                        <h2 className="text-xl font-semibold leading-tight tracking-tight">INCI Recruta</h2>
                     </Link>
                 </div>
 
@@ -110,7 +110,7 @@ const PublicLayout: React.FC = () => {
                         <div className="size-8 text-primary">
                             <svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path d="M24 4C25.7818 14.2173 33.7827 22.2182 44 24C33.7827 25.7818 25.7818 33.7827 24 44C22.2182 33.7827 14.2173 25.7818 4 24C14.2173 22.2182 22.2182 14.2173 24 4Z"></path></svg>
                         </div>
-                        <span className="font-semibold text-xl uppercase tracking-tight">INCI Brasil</span>
+                        <span className="font-semibold text-xl uppercase tracking-tight">INCI Recruta</span>
                     </div>
                     <div className="flex gap-10 text-[11px] font-semibold text-muted-foreground uppercase tracking-widest">
                         <button
@@ -128,7 +128,7 @@ const PublicLayout: React.FC = () => {
                         <a className="hover:text-primary transition-colors focus-visible:underline outline-none" href="mailto:contato@incibrasil.com">Contato</a>
                     </div>
 
-                    <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-[0.2em]">© 2024 INCI Brasil. Todos os direitos reservados.</p>
+                    <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-[0.2em]">© 2024 INCI Recruta. Todos os direitos reservados.</p>
                 </div>
 
                 <TermsModal

@@ -26,7 +26,7 @@ const TermsOfUse: React.FC = () => {
 
                 <div className="space-y-16 text-muted-foreground transition-colors">
                     <p className="text-2xl font-semibold text-foreground leading-relaxed">
-                        Ao utilizar a plataforma de carreiras da <span className="text-primary italic">INCI Brasil</span>, você aceita integralmente as condições estabelecidas nestes termos.
+                        Ao utilizar a plataforma de carreiras da <span className="text-primary italic">INCI Recruta</span>, você aceita integralmente as condições estabelecidas nestes termos.
                     </p>
 
                     <section className="space-y-6">
@@ -36,7 +36,7 @@ const TermsOfUse: React.FC = () => {
                         </h2>
                         <div className="h-px bg-border w-full opacity-50"></div>
                         <p className="text-sm font-medium leading-relaxed">
-                            Para os fins destes Termos de Serviço, "Plataforma" refere-se ao ambiente digital de recrutamento da INCI Brasil. "Candidato" ou "Usuário" refere-se a qualquer pessoa física que cadastra seu currículo ou navega pelas vagas disponíveis. "Serviços" engloba todas as funcionalidades de busca de vagas, aplicação e gestão de perfil profissional oferecidas neste site.
+                            Para os fins destes Termos de Serviço, "Plataforma" refere-se ao ambiente digital de recrutamento da INCI Recruta. "Candidato" ou "Usuário" refere-se a qualquer pessoa física que cadastra seu currículo ou navega pelas vagas disponíveis. "Serviços" engloba todas as funcionalidades de busca de vagas, aplicação e gestão de perfil profissional oferecidas neste site.
                         </p>
                     </section>
 
@@ -68,7 +68,7 @@ const TermsOfUse: React.FC = () => {
                             03. Dados Pessoais
                         </h2>
                         <div className="h-px bg-border w-full opacity-50"></div>
-                        <p className="text-sm font-medium leading-relaxed">A INCI Brasil compromete-se a tratar seus dados pessoais em conformidade com a Lei Geral de Proteção de Dados (LGPD). Para detalhes específicos sobre retenção, exclusão e uso de dados, consulte nossa <Link to="/privacidade" className="text-primary hover:underline font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">Política de Privacidade</Link>.</p>
+                        <p className="text-sm font-medium leading-relaxed">A INCI Recruta compromete-se a tratar seus dados pessoais em conformidade com a Lei Geral de Proteção de Dados (LGPD). Para detalhes específicos sobre retenção, exclusão e uso de dados, consulte nossa <Link to="/privacidade" className="text-primary hover:underline font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm">Política de Privacidade</Link>.</p>
                     </section>
 
                     <section className="space-y-6">
@@ -77,7 +77,7 @@ const TermsOfUse: React.FC = () => {
                             04. Propriedade Intelectual
                         </h2>
                         <div className="h-px bg-border w-full opacity-50"></div>
-                        <p className="text-sm font-medium leading-relaxed">Todo o conteúdo visual, design, logotipos, textos e software presentes neste site são de propriedade exclusiva da INCI Brasil ou de seus licenciadores e são protegidos pelas leis de direitos autorais e propriedade industrial.</p>
+                        <p className="text-sm font-medium leading-relaxed">Todo o conteúdo visual, design, logotipos, textos e software presentes neste site são de propriedade exclusiva da INCI Recruta ou de seus licenciadores e são protegidos pelas leis de direitos autorais e propriedade industrial.</p>
                     </section>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-12">

@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { HashRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
@@ -100,36 +100,7 @@ const RoleRedirect = () => {
   return <Navigate to="/admin/dashboard" replace />;
 };
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-import { QueryClient } from '@tanstack/react-query';
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 60 * 24, // 24 hours
-      retry: 1,
-      refetchOnMount: true, // Always refetch on mount to ensure fresh data
-      refetchOnWindowFocus: false, // Don't refetch on window focus to avoid unnecessary requests
-    },
-  },
-});
-
-const persister = createSyncStoragePersister({
-  storage: window.localStorage,
-  key: 'INCI_RECRUTA_CACHE', // Use a specific key to avoid conflicts
-});
-
-=======
->>>>>>> parent of 3015adc (mvp concluido)
-=======
->>>>>>> parent of 3015adc (mvp concluido)
-=======
->>>>>>> parent of 3015adc (mvp concluido)
 const App: React.FC = () => {
   return (
     <AuthProvider>
@@ -137,11 +108,12 @@ const App: React.FC = () => {
         <Router>
           <Suspense fallback={<LoadingFallback />}>
             <Routes>
-              {/* Home redirect */}
-              <Route path="/" element={<RoleRedirect />} />
-
-              {/* Rotas de Autenticação Admin */}
+              {/* Login Admin (Alta Prioridade) */}
               <Route path="/admin/login" element={<Login />} />
+
+              {/* Redirecionamentos de Atalho */}
+              <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="/" element={<RoleRedirect />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/request-access" element={<RequestAccess />} />

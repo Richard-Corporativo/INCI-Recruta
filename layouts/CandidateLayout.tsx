@@ -43,7 +43,7 @@ const CandidateLayout: React.FC = () => {
                             <span className="material-symbols-outlined text-3xl">hexagon</span>
                         </div>
                         <div>
-                            <h1 className="text-xl font-semibold text-sidebar-foreground leading-tight tracking-tight">INCI Brasil</h1>
+                            <h1 className="text-xl font-semibold text-sidebar-foreground leading-tight tracking-tight">INCI Recruta</h1>
                             <p className="text-[10px] font-semibold text-muted-foreground tracking-widest mt-0.5">Candidato</p>
                         </div>
                     </Link>
@@ -107,10 +107,14 @@ const CandidateLayout: React.FC = () => {
                         <div className="size-9 rounded bg-primary/10 flex items-center justify-center text-primary">
                             <span className="material-symbols-outlined text-2xl">hexagon</span>
                         </div>
-                        <span className="font-semibold text-lg tracking-tight text-foreground">INCI Brasil</span>
+                        <span className="font-semibold text-lg tracking-tight text-foreground">INCI Recruta</span>
                     </div>
-                    <button className="p-2 text-foreground hover:text-primary transition-colors outline-none">
-                        <span className="material-symbols-outlined">menu</span>
+                    <button
+                        onClick={handleLogout}
+                        className="p-2 text-destructive hover:bg-destructive/10 rounded-full transition-colors outline-none"
+                        title="Sair"
+                    >
+                        <span className="material-symbols-outlined">logout</span>
                     </button>
                 </div>
 

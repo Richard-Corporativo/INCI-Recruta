@@ -26,7 +26,7 @@ const PrivacyPolicy: React.FC = () => {
 
                 <div className="space-y-16 text-muted-foreground transition-colors">
                     <p className="text-2xl font-semibold text-foreground leading-relaxed">
-                        A transparência é um pilar da <span className="text-primary italic">INCI Brasil</span>. Detalhamos abaixo como protegemos sua jornada profissional e seus dados pessoais.
+                        A transparência é um pilar da <span className="text-primary italic">INCI Recruta</span>. Detalhamos abaixo como protegemos sua jornada profissional e seus dados pessoais.
                     </p>
 
                     <section className="space-y-8">
