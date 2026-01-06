@@ -3,18 +3,35 @@ import { Job } from '../../types';
 
 export const JobService = {
     async getJobs(): Promise<Job[]> {
-        const { data, error } = await supabase
+        // First get all jobs
+        const { data: jobsData, error: jobsError } = await supabase
             .from('jobs')
             .select('*')
             .order('created_at', { ascending: false });
 
-        if (error) {
-            console.error('Error fetching jobs:', error);
+        if (jobsError) {
+            console.error('Error fetching jobs:', jobsError);
             return [];
         }
 
-        // Map decimal strings to numbers if needed, though supabase-js handles logical types usually
-        return data as Job[];
+        // Then get candidate counts for each job
+        const jobsWithCounts = await Promise.all(
+            (jobsData || []).map(async (job) => {
+                const { count, error } = await supabase
+                    .from('candidates')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('job_id', job.id);
+
+                console.log(`[JobService] Job "${job.title}" (ID: ${job.id}): ${count} candidates`, error);
+
+                return {
+                    ...job,
+                    candidates_count: count || 0
+                };
+            })
+        );
+
+        return jobsWithCounts as Job[];
     },
 
     async getJobById(id: string): Promise<Job | null> {

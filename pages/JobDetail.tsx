@@ -156,6 +156,46 @@ const JobDetail: React.FC = () => {
                   </div>
                 </article>
 
+                {/* Responsibilities */}
+                {job.responsibilities && (
+                  <article>
+                    <h3 className="text-sm font-semibold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <span className="h-px w-6 bg-primary/30"></span>
+                      Responsabilidades
+                    </h3>
+                    <div className="bg-card p-5 rounded-lg border border-border">
+                      <ul className="space-y-3">
+                        {job.responsibilities.split('\n').map((item, idx) => (
+                          <li key={idx} className="flex gap-3 text-sm text-foreground">
+                            <span className="size-1.5 rounded-full bg-primary mt-2 shrink-0"></span>
+                            <span className="leading-relaxed font-medium text-foreground/80">{item.replace(/^- /, '')}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </article>
+                )}
+
+                {/* Requirements */}
+                {job.requirements && (
+                  <article>
+                    <h3 className="text-sm font-semibold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <span className="h-px w-6 bg-primary/30"></span>
+                      Requisitos
+                    </h3>
+                    <div className="bg-card p-5 rounded-lg border border-border">
+                      <ul className="space-y-3">
+                        {job.requirements.split('\n').map((item, idx) => (
+                          <li key={idx} className="flex gap-3 text-sm text-foreground">
+                            <span className="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">check_circle</span>
+                            <span className="leading-relaxed font-medium text-foreground/80">{item.replace(/^- /, '')}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </article>
+                )}
+
                 {/* Visual Cue - End of Section */}
                 <div className="flex justify-center pt-8 opacity-20">
                   <div className="size-1.5 rounded-full bg-muted-foreground"></div>

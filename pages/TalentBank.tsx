@@ -100,13 +100,19 @@ const TalentBank: React.FC = () => {
                                                 <span className="material-symbols-outlined text-[16px]">mail</span>
                                                 <span className="truncate">{candidate.email}</span>
                                             </div>
+                                            {candidate.summary && (
+                                                <p className="text-[11px] text-muted-foreground/80 line-clamp-3 italic leading-relaxed pt-2 border-t border-border/50">
+                                                    "{candidate.summary}"
+                                                </p>
+                                            )}
                                         </div>
 
                                         <div className="mt-8 pt-6 border-t border-border flex flex-col gap-3">
                                             <div className="flex flex-wrap gap-2">
                                                 <span className="px-2 py-0.5 rounded bg-muted text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                                                     {candidate.columnId === 'hired' ? 'Contratado' :
-                                                        candidate.columnId === 'rejected' ? 'Reprovado' : 'Em processo'}
+                                                        candidate.columnId === 'rejected' ? 'Reprovado' :
+                                                            candidate.columnId === 'withdrawn' ? 'Desistência' : 'Em processo'}
                                                 </span>
                                                 {candidate.match && (
                                                     <span className="px-2 py-0.5 rounded bg-primary/10 text-[10px] font-bold text-primary uppercase tracking-wider">

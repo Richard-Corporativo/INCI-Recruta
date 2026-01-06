@@ -17,17 +17,88 @@ const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState('users');
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const { users, updateUser, deleteUser } = useUsers();
-  const { settings, updateManagerPermission } = useSettings();
+  const { settings, updateManagerPermission, updateEmailTemplates } = useSettings();
   const { roles } = useRoles();
-  const { logs } = useAudit();
+  const { logs, refresh: refreshAudit } = useAudit();
   const { user: currentUser } = useAuth();
   const [selectedManagerId, setSelectedManagerId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
-  // Initialize selected manager
+  // User Filters State
+  const [userSearch, setUserSearch] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('');
+  const [userStatusFilter, setUserStatusFilter] = useState('');
+
+  // Audit Filters State
+  const [auditPeriod, setAuditPeriod] = useState('30');
+  const [auditUser, setAuditUser] = useState('');
+  const [auditType, setAuditType] = useState('');
+  const [auditTarget, setAuditTarget] = useState('');
+
+  // Pagination State
+  const [userPage, setUserPage] = useState(1);
+  const [auditPage, setAuditPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Filtered Users Calculation
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = userSearch === '' ||
+      user.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+      user.email.toLowerCase().includes(userSearch.toLowerCase());
+    const matchesRole = userRoleFilter === '' || user.role === userRoleFilter;
+    const matchesStatus = userStatusFilter === '' || user.status === userStatusFilter;
+
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  // Pagination Slices (Users)
+  const totalUserPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const displayedUsers = filteredUsers.slice((userPage - 1) * itemsPerPage, userPage * itemsPerPage);
+
+  // Reset pagination when filters change
+  React.useEffect(() => { setUserPage(1); }, [userSearch, userRoleFilter, userStatusFilter]);
+  React.useEffect(() => { setAuditPage(1); }, [auditPeriod, auditUser, auditType, auditTarget]);
+
+  // Filtered Logs Calculation
+  const filteredLogs = logs.filter(log => {
+    // Filter by Period
+    const logDate = new Date(log.timestamp);
+    const now = new Date();
+    if (auditPeriod === '7') {
+      const past = new Date(); past.setDate(now.getDate() - 7);
+      if (logDate < past) return false;
+    } else if (auditPeriod === '30') {
+      const past = new Date(); past.setDate(now.getDate() - 30);
+      if (logDate < past) return false;
+    } else if (auditPeriod === 'today') {
+      if (logDate.toDateString() !== now.toDateString()) return false;
+    }
+
+    // Filter by User who performed action
+    if (auditUser && !log.user_name.toLowerCase().includes(auditUser.toLowerCase())) return false;
+
+    // Filter by Type (assuming action corresponds loosely or we map it)
+    // Since type is generic string in mockup, let's match action or details
+    if (auditType) {
+      if (auditType === 'profile' && !log.details.includes('Perfil')) return false;
+      if (auditType === 'scope' && !log.details.includes('Escopo')) return false;
+      if (auditType === 'system' && !log.details.includes('Sistema')) return false;
+      // Simple fallback search if precise mapping isn't available
+      if (auditType === 'privileges' && !log.details.includes('Privilégios')) return false;
+    }
+
+    // Filter by Target User (checking details for now as target_id might differ)
+    if (auditTarget && !log.details.toLowerCase().includes(auditTarget.toLowerCase())) return false;
+
+    return true;
+  });
+
+  const totalAuditPages = Math.ceil(filteredLogs.length / itemsPerPage);
+  const displayedLogs = filteredLogs.slice((auditPage - 1) * itemsPerPage, auditPage * itemsPerPage);
   React.useEffect(() => {
     if (!selectedManagerId && users.length > 0) {
       const firstManager = users.find(u => u.role === 'manager' || u.role === 'admin');
@@ -83,6 +154,7 @@ const Settings: React.FC = () => {
     { id: 'users', label: 'Usuários' },
     { id: 'privileges', label: 'Privilégios' },
     { id: 'scope', label: 'Escopo do Gestor' },
+    { id: 'emails', label: 'E-mails' },
     { id: 'audit', label: 'Auditoria de Configurações' },
     { id: 'system', label: 'Sistema' },
   ];
@@ -162,17 +234,31 @@ const Settings: React.FC = () => {
                   <div className="flex flex-col md:flex-row gap-4 flex-1">
                     <div className="relative flex-1 max-w-md">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground material-symbols-outlined text-[20px]">search</span>
-                      <input className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-base text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200" placeholder="Buscar por nome ou e-mail" type="text" />
+                      <input
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-base text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200"
+                        placeholder="Buscar por nome ou e-mail"
+                        type="text"
+                      />
                     </div>
                     <div className="w-full md:w-48">
-                      <select className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer">
+                      <select
+                        value={userRoleFilter}
+                        onChange={(e) => setUserRoleFilter(e.target.value)}
+                        className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer"
+                      >
                         <option value="">Todos os tipos</option>
                         <option value="admin">Admin / Qualidade</option>
                         <option value="manager">Gestor</option>
                       </select>
                     </div>
                     <div className="w-full md:w-48">
-                      <select className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer">
+                      <select
+                        value={userStatusFilter}
+                        onChange={(e) => setUserStatusFilter(e.target.value)}
+                        className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer"
+                      >
                         <option value="">Status: Todos</option>
                         <option value="active">Ativo</option>
                         <option value="suspended">Suspenso</option>
@@ -202,7 +288,7 @@ const Settings: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border text-sm">
-                      {users.map((user) => (
+                      {displayedUsers.map((user) => (
                         <tr key={user.id} className="group hover:bg-muted/40 transition-all duration-200">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
@@ -229,6 +315,7 @@ const Settings: React.FC = () => {
                           <td className="px-6 py-4 text-muted-foreground font-medium">{user.lastAccess}</td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
+                              {/* ACTIONS */}
                               <Link to={`/settings/users/${user.id}/edit`} className="p-1.5 text-muted-foreground hover:text-primary transition-all duration-200" title="Editar"><span className="material-symbols-outlined text-[18px]">edit</span></Link>
                               <button
                                 onClick={() => updateUser(user.id, { status: user.status === 'active' ? 'suspended' : 'active' })}
@@ -252,7 +339,26 @@ const Settings: React.FC = () => {
                   </table>
                 </div>
                 <div className="px-6 py-4 border-t border-border flex justify-between items-center bg-muted/20">
-                  <span className="text-xs text-muted-foreground font-semibold italic">Mostrando {users.length} usuários registrados</span>
+                  <span className="text-xs text-muted-foreground font-semibold italic">Mostrando {displayedUsers.length} de {filteredUsers.length} usuários</span>
+                  {totalUserPages > 1 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                        disabled={userPage === 1}
+                        className="p-1 rounded hover:bg-muted disabled:opacity-50 transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                      </button>
+                      <span className="text-xs font-semibold text-foreground">Pág. {userPage} de {totalUserPages}</span>
+                      <button
+                        onClick={() => setUserPage(p => Math.min(totalUserPages, p + 1))}
+                        disabled={userPage === totalUserPages}
+                        className="p-1 rounded hover:bg-muted disabled:opacity-50 transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -392,6 +498,8 @@ const Settings: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border text-sm">
+
+                        {/* Gestão de Cargos */}
                         <tr className="hover:bg-muted/40 transition-colors">
                           <td className="px-6 py-4 text-foreground font-semibold">
                             <div className="flex items-center gap-2">
@@ -409,7 +517,81 @@ const Settings: React.FC = () => {
                             </span>
                           </td>
                         </tr>
-                        {/* ... more rows ... */}
+
+                        {/* Encerrar Vaga */}
+                        <tr className="hover:bg-muted/40 transition-colors">
+                          <td className="px-6 py-4 text-foreground font-semibold">
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-muted-foreground text-[18px]">lock</span> Encerrar Vaga
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                              <span className="material-symbols-outlined text-[14px]">check</span> Permitido
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${settings.manager_permissions.close_job
+                              ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                              : 'bg-muted text-muted-foreground border-border'
+                              }`}>
+                              <span className="material-symbols-outlined text-[14px]">
+                                {settings.manager_permissions.close_job ? 'check' : 'block'}
+                              </span>
+                              {settings.manager_permissions.close_job ? 'Permitido' : 'Bloqueado'}
+                            </span>
+                          </td>
+                        </tr>
+
+                        {/* Aprovar Finalista */}
+                        <tr className="hover:bg-muted/40 transition-colors">
+                          <td className="px-6 py-4 text-foreground font-semibold">
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-muted-foreground text-[18px]">trophy</span> Aprovar Finalista
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                              <span className="material-symbols-outlined text-[14px]">check</span> Permitido
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${settings.manager_permissions.move_to_finalist
+                              ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                              : 'bg-muted text-muted-foreground border-border'
+                              }`}>
+                              <span className="material-symbols-outlined text-[14px]">
+                                {settings.manager_permissions.move_to_finalist ? 'check' : 'block'}
+                              </span>
+                              {settings.manager_permissions.move_to_finalist ? 'Permitido' : 'Bloqueado'}
+                            </span>
+                          </td>
+                        </tr>
+
+                        {/* Retornar Candidato */}
+                        <tr className="hover:bg-muted/40 transition-colors">
+                          <td className="px-6 py-4 text-foreground font-semibold">
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-muted-foreground text-[18px]">undo</span> Retornar Etapa
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                              <span className="material-symbols-outlined text-[14px]">check</span> Permitido
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${settings.manager_permissions.return_candidate_stage
+                              ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                              : 'bg-muted text-muted-foreground border-border'
+                              }`}>
+                              <span className="material-symbols-outlined text-[14px]">
+                                {settings.manager_permissions.return_candidate_stage ? 'check' : 'block'}
+                              </span>
+                              {settings.manager_permissions.return_candidate_stage ? 'Permitido' : 'Bloqueado'}
+                            </span>
+                          </td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>
@@ -641,6 +823,180 @@ const Settings: React.FC = () => {
             </div>
           )}
 
+          {/* Tab: E-mails */}
+          {activeTab === 'emails' && (
+            <div className="space-y-6">
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-6 flex items-start gap-4">
+                <span className="material-symbols-outlined text-primary text-[32px]">mail</span>
+                <div>
+                  <h3 className="text-base font-semibold text-primary">Templates de Notificação</h3>
+                  <div className="mt-2 space-y-2">
+                    <p className="text-sm text-foreground/80 font-medium">
+                      Personalize as mensagens enviadas automaticamente aos candidatos. Use os marcadores:
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5 bg-background/50 p-3 rounded-lg border border-primary/10">
+                      <div className="flex items-center gap-2 text-xs">
+                        <code className="bg-primary/10 px-1 rounded font-bold text-primary">{"{{name}}"}</code>
+                        <span className="text-muted-foreground font-medium">: Nome do Candidato</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <code className="bg-primary/10 px-1 rounded font-bold text-primary">{"{{job_title}}"}</code>
+                        <span className="text-muted-foreground font-medium">: Nome da Vaga</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <code className="bg-primary/10 px-1 rounded font-bold text-primary">{"{{company}}"}</code>
+                        <span className="text-muted-foreground font-medium">: Nome da sua Empresa</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <code className="bg-primary/10 px-1 rounded font-bold text-primary">{"{{recruiter}}"}</code>
+                        <span className="text-muted-foreground font-medium">: Nome do Recrutador</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <code className="bg-primary/10 px-1 rounded font-bold text-primary">{"{{portal_url}}"}</code>
+                        <span className="text-muted-foreground font-medium">: Link direto para o Portal</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {Object.entries(settings.email_templates || {}).map(([stageId, template]) => {
+                  const stageInfo = {
+                    received: { label: 'Candidatura Recebida', icon: 'inbox' },
+                    screening: { label: 'Em Triagem', icon: 'search' },
+                    technical: { label: 'Avaliação Técnica', icon: 'code' },
+                    hr_interview: { label: 'Entrevista RH', icon: 'person' },
+                    manager_interview: { label: 'Entrevista Gestor', icon: 'supervisor_account' },
+                    finalist: { label: 'Finalista', icon: 'star' },
+                    hired: { label: 'Contratado', icon: 'celebration' },
+                    rejected: { label: 'Não Selecionado', icon: 'cancel' }
+                  }[stageId] || { label: stageId, icon: 'mail' };
+
+                  const isEditing = editingTemplate === stageId;
+
+                  return (
+                    <div key={stageId} className={`bg-card rounded-lg border transition-all duration-300 ${isEditing ? 'ring-2 ring-primary border-primary shadow-lg' : 'border-border hover:border-primary/50 shadow-sm'}`}>
+                      <div className="p-5 border-b border-border flex items-center justify-between bg-muted/20">
+                        <div className="flex items-center gap-3">
+                          <span className="material-symbols-outlined text-primary">{stageInfo.icon}</span>
+                          <span className="font-semibold text-sm text-foreground">{stageInfo.label}</span>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer scale-75">
+                          <input
+                            checked={template.enabled}
+                            onChange={(e) => {
+                              const newTemplates = { ...settings.email_templates };
+                              newTemplates[stageId] = { ...template, enabled: e.target.checked };
+                              updateEmailTemplates(newTemplates);
+                            }}
+                            className="sr-only peer"
+                            type="checkbox"
+                          />
+                          <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-primary after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                        </label>
+                      </div>
+
+                      <div className="p-5 space-y-4">
+                        {isEditing ? (
+                          <>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-bold text-muted-foreground uppercase">Assunto do E-mail</label>
+                              <input
+                                value={template.subject}
+                                onChange={(e) => {
+                                  const newTemplates = { ...settings.email_templates };
+                                  newTemplates[stageId] = { ...template, subject: e.target.value };
+                                  updateEmailTemplates(newTemplates);
+                                }}
+                                className="w-full px-3 py-2 bg-background border border-border rounded text-sm focus:ring-1 focus:ring-primary outline-none"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center gap-2">
+                                <label className="text-[10px] font-bold text-muted-foreground uppercase whitespace-nowrap">Corpo da Mensagem</label>
+                                <div className="flex flex-wrap gap-1 justify-end">
+                                  {['{{name}}', '{{job_title}}', '{{company}}', '{{recruiter}}', '{{portal_url}}'].map(tag => (
+                                    <button
+                                      key={tag}
+                                      type="button"
+                                      onClick={() => {
+                                        const textarea = document.getElementById(`body-${stageId}`) as HTMLTextAreaElement;
+                                        if (textarea) {
+                                          const start = textarea.selectionStart;
+                                          const end = textarea.selectionEnd;
+                                          const currentBody = template.body;
+                                          const newBody = currentBody.substring(0, start) + tag + currentBody.substring(end);
+
+                                          const newTemplates = { ...settings.email_templates };
+                                          newTemplates[stageId] = { ...template, body: newBody };
+                                          updateEmailTemplates(newTemplates);
+
+                                          setTimeout(() => {
+                                            textarea.focus();
+                                            textarea.setSelectionRange(start + tag.length, start + tag.length);
+                                          }, 0);
+                                        }
+                                      }}
+                                      className="text-[9px] px-1.5 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded hover:bg-primary hover:text-white transition-all font-bold"
+                                    >
+                                      {tag}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                              <textarea
+                                id={`body-${stageId}`}
+                                value={template.body}
+                                onChange={(e) => {
+                                  const newTemplates = { ...settings.email_templates };
+                                  newTemplates[stageId] = { ...template, body: e.target.value };
+                                  updateEmailTemplates(newTemplates);
+                                }}
+                                rows={5}
+                                className="w-full px-3 py-2 bg-background border border-border rounded text-sm focus:ring-1 focus:ring-primary outline-none resize-none"
+                              />
+                            </div>
+                            <button
+                              onClick={() => {
+                                setEditingTemplate(null);
+                                setToast({ message: 'Template atualizado com sucesso!', type: 'success' });
+                              }}
+                              className="w-full py-2 bg-primary text-primary-foreground text-xs font-bold rounded hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">check</span>
+                              Salvar e fechar
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase block">Assunto</span>
+                              <p className="text-sm font-semibold text-foreground truncate">{template.subject}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase block">Prévia</span>
+                              <p className="text-xs text-muted-foreground line-clamp-3 leading-relaxed">
+                                {template.body}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => setEditingTemplate(stageId)}
+                              className="w-full py-2 border border-border bg-muted/30 text-foreground text-xs font-bold rounded hover:bg-muted transition-all flex items-center justify-center gap-2"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">edit</span>
+                              Customizar Template
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Tab: Auditoria */}
           {activeTab === 'audit' && (
             <div className="space-y-6">
@@ -652,11 +1008,15 @@ const Settings: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-muted-foreground">Período</label>
-                    <select className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer">
+                    <select
+                      value={auditPeriod}
+                      onChange={(e) => setAuditPeriod(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer"
+                    >
                       <option value="30">Últimos 30 dias</option>
                       <option value="7">Últimos 7 dias</option>
                       <option value="today">Hoje</option>
-                      <option value="custom">Personalizado</option>
+                      <option value="all">Todo o histórico</option>
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
@@ -665,31 +1025,53 @@ const Settings: React.FC = () => {
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <span className="material-symbols-outlined text-muted-foreground text-[18px]">person_search</span>
                       </span>
-                      <input className="w-full pl-9 pr-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-medium focus:ring-2 focus:ring-ring transition-all duration-200 placeholder:text-muted-foreground" placeholder="Nome ou e-mail" />
+                      <input
+                        value={auditUser}
+                        onChange={(e) => setAuditUser(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-medium focus:ring-2 focus:ring-ring transition-all duration-200 placeholder:text-muted-foreground" placeholder="Nome ou e-mail"
+                      />
                     </div>
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-muted-foreground">Tipo de mudança</label>
-                    <select className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer">
+                    <select
+                      value={auditType}
+                      onChange={(e) => setAuditType(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-semibold focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer"
+                    >
                       <option value="">Todos os tipos</option>
                       <option value="profile">Perfil de acesso</option>
                       <option value="scope">Escopo de gestão</option>
-                      <option value="privileges">Privilégios</option>
                       <option value="system">Sistema</option>
                     </select>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground">Usuário afetado</label>
-                    <input className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-medium focus:ring-2 focus:ring-ring transition-all duration-200 placeholder:text-muted-foreground" placeholder="Nome do usuário alvo" />
+                    <label className="text-xs font-semibold text-muted-foreground">Termo de busca (Detalhes)</label>
+                    <input
+                      value={auditTarget}
+                      onChange={(e) => setAuditTarget(e.target.value)}
+                      className="w-full px-3 py-2 bg-background border border-border rounded-base text-sm text-foreground font-medium focus:ring-2 focus:ring-ring transition-all duration-200 placeholder:text-muted-foreground" placeholder="Ex: Financeiro, João..."
+                    />
                   </div>
                 </div>
                 <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-border">
-                  <button className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">
+                  <button
+                    onClick={() => {
+                      setAuditPeriod('30');
+                      setAuditUser('');
+                      setAuditType('');
+                      setAuditTarget('');
+                    }}
+                    className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                  >
                     Limpar Filtros
                   </button>
-                  <button className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2 px-6 rounded-base transition-all duration-200 text-sm shadow-sm flex items-center gap-2 active:translate-y-[1px]">
-                    <span className="material-symbols-outlined text-[18px]">search</span>
-                    Buscar Logs
+                  <button
+                    onClick={() => refreshAudit?.()}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2 px-6 rounded-base transition-all duration-200 text-sm shadow-sm flex items-center gap-2 active:translate-y-[1px]"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">refresh</span>
+                    Atualizar Logs
                   </button>
                 </div>
               </div>
@@ -708,12 +1090,12 @@ const Settings: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border text-sm">
-                        {logs.length === 0 ? (
+                        {displayedLogs.length === 0 ? (
                           <tr>
                             <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground italic font-semibold">Nenhum registro de auditoria encontrado.</td>
                           </tr>
                         ) : (
-                          logs.map(log => (
+                          displayedLogs.map(log => (
                             <tr key={log.id} className="group hover:bg-muted/40 transition-all duration-200">
                               <td className="px-6 py-4 align-top">
                                 <div className="flex flex-col gap-1">
@@ -725,7 +1107,15 @@ const Settings: React.FC = () => {
                                   </div>
                                   <div className="flex items-center gap-1 text-muted-foreground font-semibold text-[10px]">
                                     <span className="material-symbols-outlined text-[14px]">calendar_today</span>
-                                    <span>{new Date(log.timestamp).toLocaleString('pt-BR')}</span>
+                                    <span>
+                                      {new Intl.DateTimeFormat('pt-BR', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      }).format(new Date(log.timestamp))}
+                                    </span>
                                   </div>
                                 </div>
                               </td>
@@ -754,8 +1144,27 @@ const Settings: React.FC = () => {
                       </tbody>
                     </table>
                   </div>
-                  <div className="px-6 py-4 border-t border-border flex justify-between items-center bg-muted/20 text-xs text-muted-foreground font-semibold">
-                    <span>Mostrando {logs.length} registros</span>
+                  <div className="px-6 py-4 border-t border-border flex justify-between items-center bg-muted/20">
+                    <span className="text-xs text-muted-foreground font-semibold italic">Mostrando {displayedLogs.length} de {filteredLogs.length} registros</span>
+                    {totalAuditPages > 1 && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setAuditPage(p => Math.max(1, p - 1))}
+                          disabled={auditPage === 1}
+                          className="p-1 rounded hover:bg-muted disabled:opacity-50 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                        </button>
+                        <span className="text-xs font-semibold text-foreground">Pág. {auditPage} de {totalAuditPages}</span>
+                        <button
+                          onClick={() => setAuditPage(p => Math.min(totalAuditPages, p + 1))}
+                          disabled={auditPage === totalAuditPages}
+                          className="p-1 rounded hover:bg-muted disabled:opacity-50 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -874,14 +1283,16 @@ const Settings: React.FC = () => {
         onClose={() => setSelectedLog(null)}
       />
 
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
-    </div>
+      {
+        toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        )
+      }
+    </div >
   );
 };
 

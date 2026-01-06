@@ -1,6 +1,8 @@
 import React, { useState, ChangeEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Breadcrumbs from '../components/Breadcrumbs';
+import BenefitsSelector from '../components/BenefitsSelector';
+import StringListEditor from '../components/StringListEditor';
 import { useJobs } from '../hooks/useJobs';
 import { useRoles } from '../hooks/useRoles';
 import { Role } from '../types';
@@ -17,7 +19,9 @@ interface JobFormData {
   salaryMax: string;
   context: string;
   mission: string;
-  responsibilities: string;
+  responsibilities: string[];
+  requirements: string[];
+  benefits: string[];
   roleId?: string;
   seniority?: string;
 }
@@ -45,7 +49,9 @@ const CreateJob: React.FC = () => {
     salaryMax: '',
     context: '',
     mission: '',
-    responsibilities: '',
+    responsibilities: [],
+    requirements: [],
+    benefits: [],
     seniority: 'Pleno'
   });
 
@@ -77,7 +83,8 @@ const CreateJob: React.FC = () => {
       roleCode: role.code,
       department: role.department,
       mission: role.mission || '',
-      responsibilities: role.responsibilities || '',
+      responsibilities: role.responsibilities ? role.responsibilities.split('\n') : [],
+      requirements: role.requirements ? role.requirements.split('\n') : [],
       roleId: role.id,
       seniority: role.seniority || 'Pleno'
     }));
@@ -98,7 +105,9 @@ const CreateJob: React.FC = () => {
       salary_min: Number(formData.salaryMin) || 0,
       salary_max: Number(formData.salaryMax) || 0,
       mission: formData.mission,
-      responsibilities: formData.responsibilities,
+      responsibilities: formData.responsibilities.join('\n'),
+      requirements: formData.requirements.join('\n'),
+      benefits: formData.benefits,
       seniority: formData.seniority,
       candidates_count: 0
     };
@@ -314,6 +323,28 @@ const CreateJob: React.FC = () => {
                         </ul>
                       </div>
                     </details>
+                    <details className="group">
+                      <summary className="flex justify-between items-center font-semibold cursor-pointer list-none p-4 text-xs text-muted-foreground hover:bg-muted/30 transition-colors outline-none focus-visible:bg-muted">
+                        <span>Requisitos</span>
+                        <span className="transition-transform duration-200 group-open:rotate-180">
+                          <span className="material-symbols-outlined text-muted-foreground">expand_more</span>
+                        </span>
+                      </summary>
+                      <div className="text-sm text-foreground px-4 pb-4 leading-relaxed font-medium transition-colors">
+                        <ul className="space-y-2">
+                          {formData.requirements ? (
+                            formData.requirements.split('\n').map((item, index) => (
+                              <li key={index} className="flex gap-2 items-start">
+                                <span className="material-symbols-outlined text-primary text-[14px] mt-0.5">check_circle</span>
+                                {item.replace(/^- /, '')}
+                              </li>
+                            ))
+                          ) : (
+                            <li className="italic text-muted-foreground">Nenhum requisito definido no cargo.</li>
+                          )}
+                        </ul>
+                      </div>
+                    </details>
                   </div>
                 </div>
               </div>
@@ -392,87 +423,125 @@ const CreateJob: React.FC = () => {
                       </label>
                       <textarea name="context" value={formData.context} onChange={handleInputChange} className="w-full h-32 rounded-md border border-border bg-background p-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out font-medium resize-none hover:border-ring placeholder:text-muted-foreground" placeholder="Explique por que essa vaga existe agora..."></textarea>
                     </div>
+
+
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-border">
+                      <div className="flex flex-col gap-4">
+                        <label className="text-[11px] font-semibold text-muted-foreground transition-colors">Responsabilidades</label>
+                        <StringListEditor
+                          items={formData.responsibilities}
+                          onChange={(items) => setFormData(prev => ({ ...prev, responsibilities: items }))}
+                          placeholder="Adicionar responsabilidade..."
+                          addButtonLabel="Adicionar"
+                          icon="task_alt"
+                          emptyMessage="Nenhuma responsabilidade definida."
+                        />
+                      </div>
+                      <div className="flex flex-col gap-4">
+                        <label className="text-[11px] font-semibold text-muted-foreground transition-colors">Requisitos</label>
+                        <StringListEditor
+                          items={formData.requirements}
+                          onChange={(items) => setFormData(prev => ({ ...prev, requirements: items }))}
+                          placeholder="Adicionar requisito..."
+                          addButtonLabel="Adicionar"
+                          icon="verified"
+                          emptyMessage="Nenhum requisito definido."
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-4 pt-6 border-t border-border">
+                      <h3 className="text-foreground font-semibold text-base transition-colors">Pacote de Vantagens</h3>
+                      <BenefitsSelector
+                        selectedBenefits={formData.benefits}
+                        onChange={(benefits) => setFormData(prev => ({ ...prev, benefits }))}
+                      />
+                    </div>
                   </form>
                 </div>
               </div>
             </div>
-          )}
+          )
+          }
 
           {/* STEP 3: Review */}
-          {step === 3 && (
-            <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
-              <section className="flex flex-col gap-4">
-                <h2 className="text-lg font-semibold text-foreground transition-colors tracking-tight">Cargo selecionado</h2>
-                <div className="bg-card border border-border shadow-sm rounded-lg p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 transition-all hover:shadow-md">
-                  <div className="flex items-center gap-5">
-                    <div className="flex items-center justify-center rounded-lg bg-primary text-primary-foreground shrink-0 size-14 shadow-lg transition-all">
-                      <span className="material-symbols-outlined text-2xl">badge</span>
-                    </div>
-                    <div className="flex flex-col transition-colors">
-                      <p className="text-foreground text-xl font-semibold">{formData.roleTitle}</p>
-                      <p className="text-muted-foreground text-[10px] font-semibold mt-0.5">Ref: {formData.roleCode} • Dept: {formData.department}</p>
-                    </div>
-                  </div>
-                  <button className="flex items-center justify-center gap-2 h-10 px-5 text-sm font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-base border border-primary/20 transition-all duration-200 ease-in-out outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-95">
-                    <span className="material-symbols-outlined text-lg">visibility</span>
-                    Ver detalhes do cargo
-                  </button>
-                </div>
-              </section>
-
-              <div className="flex items-start gap-4 p-5 bg-primary/5 border border-primary/20 rounded-lg transition-colors">
-                <span className="material-symbols-outlined text-primary shrink-0 mt-0.5 animate-pulse">warning</span>
-                <div className="flex flex-col gap-1 transition-colors">
-                  <p className="text-primary font-semibold text-sm tracking-tight">Atenção importante</p>
-                  <p className="text-muted-foreground text-sm font-medium leading-relaxed">
-                    Após publicar, o conteúdo do cargo permanece como referência padrão e os detalhes do contexto serão vinculados a esta oportunidade.
-                  </p>
-                </div>
-              </div>
-
-              <section className="flex flex-col gap-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-lg font-semibold text-foreground transition-colors tracking-tight">Resumo do contexto</h2>
-                  <button onClick={() => setStep(2)} className="h-9 px-4 text-xs font-semibold text-primary hover:bg-primary/10 rounded-base border border-border bg-background transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring">Editar informações</button>
-                </div>
-                <div className="bg-card border border-border shadow-sm rounded-lg overflow-hidden transition-all hover:shadow-md">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12 p-8 transition-colors">
-                    <div className="flex flex-col gap-1.5 transition-colors">
-                      <span className="text-[10px] font-semibold text-muted-foreground">Título da vaga</span>
-                      <p className="text-foreground font-semibold text-lg">{formData.roleTitle}</p>
-                    </div>
-                    <div className="flex flex-col gap-1.5 transition-colors">
-                      <span className="text-[10px] font-semibold text-muted-foreground">Localização & modelo</span>
-                      <p className="text-foreground font-semibold text-lg">{formData.location} • {formData.model}</p>
-                    </div>
-                    <div className="flex flex-col gap-1.5 transition-colors">
-                      <span className="text-[10px] font-semibold text-muted-foreground">Faixa salarial</span>
-                      <p className="text-foreground font-semibold text-lg">R$ {formData.salaryMin} — R$ {formData.salaryMax}</p>
-                    </div>
-                    <div className="flex flex-col gap-1.5 transition-colors">
-                      <span className="text-[10px] font-semibold text-muted-foreground">Nível de urgência</span>
-                      <div className="flex items-center gap-2">
-                        <span className={`size-2.5 rounded-full ${formData.urgency === 'Alta' ? 'bg-primary' : formData.urgency === 'Média' ? 'bg-primary/60' : 'bg-primary/30'} animate-pulse`}></span>
-                        <p className="text-foreground font-semibold text-lg">{formData.urgency}</p>
+          {
+            step === 3 && (
+              <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                <section className="flex flex-col gap-4">
+                  <h2 className="text-lg font-semibold text-foreground transition-colors tracking-tight">Cargo selecionado</h2>
+                  <div className="bg-card border border-border shadow-sm rounded-lg p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 transition-all hover:shadow-md">
+                    <div className="flex items-center gap-5">
+                      <div className="flex items-center justify-center rounded-lg bg-primary text-primary-foreground shrink-0 size-14 shadow-lg transition-all">
+                        <span className="material-symbols-outlined text-2xl">badge</span>
+                      </div>
+                      <div className="flex flex-col transition-colors">
+                        <p className="text-foreground text-xl font-semibold">{formData.roleTitle}</p>
+                        <p className="text-muted-foreground text-[10px] font-semibold mt-0.5">Ref: {formData.roleCode} • Dept: {formData.department}</p>
                       </div>
                     </div>
-                    <div className="md:col-span-2 flex flex-col gap-1.5 transition-colors">
-                      <span className="text-[10px] font-semibold text-muted-foreground">Justificativa & contexto</span>
-                      <p className="text-foreground font-medium leading-relaxed bg-muted/20 p-4 rounded-md border border-border">
-                        {formData.context || "Nenhuma justificativa inserida."}
-                      </p>
-                    </div>
+                    <button className="flex items-center justify-center gap-2 h-10 px-5 text-sm font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-base border border-primary/20 transition-all duration-200 ease-in-out outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-95">
+                      <span className="material-symbols-outlined text-lg">visibility</span>
+                      Ver detalhes do cargo
+                    </button>
+                  </div>
+                </section>
+
+                <div className="flex items-start gap-4 p-5 bg-primary/5 border border-primary/20 rounded-lg transition-colors">
+                  <span className="material-symbols-outlined text-primary shrink-0 mt-0.5 animate-pulse">warning</span>
+                  <div className="flex flex-col gap-1 transition-colors">
+                    <p className="text-primary font-semibold text-sm tracking-tight">Atenção importante</p>
+                    <p className="text-muted-foreground text-sm font-medium leading-relaxed">
+                      Após publicar, o conteúdo do cargo permanece como referência padrão e os detalhes do contexto serão vinculados a esta oportunidade.
+                    </p>
                   </div>
                 </div>
-              </section>
-            </div>
-          )}
 
-        </div>
-      </main>
+                <section className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className="text-lg font-semibold text-foreground transition-colors tracking-tight">Resumo do contexto</h2>
+                    <button onClick={() => setStep(2)} className="h-9 px-4 text-xs font-semibold text-primary hover:bg-primary/10 rounded-base border border-border bg-background transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring">Editar informações</button>
+                  </div>
+                  <div className="bg-card border border-border shadow-sm rounded-lg overflow-hidden transition-all hover:shadow-md">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12 p-8 transition-colors">
+                      <div className="flex flex-col gap-1.5 transition-colors">
+                        <span className="text-[10px] font-semibold text-muted-foreground">Título da vaga</span>
+                        <p className="text-foreground font-semibold text-lg">{formData.roleTitle}</p>
+                      </div>
+                      <div className="flex flex-col gap-1.5 transition-colors">
+                        <span className="text-[10px] font-semibold text-muted-foreground">Localização & modelo</span>
+                        <p className="text-foreground font-semibold text-lg">{formData.location} • {formData.model}</p>
+                      </div>
+                      <div className="flex flex-col gap-1.5 transition-colors">
+                        <span className="text-[10px] font-semibold text-muted-foreground">Faixa salarial</span>
+                        <p className="text-foreground font-semibold text-lg">R$ {formData.salaryMin} — R$ {formData.salaryMax}</p>
+                      </div>
+                      <div className="flex flex-col gap-1.5 transition-colors">
+                        <span className="text-[10px] font-semibold text-muted-foreground">Nível de urgência</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`size-2.5 rounded-full ${formData.urgency === 'Alta' ? 'bg-primary' : formData.urgency === 'Média' ? 'bg-primary/60' : 'bg-primary/30'} animate-pulse`}></span>
+                          <p className="text-foreground font-semibold text-lg">{formData.urgency}</p>
+                        </div>
+                      </div>
+                      <div className="md:col-span-2 flex flex-col gap-1.5 transition-colors">
+                        <span className="text-[10px] font-semibold text-muted-foreground">Justificativa & contexto</span>
+                        <p className="text-foreground font-medium leading-relaxed bg-muted/20 p-4 rounded-md border border-border">
+                          {formData.context || "Nenhuma justificativa inserida."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            )
+          }
+
+        </div >
+      </main >
 
       {/* Footer Actions */}
-      <footer className="bg-card border-t border-border p-4 md:px-12 md:py-6 flex items-center justify-end gap-4 z-20 shrink-0 sticky bottom-0 shadow-lg transition-colors duration-200">
+      < footer className="bg-card border-t border-border p-4 md:px-12 md:py-6 flex items-center justify-end gap-4 z-20 shrink-0 sticky bottom-0 shadow-lg transition-colors duration-200" >
         <button
           onClick={() => step === 1 ? navigate('/jobs') : setStep(step - 1)}
           className="flex items-center justify-center gap-2.5 px-6 h-11 rounded-base border border-border bg-background text-foreground font-semibold hover:bg-accent transition-all duration-200 ease-in-out active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -506,8 +575,8 @@ const CreateJob: React.FC = () => {
             </button>
           )}
         </div>
-      </footer>
-    </div>
+      </footer >
+    </div >
   );
 };
 

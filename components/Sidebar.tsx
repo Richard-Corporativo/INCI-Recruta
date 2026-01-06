@@ -34,7 +34,7 @@ const Sidebar: React.FC = () => {
 
   const handleLogout = useCallback(() => {
     logout();
-    navigate('/admin/login');
+    navigate('/vagas');
   }, [logout, navigate]);
 
   return (

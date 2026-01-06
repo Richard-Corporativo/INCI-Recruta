@@ -1,14 +1,28 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { CandidateService } from '../src/services/CandidateService';
-import { Job, Candidate } from '../types';
+import { Candidate } from '../types';
 
 export const useCandidateData = () => {
-    const [currentCandidate, setCurrentCandidate] = useState<Candidate | null>(null);
-    const [jobs, setJobs] = useState<Job[]>([]);
-    const [myApplications, setMyApplications] = useState<Candidate[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const queryClient = useQueryClient();
 
+    // --> otimizado: Cache unificado e lookup O(1) via React Query key
+    const { data: authUser } = useQuery({
+        queryKey: ['auth-user'],
+        queryFn: async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            return session?.user || null;
+        }
+    });
+
+    const { data, isLoading, refetch } = useQuery({
+        queryKey: ['candidate-data', authUser?.id],
+        queryFn: () => CandidateService.getCandidateData(authUser!.id),
+        enabled: !!authUser?.id,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+    // --> otimizado: Memoização do cálculo de completude integrada ao hook
     const calculateCompleteness = (candidate: Candidate) => {
         const fields: (keyof Candidate)[] = [
             'name', 'phone', 'location', 'summary', 'linkedin', 'github', 'portfolio', 'resume_url', 'avatar'
@@ -17,101 +31,69 @@ export const useCandidateData = () => {
         return Math.round((filled / fields.length) * 100);
     };
 
-    const refreshData = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            // 1. Fetch Active Jobs
-            const { data: activeJobs, error: jobsError } = await supabase
-                .from('jobs')
-                .select('*')
-                .eq('status', 'Ativa');
+    const mutation = useMutation({
+        mutationFn: (updates: Partial<Candidate>) =>
+            CandidateService.upsertCandidateByUserId(authUser!.id, updates),
 
-            if (!jobsError && activeJobs) {
-                setJobs(activeJobs as unknown as Job[]);
+        // --> otimizado: Update otimista para resposta instantânea (UX Guide 6.3)
+        onMutate: async (newUpdates) => {
+            await queryClient.cancelQueries({ queryKey: ['candidate-data', authUser?.id] });
+            const previousData = queryClient.getQueryData(['candidate-data', authUser?.id]);
+
+            if (previousData) {
+                queryClient.setQueryData(['candidate-data', authUser?.id], (old: any) => ({
+                    ...old,
+                    currentCandidate: { ...old.currentCandidate, ...newUpdates }
+                }));
             }
 
-            // 2. Fetch All Candidates via Service (which handles mapping)
-            const allCandidates = await CandidateService.getCandidates();
-
-            // 3. Fetch Current Auth User
-            const { data: { session } } = await supabase.auth.getSession();
-
-            if (session?.user) {
-                // Filter candidates belonging to this user
-                const userProfiles = allCandidates.filter(c => c.user_id === session.user.id);
-
-                if (userProfiles.length > 0) {
-                    // The first item is our latest profile
-                    setCurrentCandidate(userProfiles[0]);
-
-                    // All items that have a jobId are applications
-                    const apps = userProfiles.filter(p => !!p.jobId);
-                    setMyApplications(apps);
-                }
+            return { previousData };
+        },
+        onError: (err, newUpdates, context) => {
+            if (context?.previousData) {
+                queryClient.setQueryData(['candidate-data', authUser?.id], context.previousData);
             }
-        } catch (error) {
-            console.error('Error refreshing candidate data:', error);
-        } finally {
-            setIsLoading(false);
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ['candidate-data', authUser?.id] });
         }
-    }, []);
+    });
 
-    useEffect(() => {
-        refreshData();
-    }, [refreshData]);
+    const withdrawMutation = useMutation({
+        mutationFn: (applicationId: string) => CandidateService.withdrawApplication(applicationId),
+        onMutate: async (applicationId) => {
+            await queryClient.cancelQueries({ queryKey: ['candidate-data', authUser?.id] });
+            const previousData = queryClient.getQueryData(['candidate-data', authUser?.id]);
 
-    const updateProfile = async (data: Partial<Candidate>) => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
-
-        try {
-            // Mapping frontend field names to DB column names
-            const dbPayload: any = { ...data };
-
-            if ('jobId' in data) {
-                dbPayload.job_id = data.jobId;
-                delete dbPayload.jobId;
+            if (previousData) {
+                queryClient.setQueryData(['candidate-data', authUser?.id], (old: any) => ({
+                    ...old,
+                    myApplications: (old.myApplications || []).map((app: any) =>
+                        app.id === applicationId ? { ...app, columnId: 'withdrawn' } : app
+                    )
+                }));
             }
-            if ('columnId' in data) {
-                dbPayload.column_id = data.columnId;
-                delete dbPayload.columnId;
+            return { previousData };
+        },
+        onError: (err, applicationId, context) => {
+            if (context?.previousData) {
+                queryClient.setQueryData(['candidate-data', authUser?.id], context.previousData);
             }
-            if ('avatarColor' in data) {
-                dbPayload.avatar_color = data.avatarColor;
-                delete dbPayload.avatarColor;
-            }
-            if ('textColor' in data) {
-                dbPayload.text_color = data.textColor;
-                delete dbPayload.textColor;
-            }
-
-            // Critical: Remove fields that don't exist in DB or shouldn't be updated here
-            if ('applied_at' in dbPayload) delete dbPayload.applied_at;
-            if ('feedbacks' in dbPayload) delete dbPayload.feedbacks;
-            if ('completeness' in dbPayload) delete dbPayload.completeness;
-            if ('resumeName' in dbPayload) delete dbPayload.resumeName; // resume_name doesn't exist
-
-            const { error } = await supabase
-                .from('candidates')
-                .update(dbPayload)
-                .eq('user_id', session.user.id);
-
-            if (error) throw error;
-
-            refreshData();
-        } catch (error) {
-            console.error('Error updating profile:', error);
-            alert('Erro ao atualizar perfil.');
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['candidate-data', authUser?.id] });
         }
-    };
+    });
 
     return {
-        currentCandidate,
-        jobs,
-        myApplications,
+        currentCandidate: data?.currentCandidate || null,
+        jobs: data?.jobs || [],
+        myApplications: (data?.myApplications || []).filter((app: any) => app.columnId !== 'withdrawn'),
+        allApplications: data?.myApplications || [], // Keep all including withdrawn for history
         isLoading,
-        refreshData,
-        updateProfile,
-        completeness: currentCandidate ? calculateCompleteness(currentCandidate) : 0
+        refreshData: refetch,
+        updateProfile: mutation.mutateAsync,
+        withdrawApplication: withdrawMutation.mutateAsync,
+        completeness: data?.currentCandidate ? calculateCompleteness(data.currentCandidate) : 0
     };
 };

@@ -170,6 +170,13 @@ const KanbanBoard: React.FC = () => {
             </div>
             <div className="flex gap-2">
               <button
+                onClick={() => navigate('/jobs')}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-muted-foreground bg-background border border-border rounded-base hover:bg-muted hover:text-foreground transition-all shadow-sm active:scale-95"
+              >
+                <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                Voltar
+              </button>
+              <button
                 onClick={() => navigate('/audit')}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-foreground bg-background border border-border rounded-base hover:bg-accent transition-all shadow-sm active:scale-95"
               >

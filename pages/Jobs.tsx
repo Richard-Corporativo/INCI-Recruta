@@ -4,17 +4,24 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import ConfirmationModal from '../components/ConfirmationModal';
 import Toast from '../components/Toast';
 import { useJobs } from '../hooks/useJobs';
+import { useUsers } from '../hooks/useUsers';
 import { useAuth } from '../hooks/useAuth';
 import useDebounce from '../hooks/useDebounce';
+import JobDetailsDrawer from '../components/JobDetailsDrawer';
+import { Job } from '../types';
 
 const Jobs: React.FC = () => {
   const navigate = useNavigate();
   const { jobs, deleteJob, isLoading } = useJobs();
+  const { users } = useUsers();
   const { user } = useAuth();
 
   const [jobToDelete, setJobToDelete] = useState<string | number | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [searchInputValue, setSearchInputValue] = useState('');
+  const [statusFilter, setStatusFilter] = useState('Todas');
+  const [managerFilter, setManagerFilter] = useState('');
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   const debouncedSearchTerm = useDebounce(searchInputValue, 300);
 
@@ -95,14 +102,25 @@ const Jobs: React.FC = () => {
 
           <div className="w-full md:w-48 px-4 py-2">
             <label className="block text-[11px] font-semibold text-muted-foreground mb-1 flex items-center gap-1 transition-colors">
-              Gestor <span className="material-symbols-outlined text-[10px] text-muted-foreground" title="Permissão restrita">lock</span>
+              Gestor
             </label>
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-muted-foreground text-[18px]">person</span>
               <div className="relative w-full">
-                <select className="w-full bg-transparent border-none p-0 text-sm font-medium text-muted-foreground focus:ring-0 cursor-not-allowed appearance-none pr-6 outline-none" disabled>
-                  <option>{user?.name || 'Ana Silva'} (Eu)</option>
+                <select
+                  className="w-full bg-transparent border-none p-0 text-sm font-medium text-foreground focus:ring-0 cursor-pointer appearance-none pr-6 outline-none"
+                  value={managerFilter}
+                  onChange={(e) => setManagerFilter(e.target.value)}
+                >
+                  <option value="">Todos</option>
+                  <option value={user?.id}>Eu ({user?.name})</option>
+                  {users
+                    .filter(u => (u.role === 'manager' || u.role === 'admin') && u.id !== user?.id)
+                    .map(u => (
+                      <option key={u.id} value={u.id}>{u.name}</option>
+                    ))}
                 </select>
+                <span className="material-symbols-outlined absolute right-0 top-1/2 -translate-y-1/2 text-[20px] text-muted-foreground pointer-events-none transition-colors">expand_more</span>
               </div>
             </div>
           </div>
@@ -110,10 +128,15 @@ const Jobs: React.FC = () => {
           <div className="w-full md:w-40 px-4 py-2">
             <label className="block text-[11px] font-semibold text-muted-foreground mb-1 transition-colors">Status</label>
             <div className="relative">
-              <select className="w-full bg-transparent border-none p-0 text-sm font-medium text-foreground focus:ring-0 cursor-pointer appearance-none pr-6 outline-none">
+              <select
+                className="w-full bg-transparent border-none p-0 text-sm font-medium text-foreground focus:ring-0 cursor-pointer appearance-none pr-6 outline-none"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
                 <option>Todas</option>
-                <option>Ativas</option>
-                <option>Pausadas</option>
+                <option value="Ativa">Ativas</option>
+                <option value="Pausada">Pausadas</option>
+                <option value="Encerrada">Encerradas</option>
               </select>
               <span className="material-symbols-outlined absolute right-0 top-1/2 -translate-y-1/2 text-[20px] text-muted-foreground pointer-events-none transition-colors">expand_more</span>
             </div>
@@ -136,6 +159,7 @@ const Jobs: React.FC = () => {
                     <tr>
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground w-[25%] transition-colors">Vaga / Contexto</th>
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Área/Depto</th>
+                      <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Gestor</th>
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Local/Modelo</th>
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Contrato</th>
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Urgência</th>
@@ -145,7 +169,12 @@ const Jobs: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {jobs.filter(job => !debouncedSearchTerm || job.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase())).map((job) => (
+                    {jobs.filter(job => {
+                      const matchesSearch = !debouncedSearchTerm || job.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+                      const matchesStatus = statusFilter === 'Todas' || job.status === statusFilter;
+                      const matchesManager = !managerFilter || job.manager_id === managerFilter;
+                      return matchesSearch && matchesStatus && matchesManager;
+                    }).map((job) => (
                       <tr
                         key={job.id}
                         className="bg-card hover:bg-muted/50 transition-colors duration-200 ease-in-out cursor-pointer group"
@@ -160,6 +189,9 @@ const Jobs: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-5 text-sm text-foreground transition-colors">{job.department}</td>
+                        <td className="px-6 py-5 text-sm text-muted-foreground transition-colors">
+                          {users.find(u => u.id === job.manager_id)?.name || 'Sistema'}
+                        </td>
                         <td className="px-6 py-5 text-sm text-foreground transition-colors">{job.location}</td>
                         <td className="px-6 py-5">
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-muted text-muted-foreground border border-border transition-colors">
@@ -178,12 +210,21 @@ const Jobs: React.FC = () => {
                         </td>
                         <td className="px-6 py-5">
                           <div className="flex items-baseline gap-1 transition-colors">
-                            <span className="text-sm font-semibold text-foreground">0</span>
-                            <span className="text-xs text-muted-foreground">ativos</span>
+                            <div className="flex items-baseline gap-1 transition-colors">
+                              <span className="text-sm font-semibold text-foreground">{job.candidates_count || 0}</span>
+                              <span className="text-xs text-muted-foreground">inscrições</span>
+                            </div>
                           </div>
                         </td>
                         <td className="px-6 py-5 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setSelectedJob(job); }}
+                              className="p-2 text-muted-foreground hover:text-primary rounded-lg hover:bg-primary/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              title="Visualizar Detalhes"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">visibility</span>
+                            </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); navigate(`/jobs/${job.id}/kanban`); }}
                               className="p-2 text-muted-foreground hover:text-primary rounded-lg hover:bg-primary/10 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -239,6 +280,17 @@ const Jobs: React.FC = () => {
           onClose={() => setToast(null)}
         />
       )}
+
+      <JobDetailsDrawer
+        isOpen={!!selectedJob}
+        onClose={() => setSelectedJob(null)}
+        job={selectedJob}
+        managerName={selectedJob ? users.find(u => u.id === selectedJob.manager_id)?.name : undefined}
+        onDelete={(id) => {
+          setSelectedJob(null);
+          setJobToDelete(id);
+        }}
+      />
     </div>
   );
 };

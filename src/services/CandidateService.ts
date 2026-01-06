@@ -18,6 +18,12 @@ const mapDbToCandidate = (dbCandidate: any): Candidate => ({
     textColor: dbCandidate.text_color || 'text-white',
     applied_at: dbCandidate.applied_at,
     user_id: dbCandidate.user_id,
+    summary: dbCandidate.summary,
+    role: dbCandidate.role,
+    github: dbCandidate.github,
+    avatar: dbCandidate.avatar,
+    notification_preferences: dbCandidate.notification_preferences || { email: true },
+    experiences: dbCandidate.experiences || [],
     feedbacks: dbCandidate.feedbacks || []
 });
 
@@ -85,8 +91,38 @@ export const CandidateService = {
             user_id: candidate.user_id,
             column_id: candidate.columnId || 'received',
             avatar_color: candidate.avatarColor,
-            text_color: candidate.textColor
+            text_color: candidate.textColor,
+            summary: candidate.summary,
+            experiences: candidate.experiences,
+            github: candidate.github,
+            role: candidate.role,
+            avatar: candidate.avatar,
+            notification_preferences: candidate.notification_preferences,
+            applied_at: new Date().toISOString() // Always refresh applied_at on re-apply
         };
+
+        // Check if there is an existing application for this user and job
+        if (candidate.user_id && candidate.jobId) {
+            const { data: existing } = await supabase
+                .from('candidates')
+                .select('id')
+                .eq('user_id', candidate.user_id)
+                .eq('job_id', candidate.jobId)
+                .maybeSingle();
+
+            if (existing) {
+                console.log(`[CandidateService] Found existing application ${existing.id}. Updating instead of inserting.`);
+                const { data: updated, error: updateError } = await supabase
+                    .from('candidates')
+                    .update(dbPayload)
+                    .eq('id', existing.id)
+                    .select()
+                    .single();
+
+                if (updateError) throw updateError;
+                return mapDbToCandidate(updated);
+            }
+        }
 
         const { data, error } = await supabase
             .from('candidates')
@@ -140,9 +176,30 @@ export const CandidateService = {
         return mapDbToCandidate(data);
     },
 
+    async withdrawApplication(id: string): Promise<boolean> {
+        console.log(`[CandidateService] Attempting to withdraw application: ${id}`);
+        const { data, error } = await supabase
+            .from('candidates')
+            .update({ column_id: 'withdrawn' })
+            .eq('id', id)
+            .select();
+
+        if (error) {
+            console.error(`[CandidateService] Error withdrawing application ${id}:`, error);
+            return false;
+        }
+
+        if (!data || data.length === 0) {
+            console.warn(`[CandidateService] No records updated for id ${id}. Possible RLS restriction.`);
+            return false;
+        }
+
+        console.log(`[CandidateService] Successfully withdrawn application: ${id}`);
+        return true;
+    },
+
     async deleteCandidate(id: string): Promise<boolean> {
         console.log(`[CandidateService] Attempting to delete candidate: ${id}`);
-        // Add select() to ensure we get data back which confirms deletion under RLS
         const { data, error } = await supabase
             .from('candidates')
             .delete()
@@ -151,11 +208,6 @@ export const CandidateService = {
 
         if (error) {
             console.error(`[CandidateService] Error deleting candidate ${id}:`, error);
-            return false;
-        }
-
-        if (!data || data.length === 0) {
-            console.warn(`[CandidateService] No records deleted for id ${id}. Possible RLS restriction.`);
             return false;
         }
 
@@ -182,5 +234,113 @@ export const CandidateService = {
             return false;
         }
         return true;
+    },
+
+    async getCandidateData(userId: string): Promise<{ currentCandidate: Candidate | null, jobs: any[], myApplications: Candidate[] }> {
+        // 1. Fetch Active Jobs
+        const { data: activeJobs } = await supabase
+            .from('jobs')
+            .select('*')
+            .eq('status', 'Ativa');
+
+        // 2. Fetch base profile (without job_id)
+        const { data: baseProfile } = await supabase
+            .from('candidates')
+            .select('*, feedbacks(*)')
+            .eq('user_id', userId)
+            .is('job_id', null)
+            .maybeSingle();
+
+        // 3. Fetch all job applications
+        const { data: applications, error: appsError } = await supabase
+            .from('candidates')
+            .select('*, feedbacks(*)')
+            .eq('user_id', userId)
+            .not('job_id', 'is', null)
+            .order('applied_at', { ascending: false });
+
+        if (appsError) throw appsError;
+
+        let currentCandidate: Candidate | null = null;
+        let myApplications: Candidate[] = [];
+
+        if (baseProfile) {
+            currentCandidate = mapDbToCandidate(baseProfile);
+        }
+
+        if (applications && applications.length > 0) {
+            myApplications = applications.map(mapDbToCandidate);
+        }
+
+        return {
+            currentCandidate,
+            jobs: activeJobs || [],
+            myApplications
+        };
+    },
+
+    async upsertCandidateByUserId(userId: string, updates: Partial<Candidate>): Promise<void> {
+        const dbPayload: any = {
+            ...updates,
+            user_id: userId,
+            updated_at: new Date().toISOString()
+        };
+
+        // Calculate initials if name is present
+        if (updates.name) {
+            dbPayload.initials = updates.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
+        }
+
+        // Map camelCase to snake_case
+        const mapKeys: { [key: string]: string } = {
+            jobId: 'job_id',
+            columnId: 'column_id',
+            avatarColor: 'avatar_color',
+            textColor: 'text_color'
+        };
+
+        Object.keys(mapKeys).forEach(key => {
+            if (key in dbPayload) {
+                dbPayload[mapKeys[key]] = dbPayload[key];
+                delete dbPayload[key];
+            }
+        });
+
+        // Remove non-db fields
+        const forbiddenKeys = ['id', 'applied_at', 'feedbacks', 'completeness', 'resumeName', 'time'];
+        forbiddenKeys.forEach(key => {
+            if (key in dbPayload) delete dbPayload[key];
+        });
+
+        // Find base profile (record without job_id)
+        const { data: existingProfile } = await supabase
+            .from('candidates')
+            .select('id')
+            .eq('user_id', userId)
+            .is('job_id', null)
+            .maybeSingle();
+
+        if (existingProfile) {
+            // Update existing base profile
+            const { error } = await supabase
+                .from('candidates')
+                .update(dbPayload)
+                .eq('id', existingProfile.id);
+
+            if (error) {
+                console.error('[CandidateService] Error updating profile:', error);
+                throw error;
+            }
+        } else {
+            // Insert new base profile (without job_id)
+            const { error } = await supabase
+                .from('candidates')
+                .insert({ ...dbPayload, job_id: null });
+
+            if (error) {
+                console.error('[CandidateService] Error inserting profile:', error);
+                throw error;
+            }
+        }
     }
 };

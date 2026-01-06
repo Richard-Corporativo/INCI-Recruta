@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '../components/Breadcrumbs';
+import BenefitsSelector from '../components/BenefitsSelector';
+import StringListEditor from '../components/StringListEditor';
 import { useJobs } from '../hooks/useJobs';
 
 const EditJob: React.FC = () => {
@@ -21,6 +23,10 @@ const EditJob: React.FC = () => {
     salaryMin: '',
     salaryMax: '',
     context: '',
+    mission: '',
+    responsibilities: [] as string[],
+    requirements: [] as string[],
+    benefits: [] as string[],
     status: ''
   });
 
@@ -36,6 +42,10 @@ const EditJob: React.FC = () => {
         salaryMin: job.salary_min.toString(),
         salaryMax: job.salary_max.toString(),
         context: job.context,
+        mission: job.mission || '',
+        responsibilities: job.responsibilities ? job.responsibilities.split('\n') : [],
+        requirements: job.requirements ? job.requirements.split('\n') : [],
+        benefits: job.benefits || [],
         status: job.status
       });
     }
@@ -56,6 +66,10 @@ const EditJob: React.FC = () => {
       salary_min: Number(formData.salaryMin),
       salary_max: Number(formData.salaryMax),
       context: formData.context,
+      mission: formData.mission,
+      responsibilities: formData.responsibilities.join('\n'),
+      requirements: formData.requirements.join('\n'),
+      benefits: formData.benefits,
       status: formData.status as any
     });
 
@@ -201,6 +215,39 @@ const EditJob: React.FC = () => {
                   <textarea
                     className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 p-3 min-h-[200px] resize-none"
                     id="context" name="context" rows={8} value={formData.context} onChange={handleInputChange} required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6 pt-6 border-t border-border">
+                  <div className="flex flex-col gap-4">
+                    <label className="text-sm font-semibold text-foreground">Responsabilidades</label>
+                    <StringListEditor
+                      items={formData.responsibilities}
+                      onChange={(items) => setFormData(prev => ({ ...prev, responsibilities: items }))}
+                      placeholder="Adicionar responsabilidade..."
+                      addButtonLabel="Adicionar"
+                      icon="task_alt"
+                      emptyMessage="Nenhuma responsabilidade listada."
+                    />
+                  </div>
+                  <div className="flex flex-col gap-4">
+                    <label className="text-sm font-semibold text-foreground">Requisitos</label>
+                    <StringListEditor
+                      items={formData.requirements}
+                      onChange={(items) => setFormData(prev => ({ ...prev, requirements: items }))}
+                      placeholder="Adicionar requisito..."
+                      addButtonLabel="Adicionar"
+                      icon="verified"
+                      emptyMessage="Nenhum requisito listado."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-4 pt-6 mt-6 border-t border-border">
+                  <h3 className="text-foreground font-semibold text-base transition-colors">Pacote de Vantagens</h3>
+                  <BenefitsSelector
+                    selectedBenefits={formData.benefits}
+                    onChange={(benefits) => setFormData(prev => ({ ...prev, benefits }))}
                   />
                 </div>
               </div>

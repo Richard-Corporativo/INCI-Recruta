@@ -37,6 +37,11 @@ const CandidateCard: React.FC<CandidateCardProps> = React.memo(({ candidate, onD
                     )}
                 </div>
             )}
+            {candidate.summary && (
+                <p className="text-[10px] text-muted-foreground line-clamp-2 italic mb-3 leading-relaxed transition-colors group-hover:text-foreground/70">
+                    "{candidate.summary.substring(0, 80)}{candidate.summary.length > 80 ? '...' : ''}"
+                </p>
+            )}
             {candidate.actionRequired && (
                 <div className="mt-2 flex items-center gap-1.5 text-[10px] text-primary bg-primary/10 px-2 py-1 rounded-full border border-primary/20 font-semibold tracking-wider transition-colors animate-pulse">
                     <span className="material-symbols-outlined text-[12px]">warning</span> Feedback pendente

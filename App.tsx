@@ -51,7 +51,8 @@ const RequireAuth = ({ children }: { children?: React.ReactNode }) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />;
+    // Redirect to public jobs page
+    return <Navigate to="/vagas" replace />;
   }
 
   // SECURITY: Block candidates from accessing admin routes
@@ -100,77 +101,97 @@ const RoleRedirect = () => {
   return <Navigate to="/admin/dashboard" replace />;
 };
 
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours
+      retry: 1,
+    },
+  },
+});
+
+const persister = createSyncStoragePersister({
+  storage: window.localStorage,
+});
+
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <Router>
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
-              {/* Home redirect */}
-              <Route path="/" element={<RoleRedirect />} />
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+      <AuthProvider>
+        <ToastProvider>
+          <Router>
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                {/* Home redirect */}
+                <Route path="/" element={<RoleRedirect />} />
 
-              {/* Rotas de Autenticação Admin */}
-              <Route path="/admin/login" element={<Login />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/request-access" element={<RequestAccess />} />
-              <Route path="/2fa" element={<TwoFactorAuth />} />
+                {/* Rotas de Autenticação Admin */}
+                <Route path="/admin/login" element={<Login />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/request-access" element={<RequestAccess />} />
+                <Route path="/2fa" element={<TwoFactorAuth />} />
 
-              {/* Rotas Públicas do Portal do Candidato */}
-              <Route element={<PublicLayout />}>
-                <Route path="/login" element={<CandidateLogin />} />
-                <Route path="/cadastro" element={<CandidateRegister />} />
-                <Route path="/recuperar-senha" element={<CandidateForgotPassword />} />
-                <Route path="/vagas" element={<JobsList />} />
-                <Route path="/vagas/:id" element={<JobDetailPublic />} />
-                <Route path="/vagas/:id/candidatar" element={<JobApplication />} />
-                <Route path="/termos" element={<TermsOfUse />} />
-                <Route path="/privacidade" element={<PrivacyPolicy />} />
-                <Route path="/verificar-email" element={<VerifyEmail />} />
-              </Route>
+                {/* Rotas Públicas do Portal do Candidato */}
+                <Route element={<PublicLayout />}>
+                  <Route path="/login" element={<CandidateLogin />} />
+                  <Route path="/cadastro" element={<CandidateRegister />} />
+                  <Route path="/recuperar-senha" element={<CandidateForgotPassword />} />
+                  <Route path="/vagas" element={<JobsList />} />
+                  <Route path="/vagas/:id" element={<JobDetailPublic />} />
+                  <Route path="/vagas/:id/candidatar" element={<JobApplication />} />
+                  <Route path="/termos" element={<TermsOfUse />} />
+                  <Route path="/privacidade" element={<PrivacyPolicy />} />
+                  <Route path="/verificar-email" element={<VerifyEmail />} />
+                </Route>
 
-              {/* Rotas Privadas do Candidato */}
-              <Route path="/candidate" element={
-                <RequireCandidateAuth>
-                  <CandidateLayout />
-                </RequireCandidateAuth>
-              }>
-                <Route path="dashboard" element={<CandidateDashboard />} />
-                <Route path="applications" element={<MyApplications />} />
-                <Route path="applications/:id" element={<ApplicationDetail />} />
-                <Route path="settings" element={<CandidateSettings />} />
-              </Route>
+                {/* Rotas Privadas do Candidato */}
+                <Route path="/candidate" element={
+                  <RequireCandidateAuth>
+                    <CandidateLayout />
+                  </RequireCandidateAuth>
+                }>
+                  <Route path="dashboard" element={<CandidateDashboard />} />
+                  <Route path="applications" element={<MyApplications />} />
+                  <Route path="applications/:id" element={<ApplicationDetail />} />
+                  <Route path="settings" element={<CandidateSettings />} />
+                </Route>
 
-              {/* Rotas do Painel (Protegidas) */}
-              <Route element={
-                <RequireAuth>
-                  <MainLayout />
-                </RequireAuth>
-              }>
-                <Route path="/admin/dashboard" element={<Dashboard />} />
-                <Route path="/jobs" element={<Jobs />} />
-                <Route path="/jobs/new" element={<CreateJob />} />
-                <Route path="/jobs/:id" element={<JobDetail />} />
-                <Route path="/jobs/:id/edit" element={<EditJob />} />
-                <Route path="/jobs/:id/kanban" element={<Kanban />} />
-                <Route path="/kanban" element={<Kanban />} />
-                <Route path="/roles" element={<Roles />} />
-                <Route path="/roles/new" element={<CreateRole />} />
-                <Route path="/roles/:id/edit" element={<EditRole />} />
-                <Route path="/audit" element={<Audit />} />
-                <Route path="/talent-bank" element={<TalentBank />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/settings/users/:id/edit" element={<EditUser />} />
-              </Route>
+                {/* Rotas do Painel (Protegidas) */}
+                <Route element={
+                  <RequireAuth>
+                    <MainLayout />
+                  </RequireAuth>
+                }>
+                  <Route path="/admin/dashboard" element={<Dashboard />} />
+                  <Route path="/jobs" element={<Jobs />} />
+                  <Route path="/jobs/new" element={<CreateJob />} />
+                  <Route path="/jobs/:id" element={<JobDetail />} />
+                  <Route path="/jobs/:id/edit" element={<EditJob />} />
+                  <Route path="/jobs/:id/kanban" element={<Kanban />} />
+                  <Route path="/kanban" element={<Kanban />} />
+                  <Route path="/roles" element={<Roles />} />
+                  <Route path="/roles/new" element={<CreateRole />} />
+                  <Route path="/roles/:id/edit" element={<EditRole />} />
+                  <Route path="/audit" element={<Audit />} />
+                  <Route path="/talent-bank" element={<TalentBank />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/settings/users/:id/edit" element={<EditUser />} />
+                </Route>
 
-              {/* Rota 404 - Not Found */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </Router>
-      </ToastProvider>
-    </AuthProvider>
+                {/* Rota 404 - Not Found */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </Router>
+        </ToastProvider>
+      </AuthProvider>
+    </PersistQueryClientProvider>
   );
 };
 

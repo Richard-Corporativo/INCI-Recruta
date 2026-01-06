@@ -6,7 +6,8 @@ import { Job } from '../../types';
 
 const MyApplications: React.FC = () => {
     const navigate = useNavigate();
-    const { myApplications, jobs, isLoading } = useCandidateData();
+    // --> otimizado: Observe and Refetch pattern substitui o polling manual
+    const { allApplications, jobs, isLoading } = useCandidateData();
 
     const handleViewDetails = (id: string) => {
         navigate(`/candidate/applications/${id}`);
@@ -39,7 +40,7 @@ const MyApplications: React.FC = () => {
     if (isLoading) return <div className="p-4">{renderSkeletons()}</div>;
 
     return (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-10 pb-20">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-200 flex flex-col gap-10 pb-20">
             {/* Page Header */}
             <div className="flex flex-col gap-2">
                 <h2 className="text-3xl font-semibold text-foreground">Minhas candidaturas</h2>
@@ -81,7 +82,7 @@ const MyApplications: React.FC = () => {
 
             {/* Application List */}
             <div className="flex flex-col gap-6">
-                {myApplications.map((app) => {
+                {allApplications.map((app) => {
                     const job = jobs.find(j => j.id.toString() === app.jobId?.toString());
                     const statusConfig: any = {
                         'received': { label: 'Em análise', color: 'bg-primary/10 text-primary', pulse: true },
@@ -90,12 +91,13 @@ const MyApplications: React.FC = () => {
                         'hr_interview': { label: 'Entrevista RH', color: 'bg-amber-100 text-amber-700' },
                         'finalist': { label: 'Finalista', color: 'bg-green-100 text-green-700' },
                         'hired': { label: 'Contratado!', color: 'bg-green-600 text-white' },
-                        'rejected': { label: 'Encerrado', color: 'bg-slate-100 text-slate-500' }
+                        'rejected': { label: 'Encerrado', color: 'bg-slate-100 text-slate-500' },
+                        'withdrawn': { label: 'Desistência', color: 'bg-orange-50 text-orange-600 border-orange-100' }
                     };
                     const config = statusConfig[app.columnId] || statusConfig.received;
 
                     return (
-                        <div key={app.id} className="group bg-card text-card-foreground rounded-lg p-6 lg:p-8 border border-border hover:border-ring transition-all duration-300 ease-in-out">
+                        <div key={app.id} className="group bg-card text-card-foreground rounded-lg p-6 lg:p-8 border border-border hover:border-ring transition-all duration-200 ease-in-out">
                             <div className="flex flex-col md:flex-row gap-8 items-start">
                                 {/* Icon/Image */}
                                 <div className="shrink-0 size-16 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10 transition-transform group-hover:scale-105">
@@ -148,7 +150,7 @@ const MyApplications: React.FC = () => {
                     );
                 })}
 
-                {myApplications.length === 0 && (
+                {allApplications.length === 0 && (
                     <div className="border-t-2 border-dashed border-border pt-12 mt-12 bg-muted/5 rounded-lg p-10 flex flex-col items-center">
                         <div className="flex flex-col items-center justify-center text-center max-w-lg">
                             <div className="bg-card border border-border size-20 rounded-lg flex items-center justify-center mb-8 text-primary">

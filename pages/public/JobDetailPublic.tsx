@@ -1,13 +1,54 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { JobService } from '../../src/services/JobService';
 import { Job } from '../../types';
+import { AVAILABLE_BENEFITS } from '../../components/BenefitsSelector';
+import { useAuth } from '../../hooks/useAuth';
+import { useCandidateData } from '../../hooks/useCandidateData';
+import { useToast } from '../../components/ui/Toast';
 
 const JobDetailPublic: React.FC = () => {
+    const { user: authUser } = useAuth();
+    const { myApplications, isLoading: isDataLoading, withdrawApplication } = useCandidateData();
+    const { success, error: toastError } = useToast();
     const navigate = useNavigate();
     const { id } = useParams();
     const [job, setJob] = useState<any | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isWithdrawing, setIsWithdrawing] = useState(false);
+    const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+
+    const hasApplied = useMemo(() =>
+        myApplications.some(app => app.jobId?.toString() === id?.toString()),
+        [myApplications, id]
+    );
+
+    const application = useMemo(() =>
+        myApplications.find(app => app.jobId?.toString() === id?.toString()),
+        [myApplications, id]
+    );
+
+    const handleWithdraw = async () => {
+        if (!application?.id) return;
+        setIsWithdrawing(true);
+
+        // Trigger mutation
+        const p = withdrawApplication(application.id);
+
+        // Optimistic feedback
+        setTimeout(() => {
+            success('Candidatura removida com sucesso!');
+            setShowWithdrawModal(false);
+            setIsWithdrawing(false);
+        }, 600);
+
+        try {
+            await p;
+        } catch (err) {
+            toastError('Erro ao processar sua solicitação no servidor.');
+            setIsWithdrawing(false);
+        }
+    };
 
     useEffect(() => {
         const fetchJob = async () => {
@@ -16,35 +57,39 @@ const JobDetailPublic: React.FC = () => {
             const found = await JobService.getJobById(id);
 
             if (found) {
-                // Map the simple Job type to the Rich Detail type for consistency
+                const createdAt = new Date(found.created_at);
+                const now = new Date();
+                const diffDays = Math.ceil((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+
                 setJob({
+                    id: found.id,
                     title: found.title,
-                    location: found.location,
-                    publishedAt: new Date(found.created_at).toLocaleDateString('pt-BR'),
+                    location: `${found.location} - ${found.model}`, // Combined for standard display
+                    pureLocation: found.location,
                     model: found.model,
+                    publishedAt: createdAt.toLocaleDateString('pt-BR'),
+                    isNew: diffDays <= 7,
                     contract: found.contract,
                     level: found.seniority || 'Sênior',
                     area: found.department,
-                    description: found.context,
-                    responsibilities: found.responsibilities
-                        ? found.responsibilities.split('\n').map(r => r.replace(/^- /, ''))
-                        : [
-                            "Participar do desenvolvimento e manutenção de sistemas.",
-                            "Colaborar com a equipe para melhoria contínua.",
-                            found.mission || "Contribuir com a visão e missão do projeto."
-                        ],
-                    requirements: [
-                        "Experiência prévia na área.",
-                        "Conhecimento técnico compatível com o cargo.",
-                        "Vontade de aprender e crescer."
-                    ],
-                    skills: ["Foco", "Agilidade", "Trabalho em Equipe"],
-                    benefits: [
-                        { icon: "favorite", title: "Plano de Saúde", color: "primary" },
-                        { icon: "restaurant", title: "Vale Alimentação", color: "primary" },
-                        { icon: "home_work", title: "Home Office", color: "primary" }
-                    ],
-                    areaDescription: `A área de ${found.department} é fundamental para o sucesso do nosso negócio.`,
+                    status: found.status,
+                    candidatesCount: found.candidates_count || 0,
+                    description: found.context || found.mission || "Descrição detalhada em breve.",
+                    responsibilities: (found.responsibilities || "")
+                        .split(/\n|;/)
+                        .map(r => r.trim().replace(/^- /, ''))
+                        .filter(r => r.length > 0),
+                    requirements: (found.requirements || "")
+                        .split(/\n|;/)
+                        .map(r => r.trim().replace(/^- /, ''))
+                        .filter(r => r.length > 0),
+                    benefits: (found.benefits || []).map((bLabel: string) => {
+                        const def = AVAILABLE_BENEFITS.find(b => b.label === bLabel);
+                        return {
+                            icon: def?.icon || 'star',
+                            title: bLabel,
+                        };
+                    }),
                     steps: [
                         { number: 1, title: "Aplicação", active: true },
                         { number: 2, title: "Entrevista", active: false },
@@ -237,12 +282,32 @@ const JobDetailPublic: React.FC = () => {
                                     </div>
 
                                     <div className="flex flex-col gap-3">
-                                        <button
-                                            onClick={() => navigate(`/vagas/${id}/candidatar`)}
-                                            className="group flex w-full items-center justify-center h-14 bg-primary text-white text-sm font-semibold rounded-base hover:bg-primary/90 transition-all duration-200 active:scale-95 gap-2 shadow-sm shadow-primary/20"
-                                        >
-                                            Candidatar agora
-                                        </button>
+                                        {hasApplied ? (
+                                            <div className="flex flex-col gap-3">
+                                                <button
+                                                    onClick={() => navigate(`/candidate/applications/${application?.id}`)}
+                                                    className="w-full h-14 flex items-center justify-center gap-2 rounded-base bg-green-600 text-white text-[11px] font-semibold hover:bg-green-700 transition-all duration-200 outline-none active:scale-95 shadow-lg shadow-green-100"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">visibility</span>
+                                                    Ver minha candidatura
+                                                </button>
+                                                <button
+                                                    onClick={() => setShowWithdrawModal(true)}
+                                                    disabled={isWithdrawing}
+                                                    className="w-full h-12 flex items-center justify-center gap-2 rounded-base border border-destructive/20 bg-destructive/5 text-destructive hover:bg-destructive hover:text-white text-[11px] font-semibold transition-all duration-200 outline-none active:scale-95 disabled:opacity-50"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">cancel</span>
+                                                    {isWithdrawing ? 'Processando...' : 'Desistir da vaga'}
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => navigate(`/vagas/${id}/candidatar`)}
+                                                className="group flex w-full items-center justify-center h-14 bg-primary text-white text-sm font-semibold rounded-base hover:bg-primary/90 transition-all duration-200 active:scale-95 gap-2 shadow-sm shadow-primary/20"
+                                            >
+                                                Candidatar agora
+                                            </button>
+                                        )}
                                         <button className="flex w-full items-center justify-center h-14 bg-white text-slate-700 border border-slate-200 rounded-base hover:bg-slate-50 transition-all duration-200 font-semibold text-xs gap-2 active:scale-95">
                                             Compartilhar
                                         </button>
@@ -253,15 +318,17 @@ const JobDetailPublic: React.FC = () => {
                                     <div className="space-y-3">
                                         <div className="flex justify-between items-center text-[10px] font-semibold">
                                             <span className="text-slate-400">Status</span>
-                                            <span className="text-green-600 bg-green-50 px-2 py-1 rounded-md">Aberta</span>
+                                            <span className={`${job.status === 'Encerrada' ? 'text-red-600 bg-red-50' : 'text-green-600 bg-green-50'} px-2 py-1 rounded-md capitalize`}>
+                                                {job.status === 'Ativa' ? 'Aberta' : job.status || 'Aberta'}
+                                            </span>
                                         </div>
                                         <div className="flex justify-between items-center text-[10px] font-semibold">
                                             <span className="text-slate-400">Candidatos</span>
-                                            <span className="text-slate-900">+120</span>
+                                            <span className="text-slate-900">{job.candidatesCount > 50 ? `+${job.candidatesCount}` : job.candidatesCount || 'Poucos'}</span>
                                         </div>
                                         <div className="flex justify-between items-center text-[10px] font-semibold">
                                             <span className="text-slate-400">Resposta</span>
-                                            <span className="text-slate-900">~48h</span>
+                                            <span className="text-slate-900">~ {job.level === 'Estágio' ? '48h' : '5 dias'}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -274,12 +341,31 @@ const JobDetailPublic: React.FC = () => {
             {/* Mobile Bottom Bar Sticky */}
             <div className="lg:hidden fixed bottom-0 left-0 w-full bg-white border-t border-slate-300 p-4 z-[60]">
                 <div className="flex gap-4 max-w-[1280px] mx-auto">
-                    <button
-                        onClick={() => navigate(`/vagas/${id}/candidatar`)}
-                        className="flex-1 h-12 bg-primary text-white font-semibold text-sm rounded-lg transition-colors hover:bg-slate-900"
-                    >
-                        Candidatar agora
-                    </button>
+                    {hasApplied ? (
+                        <div className="flex-1 flex gap-2">
+                            <button
+                                onClick={() => navigate(`/candidate/applications/${application?.id}`)}
+                                className="flex-1 h-12 bg-green-600 text-white font-semibold text-[11px] rounded-lg transition-colors hover:bg-green-700 flex items-center justify-center gap-2"
+                            >
+                                <span className="material-symbols-outlined text-[18px]">visibility</span>
+                                Ver minha candidatura
+                            </button>
+                            <button
+                                onClick={() => setShowWithdrawModal(true)}
+                                disabled={isWithdrawing}
+                                className="size-12 flex items-center justify-center rounded-lg border border-destructive/20 bg-destructive/5 text-destructive hover:bg-destructive hover:text-white transition-all duration-200 outline-none active:scale-95 disabled:opacity-50"
+                            >
+                                <span className="material-symbols-outlined text-[18px]">cancel</span>
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => navigate(`/vagas/${id}/candidatar`)}
+                            className="flex-1 h-12 bg-primary text-white font-semibold text-sm rounded-lg transition-colors hover:bg-slate-900"
+                        >
+                            Candidatar agora
+                        </button>
+                    )}
                     <button className="aspect-square h-12 flex items-center justify-center bg-white text-slate-900 border border-slate-300 rounded-lg transition-colors hover:bg-slate-50">
                         <span className="material-symbols-outlined">share</span>
                     </button>
@@ -288,6 +374,48 @@ const JobDetailPublic: React.FC = () => {
 
             {/* Final Space for Mobile Button Margin */}
             <div className="h-28 lg:hidden"></div>
+
+            {/* Modal de Desistência */}
+            {showWithdrawModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-card w-full max-w-md rounded-lg border border-border shadow-2xl p-10 animate-in zoom-in-95 duration-300">
+                        <div className="flex flex-col items-center text-center gap-6">
+                            <div className="size-20 rounded-full bg-destructive/10 text-destructive flex items-center justify-center">
+                                <span className="material-symbols-outlined text-4xl">warning</span>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                                <h3 className="text-2xl font-semibold text-foreground">Confirmar desistência?</h3>
+                                <p className="text-sm font-medium text-muted-foreground leading-relaxed">
+                                    Essa ação é irreversível. Você não poderá reverter sua candidatura para esta vaga após confirmar.
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 w-full mt-6">
+                                <button
+                                    onClick={() => setShowWithdrawModal(false)}
+                                    disabled={isWithdrawing}
+                                    className="h-12 rounded-base border border-border bg-background text-foreground text-[10px] font-semibold hover:bg-accent transition-all outline-none active:scale-95 disabled:opacity-50"
+                                >
+                                    Manter candidatura
+                                </button>
+                                <button
+                                    onClick={handleWithdraw}
+                                    disabled={isWithdrawing}
+                                    className="h-12 rounded-base bg-destructive text-destructive-foreground text-[10px] font-semibold hover:bg-destructive/90 transition-all outline-none active:scale-95 shadow-lg shadow-destructive/10 disabled:opacity-70 flex items-center justify-center gap-2"
+                                >
+                                    {isWithdrawing ? (
+                                        <>
+                                            <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                            <span>Processando...</span>
+                                        </>
+                                    ) : (
+                                        'Confirmar desistência'
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 };

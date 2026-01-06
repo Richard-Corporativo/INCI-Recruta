@@ -69,7 +69,7 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
                     </div>
                   )}
                 </div>
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground font-medium transition-colors">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground font-medium transition-colors mb-4">
                   <span className="flex items-center gap-1.5 hover:text-primary transition-colors cursor-default">
                     <span className="material-symbols-outlined text-[18px]">mail</span> {candidate.email}
                   </span>
@@ -79,10 +79,25 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
                   <span className="flex items-center gap-1.5 hover:text-primary transition-colors cursor-default">
                     <span className="material-symbols-outlined text-[18px]">location_on</span> {candidate.location}
                   </span>
-                  <a href="#" className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors font-semibold outline-none focus-visible:underline">
-                    <span className="material-symbols-outlined text-[18px]">link</span> LinkedIn
-                  </a>
+                  {candidate.linkedin && (
+                    <a href={candidate.linkedin.startsWith('http') ? candidate.linkedin : `https://${candidate.linkedin}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors font-semibold outline-none focus-visible:underline">
+                      <span className="material-symbols-outlined text-[18px]">link</span> LinkedIn
+                    </a>
+                  )}
+                  {candidate.portfolio && (
+                    <a href={candidate.portfolio.startsWith('http') ? candidate.portfolio : `https://${candidate.portfolio}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors font-semibold outline-none focus-visible:underline">
+                      <span className="material-symbols-outlined text-[18px]">folder_shared</span> Portfólio
+                    </a>
+                  )}
                 </div>
+                {candidate.summary && (
+                  <div className="max-w-2xl">
+                    <p className="text-xs text-muted-foreground/90 font-medium line-clamp-2 leading-relaxed bg-muted/30 px-3 py-2 rounded-lg border border-border/50 transition-colors">
+                      <span className="font-bold text-primary mr-1 italic">Bio:</span>
+                      "{candidate.summary}"
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
             <button
@@ -155,7 +170,75 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
                   </div>
                   <div>
                     <p className="text-[11px] font-semibold text-muted-foreground mb-1 transition-colors">Data aplicação</p>
-                    <p className="text-sm font-semibold text-foreground transition-colors">{candidate.time}</p>
+                    <p className="text-sm font-semibold text-foreground transition-colors">{candidate.applied_at ? new Date(candidate.applied_at).toLocaleDateString() : candidate.time}</p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Professional Trajectory (Summary & Experiences) */}
+              <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Biography */}
+                <div className="lg:col-span-2 bg-card rounded-lg border border-border shadow-sm overflow-hidden transition-all duration-200">
+                  <div className="px-6 py-4 border-b border-border bg-muted/20 flex items-center gap-2 transition-colors">
+                    <span className="material-symbols-outlined text-primary text-[20px]">history_edu</span>
+                    <h3 className="text-sm font-semibold text-foreground">Biografia Profissional</h3>
+                  </div>
+                  <div className="p-6">
+                    {candidate.summary ? (
+                      <p className="text-sm text-foreground/80 leading-relaxed italic border-l-4 border-primary/20 pl-6 py-2 bg-primary/5 rounded-r-lg">
+                        "{candidate.summary}"
+                      </p>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8 text-muted-foreground/50 italic">
+                        <span className="material-symbols-outlined text-4xl mb-2">article</span>
+                        <p className="text-xs">Nenhuma biografia informada pelo candidato.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Last Experience Info */}
+                <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden transition-all duration-200">
+                  <div className="px-6 py-4 border-b border-border bg-muted/20 flex items-center gap-2 transition-colors">
+                    <span className="material-symbols-outlined text-primary text-[20px]">business_center</span>
+                    <h3 className="text-sm font-semibold text-foreground">Última Experiência</h3>
+                  </div>
+                  <div className="p-6">
+                    {candidate.experiences && candidate.experiences.length > 0 && candidate.experiences[0].company ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                            <span className="material-symbols-outlined">business</span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Empresa</p>
+                            <p className="text-sm font-semibold text-foreground">{candidate.experiences[0].company}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
+                            <span className="material-symbols-outlined">badge</span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Cargo</p>
+                            <p className="text-sm font-semibold text-foreground">{candidate.experiences[0].position}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
+                            <span className="material-symbols-outlined">schedule</span>
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Duração</p>
+                            <p className="text-sm font-semibold text-foreground">{candidate.experiences[0].duration}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-muted-foreground/50 italic py-8">
+                        <p className="text-xs">Não informada.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </section>

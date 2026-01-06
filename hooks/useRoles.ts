@@ -1,74 +1,128 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { Role } from '../types';
 
 export const useRoles = () => {
-    const [roles, setRoles] = useState<Role[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const queryClient = useQueryClient();
 
-    const loadRoles = useCallback(async () => {
-        const { data, error } = await supabase
-            .from('roles')
-            .select('*')
-            .order('title');
+    const { data: roles = [], isLoading, error } = useQuery({
+        queryKey: ['roles'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('roles')
+                .select('*')
+                .order('title');
 
-        if (error) {
-            console.error('Error loading roles:', error);
-        } else if (data) {
-            setRoles(data as Role[]);
-        }
-        setIsLoading(false);
-    }, []);
+            if (error) throw error;
+            return data as Role[];
+        },
+        staleTime: 1000 * 60 * 5, // 5 minutes fresh
+    });
 
-    useEffect(() => {
-        loadRoles();
-    }, [loadRoles]);
+    const addRole = useMutation({
+        mutationFn: async (role: Omit<Role, 'id' | 'updated_at'>) => {
+            const { data, error } = await supabase
+                .from('roles')
+                .insert([{
+                    ...role,
+                    updated_at: new Date().toISOString()
+                }])
+                .select()
+                .single();
 
-    const addRole = useCallback(async (role: Omit<Role, 'id' | 'updated_at'>) => {
-        const { data, error } = await supabase
-            .from('roles')
-            .insert([{
-                ...role,
-                updated_at: new Date().toISOString()
-            }])
-            .select()
-            .single();
+            if (error) throw error;
+            return data;
+        },
+        onMutate: async (newRole) => {
+            await queryClient.cancelQueries({ queryKey: ['roles'] });
+            const previousRoles = queryClient.getQueryData(['roles']);
 
-        if (error) {
-            console.error('Error adding role:', error);
-        } else {
-            loadRoles();
-        }
-    }, [loadRoles]);
+            // Optimistic update
+            const optimisticRole = { ...newRole, id: 'temp-' + Date.now(), updated_at: new Date().toISOString() } as Role;
+            queryClient.setQueryData(['roles'], (old: Role[] | undefined) => [...(old || []), optimisticRole].sort((a, b) => a.title.localeCompare(b.title)));
 
-    const updateRole = useCallback(async (id: string, roleData: Partial<Role>) => {
-        const { error } = await supabase
-            .from('roles')
-            .update({
-                ...roleData,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', id);
+            return { previousRoles };
+        },
+        onError: (_err, _newRole, context) => {
+            if (context?.previousRoles) {
+                queryClient.setQueryData(['roles'], context.previousRoles);
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['roles'] });
+        },
+    });
 
-        if (error) {
-            console.error('Error updating role:', error);
-        } else {
-            loadRoles();
-        }
-    }, [loadRoles]);
+    const updateRole = useMutation({
+        mutationFn: async ({ id, ...roleData }: { id: string } & Partial<Role>) => {
+            const { error } = await supabase
+                .from('roles')
+                .update({
+                    ...roleData,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id);
 
-    const deleteRole = useCallback(async (id: string) => {
-        const { error } = await supabase
-            .from('roles')
-            .delete()
-            .eq('id', id);
+            if (error) throw error;
+        },
+        onMutate: async ({ id, ...roleData }) => {
+            await queryClient.cancelQueries({ queryKey: ['roles'] });
+            const previousRoles = queryClient.getQueryData<Role[]>(['roles']);
 
-        if (error) {
-            console.error('Error deleting role:', error);
-        } else {
-            loadRoles();
-        }
-    }, [loadRoles]);
+            // Optimistic update
+            if (previousRoles) {
+                queryClient.setQueryData(['roles'], previousRoles.map(role =>
+                    role.id === id ? { ...role, ...roleData } : role
+                ));
+            }
 
-    return { roles, addRole, updateRole, deleteRole, isLoading };
+            return { previousRoles };
+        },
+        onError: (_err, _vars, context) => {
+            if (context?.previousRoles) {
+                queryClient.setQueryData(['roles'], context.previousRoles);
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['roles'] });
+        },
+    });
+
+    const deleteRole = useMutation({
+        mutationFn: async (id: string) => {
+            const { error } = await supabase
+                .from('roles')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+        },
+        onMutate: async (id) => {
+            await queryClient.cancelQueries({ queryKey: ['roles'] });
+            const previousRoles = queryClient.getQueryData<Role[]>(['roles']);
+
+            // Optimistic update
+            if (previousRoles) {
+                queryClient.setQueryData(['roles'], previousRoles.filter(role => role.id !== id));
+            }
+
+            return { previousRoles };
+        },
+        onError: (_err, _id, context) => {
+            if (context?.previousRoles) {
+                queryClient.setQueryData(['roles'], context.previousRoles);
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['roles'] });
+        },
+    });
+
+    return {
+        roles,
+        addRole: addRole.mutate,
+        updateRole: (id: string, data: Partial<Role>) => updateRole.mutate({ id, ...data }),
+        deleteRole: deleteRole.mutate,
+        isLoading
+    };
 };

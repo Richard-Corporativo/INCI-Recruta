@@ -9,12 +9,14 @@ const ApplicationDetail: React.FC = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [showDesistirModal, setShowDesistirModal] = useState(false);
-    const { myApplications, jobs, isLoading, refreshData } = useCandidateData();
+    const [isWithdrawing, setIsWithdrawing] = useState(false);
+    const [isWithdrawalSuccess, setIsWithdrawalSuccess] = useState(false);
+    const { myApplications, allApplications, jobs, isLoading, refreshData, withdrawApplication } = useCandidateData();
     const { success: toastSuccess, error: toastError } = useToast();
 
     const app = useMemo(() =>
-        myApplications.find(c => c.id === id),
-        [myApplications, id]
+        (allApplications || []).find(c => c.id === id),
+        [allApplications, id]
     );
 
     const job = useMemo(() =>
@@ -30,36 +32,68 @@ const ApplicationDetail: React.FC = () => {
         'manager_interview': { label: 'Entrevista Gestor', icon: 'person', index: 4 },
         'finalist': { label: 'Finalista', icon: 'star', index: 5 },
         'hired': { label: 'Contratado!', icon: 'celebration', index: 6 },
-        'rejected': { label: 'Encerrado', icon: 'cancel', index: -1 }
+        'rejected': { label: 'Encerrado', icon: 'cancel', index: -1 },
+        'withdrawn': { label: 'Desistência', icon: 'person_off', index: -2 }
     };
 
     const isRejected = app?.columnId === 'rejected';
+    const isWithdrawn = app?.columnId === 'withdrawn';
     const currentStatus = statusConfig[app?.columnId || 'received'] || statusConfig['received'];
 
     const steps = [
         {
             name: 'Candidatura',
-            status: isRejected ? 'rejected' : currentStatus.index >= 0 ? 'completed' : 'upcoming',
+            status: (isRejected || isWithdrawn) ? 'rejected' : currentStatus.index >= 0 ? 'completed' : 'upcoming',
             desc: 'Sua candidatura foi recebida com sucesso pela nossa equipe.'
         },
         {
             name: 'Triagem inicial',
-            status: isRejected ? 'rejected' : currentStatus.index > 1 ? 'completed' : currentStatus.index === 1 ? 'current' : 'upcoming',
+            status: (isRejected || isWithdrawn) ? 'rejected' : currentStatus.index > 1 ? 'completed' : currentStatus.index === 1 ? 'current' : 'upcoming',
             desc: 'Análise do perfil e experiências.'
         },
         {
             name: 'Entrevistas / Testes',
-            status: isRejected ? 'rejected' : currentStatus.index > 4 ? 'completed' : (currentStatus.index >= 2 && currentStatus.index <= 4) ? 'current' : 'upcoming',
+            status: (isRejected || isWithdrawn) ? 'rejected' : currentStatus.index > 4 ? 'completed' : (currentStatus.index >= 2 && currentStatus.index <= 4) ? 'current' : 'upcoming',
             desc: 'Etapa de avaliação técnica e entrevistas com RH e Gestores.'
         },
         {
             name: 'Proposta final',
-            status: isRejected ? 'rejected' : currentStatus.index >= 6 ? 'completed' : currentStatus.index === 5 ? 'current' : 'upcoming',
+            status: (isRejected || isWithdrawn) ? 'rejected' : currentStatus.index >= 6 ? 'completed' : currentStatus.index === 5 ? 'current' : 'upcoming',
             desc: 'Última etapa do processo com detalhes da contratação.'
         }
     ];
 
     if (isLoading) return <div className="p-12 text-center text-xs font-semibold">Carregando detalhes...</div>;
+
+    if (isWithdrawalSuccess) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 px-4 text-center animate-in fade-in zoom-in duration-500">
+                <div className="size-24 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-8 shadow-inner">
+                    <span className="material-symbols-outlined text-5xl">check_circle</span>
+                </div>
+                <h2 className="text-3xl font-semibold text-foreground mb-4">Candidatura Cancelada</h2>
+                <p className="text-muted-foreground text-sm font-medium max-w-md leading-relaxed mb-10">
+                    Você desistiu com sucesso da vaga <strong>{job?.title}</strong>.
+                    Seu perfil não está mais visível para esta oportunidade.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                    <button
+                        onClick={() => navigate('/vagas')}
+                        className="h-12 px-8 rounded-base bg-primary text-primary-foreground text-[11px] font-bold hover:bg-primary/90 transition-all active:scale-95 shadow-lg shadow-primary/20"
+                    >
+                        Buscar outras vagas
+                    </button>
+                    <button
+                        onClick={() => navigate('/candidate/applications')}
+                        className="h-12 px-8 rounded-base border border-border bg-card text-foreground text-[11px] font-bold hover:bg-accent transition-all active:scale-95"
+                    >
+                        Minhas candidaturas
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     if (!app) return <div className="p-12 text-center text-xs font-semibold">Candidatura não encontrada.</div>;
 
     return (
@@ -106,11 +140,11 @@ const ApplicationDetail: React.FC = () => {
                 <div className="lg:col-span-8 space-y-8">
                     <div className="bg-card text-card-foreground rounded-lg border border-border p-10 md:p-14">
                         <div className="flex flex-col gap-2 mb-12">
-                            <p className={`text-xs font-semibold ${isRejected ? 'text-destructive' : 'text-primary'}`}>
-                                {isRejected ? 'Processo Finalizado' : 'Próxima etapa: Entrevista'}
+                            <p className={`text-xs font-semibold ${isRejected || isWithdrawn ? 'text-destructive' : 'text-primary'}`}>
+                                {isRejected ? 'Processo Finalizado' : isWithdrawn ? 'Candidatura Cancelada' : 'Próxima etapa: Entrevista'}
                             </p>
                             <h3 className="text-2xl font-semibold text-foreground">
-                                {isRejected ? 'Histórico do processo' : 'Progresso da candidatura'}
+                                {isRejected || isWithdrawn ? 'Histórico do processo' : 'Progresso da candidatura'}
                             </h3>
                         </div>
 
@@ -181,13 +215,30 @@ const ApplicationDetail: React.FC = () => {
                             </p>
                         </div>
                         <div className="pt-4 border-t border-border mt-2">
-                            <button
-                                onClick={() => setShowDesistirModal(true)}
-                                className="w-full h-12 flex items-center justify-center gap-2 rounded-base border border-destructive/20 bg-destructive/5 text-destructive hover:bg-destructive hover:text-white text-[11px] font-semibold transition-all duration-200 outline-none active:scale-95"
-                            >
-                                <span className="material-symbols-outlined text-[18px]">cancel</span>
-                                Desistir da vaga
-                            </button>
+                            {isWithdrawn ? (
+                                <div className="flex flex-col gap-3">
+                                    <div className="p-4 rounded-xl bg-orange-50 border border-orange-200 flex gap-3 items-center">
+                                        <span className="material-symbols-outlined text-orange-500 text-lg">info</span>
+                                        <span className="text-[10px] font-bold text-orange-700 uppercase">Aguardando novo ciclo</span>
+                                    </div>
+                                    <button
+                                        onClick={() => navigate(`/vagas/${job?.id}`)}
+                                        className="w-full h-12 flex items-center justify-center gap-2 rounded-base bg-primary text-white text-[11px] font-semibold transition-all duration-200 outline-none active:scale-95"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">rocket_launch</span>
+                                        Candidatar-se novamente
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => setShowDesistirModal(true)}
+                                    disabled={isRejected}
+                                    className="w-full h-12 flex items-center justify-center gap-2 rounded-base border border-destructive/20 bg-destructive/5 text-destructive hover:bg-destructive hover:text-white text-[11px] font-semibold transition-all duration-200 outline-none active:scale-95 disabled:opacity-50"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">cancel</span>
+                                    Desistir da vaga
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -226,33 +277,55 @@ const ApplicationDetail: React.FC = () => {
                             <div className="grid grid-cols-2 gap-4 w-full mt-6">
                                 <button
                                     onClick={() => setShowDesistirModal(false)}
-                                    className="h-12 rounded-base border border-border bg-background text-foreground text-[10px] font-semibold hover:bg-accent transition-all outline-none active:scale-95"
+                                    disabled={isWithdrawing}
+                                    className="h-12 rounded-base border border-border bg-background text-foreground text-[10px] font-semibold hover:bg-accent transition-all outline-none active:scale-95 disabled:opacity-50"
                                 >
                                     Manter candidatura
                                 </button>
                                 <button
+                                    disabled={isWithdrawing}
                                     onClick={async () => {
+                                        if (!app?.id) return;
+
+                                        setIsWithdrawing(true);
+                                        console.log('Attempting to withdraw from application:', app.id);
+
+                                        // Trigger mutation
+                                        const mutationPromise = withdrawApplication(app.id);
+
+                                        // After a very short delay (for visual feedback) or immediately, show success
+                                        // since we have optimistic updates in the hook.
+                                        setTimeout(() => {
+                                            toastSuccess('Candidatura removida com sucesso!');
+                                            setIsWithdrawalSuccess(true);
+                                            setShowDesistirModal(false);
+                                            setIsWithdrawing(false);
+                                        }, 600);
+
                                         try {
-                                            if (app?.id) {
-                                                console.log('Attempting to withdraw from application:', app.id);
-                                                const success = await CandidateService.deleteCandidate(app.id);
-                                                if (success) {
-                                                    toastSuccess('Candidatura removida com sucesso!');
-                                                    setShowDesistirModal(false);
-                                                    // Navigate immediately, the next page's useCandidateData will fetch fresh data
-                                                    navigate('/candidate/applications');
-                                                } else {
-                                                    toastError('Não foi possível processar sua desistência. Verifique se o processo ainda está ativo.');
-                                                }
+                                            const success = await mutationPromise;
+                                            if (!success) {
+                                                // If it failed silently (mutation returned false)
+                                                console.warn('Withdrawal returned false, but optimistic UI already transitioned.');
                                             }
                                         } catch (err) {
                                             console.error('Erro ao desistir:', err);
-                                            toastError('Ocorreu um erro inesperado ao processar sua desistência.');
+                                            toastError('Ocorreu um erro ao processar sua desistência no servidor.');
+                                            // Optional: rollback success state if critical
+                                            setIsWithdrawalSuccess(false);
+                                            setIsWithdrawing(false);
                                         }
                                     }}
-                                    className="h-12 rounded-base bg-destructive text-destructive-foreground text-[10px] font-semibold hover:bg-destructive/90 transition-all outline-none active:scale-95 shadow-lg shadow-destructive/10"
+                                    className="h-12 rounded-base bg-destructive text-destructive-foreground text-[10px] font-semibold hover:bg-destructive/90 transition-all outline-none active:scale-95 shadow-lg shadow-destructive/10 disabled:opacity-70 flex items-center justify-center gap-2"
                                 >
-                                    Confirmar desistência
+                                    {isWithdrawing ? (
+                                        <>
+                                            <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                            <span>Processando...</span>
+                                        </>
+                                    ) : (
+                                        'Confirmar desistência'
+                                    )}
                                 </button>
                             </div>
                         </div>

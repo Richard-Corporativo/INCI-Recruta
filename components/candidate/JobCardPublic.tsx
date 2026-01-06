@@ -16,9 +16,12 @@ interface JobCardPublicProps {
     job: PublicJob;
     onApply: (id: string) => void;
     onDetails: (id: string) => void;
+    hasApplied?: boolean;
+    onWithdraw?: (id: string) => void;
+    isWithdrawing?: boolean;
 }
 
-const JobCardPublic: React.FC<JobCardPublicProps> = ({ job, onApply, onDetails }) => {
+const JobCardPublic: React.FC<JobCardPublicProps> = ({ job, onApply, onDetails, hasApplied, onWithdraw, isWithdrawing }) => {
     return (
         <article className="group relative flex flex-col md:flex-row gap-8 p-8 bg-card text-card-foreground rounded-lg border border-border shadow-sm transition-all duration-300 hover:border-primary/50 hover:shadow-md">
             {/* Visual Indicator for New/Urgent */}
@@ -75,12 +78,23 @@ const JobCardPublic: React.FC<JobCardPublicProps> = ({ job, onApply, onDetails }
 
             {/* Actions Area */}
             <div className="flex md:flex-col gap-4 min-w-[180px] md:justify-center border-t md:border-t-0 md:border-l border-border pt-6 md:pt-0 md:pl-8">
-                <button
-                    onClick={() => onApply(job.id)}
-                    className="flex-1 md:flex-none justify-center items-center h-12 px-6 rounded-base bg-primary text-primary-foreground text-sm font-semibold transition-all hover:bg-primary/90 shadow-lg shadow-primary/20 hover:shadow-xl active:scale-95 whitespace-nowrap text-xs"
-                >
-                    Candidatar-se agora
-                </button>
+                {hasApplied ? (
+                    <button
+                        onClick={() => onWithdraw?.(job.id)}
+                        disabled={isWithdrawing}
+                        className="flex-1 md:flex-none justify-center items-center h-12 px-6 rounded-base border border-destructive/20 bg-destructive/5 text-destructive hover:bg-destructive hover:text-white text-[10px] font-bold transition-all duration-200 outline-none active:scale-95 disabled:opacity-50 flex gap-2"
+                    >
+                        <span className="material-symbols-outlined text-[16px]">cancel</span>
+                        {isWithdrawing ? 'Saindo...' : 'Desistir'}
+                    </button>
+                ) : (
+                    <button
+                        onClick={() => onApply(job.id)}
+                        className="flex-1 md:flex-none justify-center items-center h-12 px-6 rounded-base bg-primary text-primary-foreground text-sm font-semibold transition-all hover:bg-primary/90 shadow-lg shadow-primary/20 hover:shadow-xl active:scale-95 whitespace-nowrap text-xs"
+                    >
+                        Candidatar-se agora
+                    </button>
+                )}
                 <button
                     onClick={() => onDetails(job.id)}
                     className="flex-1 md:flex-none justify-center items-center h-12 px-6 rounded-base border border-border bg-card text-card-foreground text-sm font-semibold transition-all hover:bg-muted hover:border-ring active:scale-95 text-xs"
@@ -88,14 +102,6 @@ const JobCardPublic: React.FC<JobCardPublicProps> = ({ job, onApply, onDetails }
                     Ver detalhes
                 </button>
 
-                {/* Secondary Interaction - Save */}
-                <button
-                    aria-label="Salvar vaga"
-                    className="hidden md:flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors mt-2"
-                >
-                    <span className="material-symbols-outlined text-[18px]">bookmark</span>
-                    Salvar para depois
-                </button>
             </div>
         </article>
     );

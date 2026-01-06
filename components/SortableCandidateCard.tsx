@@ -8,7 +8,7 @@ interface SortableCandidateCardProps {
     onClick: (candidate: Candidate) => void;
 }
 
-const SortableCandidateCard: React.FC<SortableCandidateCardProps> = ({ candidate, onClick }) => {
+const SortableCandidateCard: React.FC<SortableCandidateCardProps> = React.memo(({ candidate, onClick }) => {
     const {
         attributes,
         listeners,
@@ -74,6 +74,6 @@ const SortableCandidateCard: React.FC<SortableCandidateCardProps> = ({ candidate
             </div>
         </div>
     );
-};
+});
 
 export default SortableCandidateCard;
