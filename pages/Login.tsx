@@ -9,6 +9,7 @@ const Login: React.FC = () => {
     const [password, setPassword] = useState('');
     const [keepConnected, setKeepConnected] = useState(false);
     const [error, setError] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Verifica se já está logado ao entrar na tela de login
     useEffect(() => {
@@ -19,18 +20,21 @@ const Login: React.FC = () => {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsSubmitting(true);
+        setError(false);
 
         try {
             const success = await login(email, password, keepConnected);
             if (success) {
-                setError(false);
                 navigate('/');
             } else {
                 setError(true);
             }
         } catch (err: any) {
             setError(true);
-            console.error(err.message);
+            console.error('[Login] Erro:', err.message);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -147,9 +151,13 @@ const Login: React.FC = () => {
                             </div>
 
                             {/* CTA - Final of Z-Pattern / High Contrast */}
-                            <button className="group w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-base shadow-lg shadow-primary/20 transition-all duration-200 ease-in-out active:scale-95 flex items-center justify-center gap-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" type="submit">
-                                <span>Acessar meu painel</span>
-                                <span className="material-symbols-outlined text-[18px] group-hover:translate-x-0.5 transition-transform duration-200">arrow_forward</span>
+                            <button
+                                className="group w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-base shadow-lg shadow-primary/20 transition-all duration-200 ease-in-out active:scale-95 flex items-center justify-center gap-2.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                type="submit"
+                                disabled={isSubmitting}
+                            >
+                                <span>{isSubmitting ? 'Acessando...' : 'Acessar meu painel'}</span>
+                                {!isSubmitting && <span className="material-symbols-outlined text-[18px] group-hover:translate-x-0.5 transition-transform duration-200">arrow_forward</span>}
                             </button>
                         </form>
 

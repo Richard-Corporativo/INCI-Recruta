@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCandidateData } from '../../hooks/useCandidateData';
@@ -17,33 +14,13 @@ const CandidateSettings: React.FC = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteConfirmation, setDeleteConfirmation] = useState('');
-=======
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 
-const CandidateSettings: React.FC = () => {
->>>>>>> parent of 3015adc (mvp concluido)
-=======
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-
-const CandidateSettings: React.FC = () => {
->>>>>>> parent of 3015adc (mvp concluido)
-=======
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-
-const CandidateSettings: React.FC = () => {
->>>>>>> parent of 3015adc (mvp concluido)
     const [notifications, setNotifications] = useState({
         email: true,
         sms: false,
         whatsapp: true
     });
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
     // --> otimizado: Sincronização automática com o cache global do React Query
     useEffect(() => {
         if (currentCandidate?.notification_preferences) {
@@ -79,8 +56,6 @@ const CandidateSettings: React.FC = () => {
 
         setIsDeleting(true);
         try {
-            // Delete candidate record from database
-            // This will cascade delete related records (applications, etc.)
             const deleted = await CandidateService.deleteCandidate(currentCandidate.id);
 
             if (!deleted) {
@@ -88,10 +63,6 @@ const CandidateSettings: React.FC = () => {
             }
 
             success('Conta excluída com sucesso');
-
-            // Sign out the user
-            // Note: The auth user record should be cleaned up via database trigger
-            // or you can create an edge function to handle auth user deletion
             await logout();
             navigate('/');
         } catch (err: any) {
@@ -103,12 +74,6 @@ const CandidateSettings: React.FC = () => {
         }
     };
 
-=======
->>>>>>> parent of 3015adc (mvp concluido)
-=======
->>>>>>> parent of 3015adc (mvp concluido)
-=======
->>>>>>> parent of 3015adc (mvp concluido)
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-10 pb-20">
             {/* Page Header */}
@@ -195,8 +160,12 @@ const CandidateSettings: React.FC = () => {
                         ))}
                     </div>
                     <div className="p-8 md:p-10 bg-muted/10 flex justify-end">
-                        <button className="h-12 px-10 rounded-base bg-foreground text-background text-[11px] font-semibold hover:bg-foreground/80 transition-all duration-300 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                            Salvar preferência
+                        <button
+                            onClick={handleSavePreferences}
+                            disabled={isSaving}
+                            className="h-12 px-10 rounded-base bg-foreground text-background text-[11px] font-semibold hover:bg-foreground/80 transition-all duration-300 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                        >
+                            {isSaving ? 'Salvando...' : 'Salvar preferência'}
                         </button>
                     </div>
                 </section>
@@ -242,22 +211,10 @@ const CandidateSettings: React.FC = () => {
                                 Ao excluir sua conta, todos os seus dados de currículo, candidaturas e histórico serão removidos permanentemente sem possibilidade de recuperação.
                             </p>
                             <div className="mt-auto pt-8">
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
                                 <button
                                     onClick={() => setShowDeleteModal(true)}
                                     className="w-full h-12 rounded-base bg-destructive text-destructive-foreground text-[11px] font-semibold hover:bg-destructive/90 transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-lg shadow-destructive/10"
                                 >
-=======
-                                <button className="w-full h-12 rounded-base bg-destructive text-destructive-foreground text-[11px] font-semibold hover:bg-destructive/90 transition-all duration-300 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-lg shadow-destructive/10">
->>>>>>> parent of 3015adc (mvp concluido)
-=======
-                                <button className="w-full h-12 rounded-base bg-destructive text-destructive-foreground text-[11px] font-semibold hover:bg-destructive/90 transition-all duration-300 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-lg shadow-destructive/10">
->>>>>>> parent of 3015adc (mvp concluido)
-=======
-                                <button className="w-full h-12 rounded-base bg-destructive text-destructive-foreground text-[11px] font-semibold hover:bg-destructive/90 transition-all duration-300 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-lg shadow-destructive/10">
->>>>>>> parent of 3015adc (mvp concluido)
                                     Excluir perfil
                                 </button>
                             </div>

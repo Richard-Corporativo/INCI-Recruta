@@ -66,7 +66,7 @@ const CandidateRegister: React.FC = () => {
                 email: formData.email,
                 password: formData.password,
                 options: {
-                    emailRedirectTo: `${window.location.origin}/#/login`,
+                    emailRedirectTo: `${window.location.origin}/login`,
                     data: {
                         name: formData.name,
                         role: 'candidate'

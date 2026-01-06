@@ -25,12 +25,9 @@ const CandidateLogin: React.FC = () => {
         setUserNotFound(false);
 
         try {
-            const { data, error: authError } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
+            const success = await login(email, password, keepConnected);
 
-            if (authError) {
+            if (!success) {
                 // Check if user actually exists to give a better hint
                 const { data: profile } = await supabase
                     .from('users')
@@ -44,14 +41,7 @@ const CandidateLogin: React.FC = () => {
                 } else {
                     toastError('E-mail ou senha incorretos.');
                 }
-                throw authError;
-            }
-
-            if (data.user) {
-                if (!data.user.email_confirmed_at) {
-                    navigate('/verificar-email');
-                    return;
-                }
+            } else {
                 navigate('/candidate/dashboard');
             }
         } catch (err: any) {

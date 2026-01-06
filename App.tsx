@@ -1,175 +1,179 @@
-import React, { Suspense, lazy } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
+import PublicLayout from './layouts/PublicLayout';
+import CandidateLayout from './layouts/CandidateLayout';
+
+// Static Imports for ALL pages to eliminate Lazy-Loading White Screens
 import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import JobsList from './pages/public/JobsList';
+import JobDetailPublic from './pages/public/JobDetailPublic';
+import CandidateLogin from './pages/public/CandidateLogin';
+import CandidateForgotPassword from './pages/public/CandidateForgotPassword';
+import CandidateRegister from './pages/public/CandidateRegister';
+import JobApplication from './pages/public/JobApplication';
+import TermsOfUse from './pages/public/TermsOfUse';
+import PrivacyPolicy from './pages/public/PrivacyPolicy';
+import VerifyEmail from './pages/public/VerifyEmail';
+import NotFound from './pages/public/NotFound';
 
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const CreateJob = lazy(() => import('./pages/CreateJob'));
-const EditJob = lazy(() => import('./pages/EditJob'));
-const Jobs = lazy(() => import('./pages/Jobs'));
-const JobDetail = lazy(() => import('./pages/JobDetail'));
-const Kanban = lazy(() => import('./pages/Kanban')); // Nota: Jobs pode conter Kanban interno, mas a rota direta também é lazy
-const Audit = lazy(() => import('./pages/Audit'));
-const Roles = lazy(() => import('./pages/Roles'));
-const CreateRole = lazy(() => import('./pages/CreateRole'));
-const EditRole = lazy(() => import('./pages/EditRole'));
-const Settings = lazy(() => import('./pages/Settings'));
-const EditUser = lazy(() => import('./pages/EditUser'));
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
-const ResetPassword = lazy(() => import('./pages/ResetPassword'));
-const RequestAccess = lazy(() => import('./pages/RequestAccess'));
-const TwoFactorAuth = lazy(() => import('./pages/TwoFactorAuth'));
-const TalentBank = lazy(() => import('./pages/TalentBank'));
+import CreateJob from './pages/CreateJob';
+import EditJob from './pages/EditJob';
+import Jobs from './pages/Jobs';
+import JobDetail from './pages/JobDetail';
+import Kanban from './pages/Kanban';
+import Audit from './pages/Audit';
+import Roles from './pages/Roles';
+import CreateRole from './pages/CreateRole';
+import EditRole from './pages/EditRole';
+import Settings from './pages/Settings';
+import EditUser from './pages/EditUser';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import RequestAccess from './pages/RequestAccess';
+import TwoFactorAuth from './pages/TwoFactorAuth';
+import TalentBank from './pages/TalentBank';
 
-// Rotas do Candidato - Fluxo de Autenticação e Vagas
-const PublicLayout = lazy(() => import('./layouts/PublicLayout'));
-const JobsList = lazy(() => import('./pages/public/JobsList'));
-const JobDetailPublic = lazy(() => import('./pages/public/JobDetailPublic'));
-const CandidateLogin = lazy(() => import('./pages/public/CandidateLogin'));
-const CandidateForgotPassword = lazy(() => import('./pages/public/CandidateForgotPassword'));
-const CandidateRegister = lazy(() => import('./pages/public/CandidateRegister'));
-const JobApplication = lazy(() => import('./pages/public/JobApplication'));
-const CandidateLayout = lazy(() => import('./layouts/CandidateLayout'));
-const CandidateDashboard = lazy(() => import('./pages/candidate/CandidateDashboard'));
-const MyApplications = lazy(() => import('./pages/candidate/MyApplications'));
-const CandidateSettings = lazy(() => import('./pages/candidate/CandidateSettings'));
-const ApplicationDetail = lazy(() => import('./pages/candidate/ApplicationDetail'));
-const TermsOfUse = lazy(() => import('./pages/public/TermsOfUse'));
-const PrivacyPolicy = lazy(() => import('./pages/public/PrivacyPolicy'));
-const VerifyEmail = lazy(() => import('./pages/public/VerifyEmail'));
-const NotFound = lazy(() => import('./pages/public/NotFound'));
+import CandidateDashboard from './pages/candidate/CandidateDashboard';
+import MyApplications from './pages/candidate/MyApplications';
+import CandidateSettings from './pages/candidate/CandidateSettings';
+import ApplicationDetail from './pages/candidate/ApplicationDetail';
+import DebugAuth from './pages/DebugAuth';
 
-// Componente para proteção de rotas
+// --- Helpers ---
 const RequireAuth = ({ children }: { children?: React.ReactNode }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
 
-  // Wait for auth to initialize
-  if (isLoading) {
-    return <LoadingScreen message="Verificando permissões..." />;
-  }
+  // If loading, render nothing (invisible wait) instead of a spinner
+  if (isLoading) return null;
 
-  if (!isAuthenticated) {
+  // If not authenticated or user profile missing, forced redirect to login
+  if (!isAuthenticated || !user) {
+    console.warn('[Guard] RequireAuth: Sem autenticação ou perfil. Redirecionando para login admin.');
     return <Navigate to="/admin/login" replace />;
   }
 
   // SECURITY: Block candidates from accessing admin routes
   if (user?.role === 'candidate') {
+    console.warn('[Guard] RequireAuth: Candidato tentando acessar área admin. Redirecionando para portal.');
     return <Navigate to="/candidate/dashboard" replace />;
   }
 
+  console.log('[Guard] RequireAuth: Acesso autorizado para', user.name);
   return <>{children}</>;
 };
 
 const RequireCandidateAuth = ({ children }: { children?: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
 
-  if (!isAuthenticated) {
+  if (isLoading) return null;
+
+  if (!isAuthenticated || !user) {
+    console.warn('[Guard] RequireCandidateAuth: Redirecionando para login candidato.');
     return <Navigate to="/login" replace />;
   }
 
-  // Email confirmation not required for candidates
+  console.log('[Guard] RequireCandidateAuth: Acesso autorizado para', user.name);
   return <>{children}</>;
 };
 
-import { LoadingScreen } from './components/ui/LoadingScreen';
-
-const LoadingFallback = () => (
-  <LoadingScreen message="Carregando recursos..." />
-);
-
-const MainLayout: React.FC = () => {
-  return (
-    <div className="flex min-h-screen w-full bg-background text-foreground transition-all duration-300 ease-in-out">
-      <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 lg:ml-72 transition-all duration-300 ease-in-out">
-        <Suspense fallback={<LoadingFallback />}>
-          <Outlet />
-        </Suspense>
-      </div>
-    </div>
-  );
-};
-
 const RoleRedirect = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
-  if (!isAuthenticated) return <Navigate to="/vagas" replace />;
-  if (user?.role === 'candidate') return <Navigate to="/candidate/dashboard" replace />;
+  if (isLoading) return null;
+
+  if (!isAuthenticated || !user) {
+    console.log('[Guard] RoleRedirect: Usuário não logado. Indo para Vagas.');
+    return <Navigate to="/vagas" replace />;
+  }
+
+  console.log('[Guard] RoleRedirect: Redirecionando usuário por cargo:', user.role);
+  if (user.role === 'candidate') return <Navigate to="/candidate/dashboard" replace />;
   return <Navigate to="/admin/dashboard" replace />;
 };
 
+// Basic Admin Layout without lazy
+const AdminLayout: React.FC = () => (
+  <div className="flex min-h-screen w-full bg-background text-foreground transition-all duration-300 ease-in-out">
+    <Sidebar />
+    <div className="flex-1 flex flex-col min-w-0 lg:ml-72 transition-all duration-300 ease-in-out">
+      <Outlet />
+    </div>
+  </div>
+);
 
+// --- App Structure ---
 const App: React.FC = () => {
   return (
     <AuthProvider>
       <ToastProvider>
         <Router>
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
-              {/* Login Admin (Alta Prioridade) */}
-              <Route path="/admin/login" element={<Login />} />
+          <Routes>
+            {/* Base Redirect */}
+            <Route path="/" element={<RoleRedirect />} />
 
-              {/* Redirecionamentos de Atalho */}
-              <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="/" element={<RoleRedirect />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/request-access" element={<RequestAccess />} />
-              <Route path="/2fa" element={<TwoFactorAuth />} />
+            {/* Admin Auth */}
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="/admin/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/request-access" element={<RequestAccess />} />
+            <Route path="/2fa" element={<TwoFactorAuth />} />
 
-              {/* Rotas Públicas do Portal do Candidato */}
-              <Route element={<PublicLayout />}>
-                <Route path="/login" element={<CandidateLogin />} />
-                <Route path="/cadastro" element={<CandidateRegister />} />
-                <Route path="/recuperar-senha" element={<CandidateForgotPassword />} />
-                <Route path="/vagas" element={<JobsList />} />
-                <Route path="/vagas/:id" element={<JobDetailPublic />} />
-                <Route path="/vagas/:id/candidatar" element={<JobApplication />} />
-                <Route path="/termos" element={<TermsOfUse />} />
-                <Route path="/privacidade" element={<PrivacyPolicy />} />
-                <Route path="/verificar-email" element={<VerifyEmail />} />
-              </Route>
+            {/* Public Routes (Candidate Portal) */}
+            <Route element={<PublicLayout />}>
+              <Route path="/login" element={<CandidateLogin />} />
+              <Route path="/cadastro" element={<CandidateRegister />} />
+              <Route path="/recuperar-senha" element={<CandidateForgotPassword />} />
+              <Route path="/vagas" element={<JobsList />} />
+              <Route path="/vagas/:id" element={<JobDetailPublic />} />
+              <Route path="/vagas/:id/candidatar" element={<JobApplication />} />
+              <Route path="/termos" element={<TermsOfUse />} />
+              <Route path="/privacidade" element={<PrivacyPolicy />} />
+              <Route path="/verificar-email" element={<VerifyEmail />} />
+            </Route>
 
-              {/* Rotas Privadas do Candidato */}
-              <Route path="/candidate" element={
-                <RequireCandidateAuth>
-                  <CandidateLayout />
-                </RequireCandidateAuth>
-              }>
-                <Route path="dashboard" element={<CandidateDashboard />} />
-                <Route path="applications" element={<MyApplications />} />
-                <Route path="applications/:id" element={<ApplicationDetail />} />
-                <Route path="settings" element={<CandidateSettings />} />
-              </Route>
+            {/* Candidate Protected Routes */}
+            <Route path="/candidate" element={
+              <RequireCandidateAuth>
+                <CandidateLayout />
+              </RequireCandidateAuth>
+            }>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<CandidateDashboard />} />
+              <Route path="applications" element={<MyApplications />} />
+              <Route path="applications/:id" element={<ApplicationDetail />} />
+              <Route path="settings" element={<CandidateSettings />} />
+            </Route>
 
-              {/* Rotas do Painel (Protegidas) */}
-              <Route element={
-                <RequireAuth>
-                  <MainLayout />
-                </RequireAuth>
-              }>
-                <Route path="/admin/dashboard" element={<Dashboard />} />
-                <Route path="/jobs" element={<Jobs />} />
-                <Route path="/jobs/new" element={<CreateJob />} />
-                <Route path="/jobs/:id" element={<JobDetail />} />
-                <Route path="/jobs/:id/edit" element={<EditJob />} />
-                <Route path="/jobs/:id/kanban" element={<Kanban />} />
-                <Route path="/kanban" element={<Kanban />} />
-                <Route path="/roles" element={<Roles />} />
-                <Route path="/roles/new" element={<CreateRole />} />
-                <Route path="/roles/:id/edit" element={<EditRole />} />
-                <Route path="/audit" element={<Audit />} />
-                <Route path="/talent-bank" element={<TalentBank />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/settings/users/:id/edit" element={<EditUser />} />
-              </Route>
+            {/* Admin Protected Routes */}
+            <Route element={
+              <RequireAuth>
+                <AdminLayout />
+              </RequireAuth>
+            }>
+              <Route path="/admin/dashboard" element={<Dashboard />} />
+              <Route path="/jobs" element={<Jobs />} />
+              <Route path="/jobs/new" element={<CreateJob />} />
+              <Route path="/jobs/:id" element={<JobDetail />} />
+              <Route path="/jobs/:id/edit" element={<EditJob />} />
+              <Route path="/jobs/:id/kanban" element={<Kanban />} />
+              <Route path="/roles" element={<Roles />} />
+              <Route path="/roles/new" element={<CreateRole />} />
+              <Route path="/roles/:id/edit" element={<EditRole />} />
+              <Route path="/audit" element={<Audit />} />
+              <Route path="/talent-bank" element={<TalentBank />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/users/:id/edit" element={<EditUser />} />
+            </Route>
 
-              {/* Rota 404 - Not Found */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
+            {/* Global 404 */}
+            <Route path="/debug" element={<DebugAuth />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </Router>
       </ToastProvider>
     </AuthProvider>
