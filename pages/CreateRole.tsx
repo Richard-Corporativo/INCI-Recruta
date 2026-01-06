@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useRoles } from '../hooks/useRoles';
-import StringListEditor from '../components/StringListEditor';
 
 const CreateRole: React.FC = () => {
   const navigate = useNavigate();
@@ -16,17 +15,12 @@ const CreateRole: React.FC = () => {
     seniority: 'Pleno',
     mission: '',
     responsibilities: '',
-    requirements: '',
     status: 'Ativo'
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleListChange = (name: string, items: string[]) => {
-    setFormData(prev => ({ ...prev, [name]: items.join('\n') }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -184,25 +178,11 @@ const CreateRole: React.FC = () => {
                     <label className="text-sm font-semibold text-foreground" htmlFor="responsibilities">
                       Responsabilidades <span className="text-destructive">*</span>
                     </label>
-                    <StringListEditor
-                      items={formData.responsibilities ? formData.responsibilities.split('\n') : []}
-                      onChange={(items) => handleListChange('responsibilities', items)}
-                      placeholder="Adicione uma responsabilidade..."
-                      addButtonLabel="Adicionar responsabilidade"
-                      icon="check_circle"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground">
-                      O que esperamos de você (Requisitos) <span className="text-destructive">*</span>
-                    </label>
-                    <StringListEditor
-                      items={formData.requirements ? formData.requirements.split('\n') : []}
-                      onChange={(items) => handleListChange('requirements', items)}
-                      placeholder="Adicione um requisito..."
-                      addButtonLabel="Adicionar requisito"
-                      icon="verified"
-                    />
+                    <textarea
+                      className="block w-full rounded-base border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 p-3 min-h-[180px] resize-none"
+                      id="responsibilities" name="responsibilities" placeholder="Liste as principais atividades..." rows={6}
+                      value={formData.responsibilities} onChange={handleInputChange} required
+                    ></textarea>
                   </div>
                 </div>
               </div>

@@ -4,33 +4,20 @@ import { Link, useNavigate } from 'react-router-dom';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useRoles } from '../hooks/useRoles';
 import ConfirmationModal from '../components/ConfirmationModal';
-import RoleDetailsDrawer from '../components/RoleDetailsDrawer';
 
 const Roles: React.FC = () => {
   const { roles, deleteRole } = useRoles();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const navigate = useNavigate();
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 
-  const filteredRoles = roles.filter(role => {
-    const matchesSearch = role.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      role.department.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = statusFilter === 'all' ||
-      (statusFilter === 'active' && role.status === 'Ativo') ||
-      (statusFilter === 'inactive' && role.status === 'Inativo');
-
-    return matchesSearch && matchesStatus;
-  });
+  const filteredRoles = roles.filter(role =>
+    role.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    role.department.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleDelete = (id: string, title: string) => {
     setDeleteConfirm({ id, title });
-  };
-
-  const handleView = (role: Role) => {
-    setSelectedRole(role);
   };
 
   return (
@@ -73,11 +60,7 @@ const Roles: React.FC = () => {
               </div>
               <div>
                 <label className="text-xs font-semibold text-muted-foreground">Status</label>
-                <select
-                  className="w-full mt-1.5 px-3 py-2 bg-background border border-border rounded-base text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 text-foreground font-semibold cursor-pointer"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
+                <select className="w-full mt-1.5 px-3 py-2 bg-background border border-border rounded-base text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 text-foreground font-semibold cursor-pointer">
                   <option value="all">Todos os Status</option>
                   <option value="active">Ativo</option>
                   <option value="inactive">Inativo</option>
@@ -85,10 +68,7 @@ const Roles: React.FC = () => {
               </div>
               <div>
                 <button
-                  onClick={() => {
-                    setSearchTerm('');
-                    setStatusFilter('all');
-                  }}
+                  onClick={() => setSearchTerm('')}
                   className="w-full h-[38px] px-4 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all duration-200 border border-transparent hover:bg-muted rounded-base"
                 >
                   Limpar Filtros
@@ -111,11 +91,7 @@ const Roles: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredRoles.map((role) => (
-                  <tr
-                    key={role.id}
-                    className="group hover:bg-muted/40 transition-all duration-200 ease-in-out cursor-pointer"
-                    onClick={() => handleView(role)}
-                  >
+                  <tr key={role.id} className="group hover:bg-muted/40 transition-all duration-200 ease-in-out">
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold text-foreground leading-tight">{role.title}</span>
@@ -131,27 +107,19 @@ const Roles: React.FC = () => {
                       <span className="text-sm font-semibold text-foreground">{role.activeJobsCount || 0}</span>
                     </td>
                     <td className="px-6 py-5">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold ${role.status === 'Ativo' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-muted text-muted-foreground border border-border'}`}>
-                        <span className={`size-1.5 rounded-full ${role.status === 'Ativo' ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground'}`}></span>
-                        {role.status === 'Ativo' ? 'Ativo' : 'Inativo'}
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold ${role.status === 'active' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-muted text-muted-foreground border border-border'}`}>
+                        <span className={`size-1.5 rounded-full ${role.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground'}`}></span>
+                        {role.status === 'active' ? 'Ativo' : 'Inativo'}
                       </span>
                     </td>
                     <td className="px-6 py-5 text-right">
-                      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => handleView(role)}
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          to={`/roles/${role.id}/edit`}
                           className="flex items-center justify-center size-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-base transition-all duration-200"
                           title="Visualizar Detalhes"
                         >
                           <span className="material-symbols-outlined text-[20px]">visibility</span>
-                        </button>
-                        <Link
-                          to={`/roles/${role.id}/edit`}
-                          className="flex items-center justify-center size-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-base transition-all duration-200"
-                          title="Editar Cargo"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <span className="material-symbols-outlined text-[20px]">edit</span>
                         </Link>
                         <button
                           onClick={() => handleDelete(role.id, role.title)}
@@ -175,13 +143,6 @@ const Roles: React.FC = () => {
           </div>
         </div>
       </main>
-
-      <RoleDetailsDrawer
-        isOpen={!!selectedRole}
-        onClose={() => setSelectedRole(null)}
-        role={selectedRole}
-        onDelete={handleDelete}
-      />
 
       <ConfirmationModal
         isOpen={deleteConfirm !== null}

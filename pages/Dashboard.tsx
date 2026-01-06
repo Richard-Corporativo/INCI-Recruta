@@ -8,8 +8,6 @@ import { useAuth } from '../hooks/useAuth';
 import Toast from '../components/Toast';
 
 import { Skeleton } from '../components/ui/Skeleton';
-import CandidateProfileDrawer from '../components/CandidateProfileDrawer';
-import { Candidate } from '../types';
 
 const Dashboard: React.FC = () => {
   const { jobs, isLoading: jobsLoading } = useJobs();
@@ -19,19 +17,13 @@ const Dashboard: React.FC = () => {
 
   const isLoading = jobsLoading || candidatesLoading;
 
-  const [filters, setFilters] = React.useState(() => {
-    const saved = localStorage.getItem('dashboard_filters');
-    return saved ? JSON.parse(saved) : {
-      period: '30',
-      area: '',
-      manager: '',
-      search: '',
-      urgency: ''
-    };
+  const [filters, setFilters] = React.useState({
+    period: '30',
+    area: '',
+    manager: '',
+    search: '',
+    urgency: ''
   });
-
-  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
-  const [selectedCandidate, setSelectedCandidate] = React.useState<Candidate | null>(null);
 
   const [toast, setToast] = React.useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -49,19 +41,6 @@ const Dashboard: React.FC = () => {
     if (filters.manager) {
       const targetManagerId = filters.manager === 'me' ? user?.id : filters.manager;
       if (job.manager_id !== targetManagerId) return false;
-    }
-
-    // Filter by Period
-    if (filters.period && filters.period !== 'custom') {
-      const days = parseInt(filters.period);
-      if (!isNaN(days)) {
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - days);
-        const jobDate = new Date(job.created_at);
-        if (jobDate < cutoff) return false;
-      }
-    } else if (filters.period === 'custom') {
-      // TODO: Implement custom range pickers if needed
     }
 
     return true;
@@ -136,10 +115,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => {
-                  localStorage.setItem('dashboard_filters', JSON.stringify(filters));
-                  setToast({ message: 'Visão personalizada salva com sucesso!', type: 'success' });
-                }}
+                onClick={() => setToast({ message: 'Visão personalizada salva com sucesso!', type: 'success' })}
                 className="hidden sm:inline-flex items-center justify-center gap-2 bg-background hover:bg-accent border border-border text-foreground font-semibold py-2 px-4 rounded-base transition-all duration-200 ease-in-out text-sm shadow-sm active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <span className="material-symbols-outlined text-[20px]">bookmark_border</span>
@@ -359,7 +335,7 @@ const Dashboard: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-4 py-3 text-muted-foreground transition-colors">
-                            {users.find(u => u.id === job.manager_id)?.name || 'Sistema'}
+                            Sistema
                           </td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${job.status === 'Ativa'
@@ -388,14 +364,7 @@ const Dashboard: React.FC = () => {
               <div className="bg-card rounded-lg border border-border shadow-sm flex flex-col h-full transition-all duration-200">
                 <div className="flex-1 overflow-y-auto max-h-[400px] p-2 space-y-2 custom-scrollbar">
                   {candidates.slice(0, 5).map(candidate => (
-                    <div
-                      key={candidate.id}
-                      onClick={() => {
-                        setSelectedCandidate(candidate);
-                        setIsDrawerOpen(true);
-                      }}
-                      className="p-3 hover:bg-muted/50 rounded-lg border border-transparent hover:border-border transition-all duration-200 cursor-pointer group"
-                    >
+                    <div key={candidate.id} className="p-3 hover:bg-muted/50 rounded-lg border border-transparent hover:border-border transition-all duration-200 cursor-pointer group">
                       <div className="flex items-start gap-3">
                         <div className={`size-8 rounded-full ${candidate.avatarColor} ${candidate.textColor} flex items-center justify-center text-xs font-semibold shrink-0 transition-colors`}>
                           {candidate.initials}
@@ -406,11 +375,6 @@ const Dashboard: React.FC = () => {
                             {candidate.match && <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded transition-colors">{candidate.match}</span>}
                           </div>
                           <p className="text-xs text-muted-foreground truncate transition-colors">{candidate.role || 'Candidato'}</p>
-                          {candidate.summary && (
-                            <p className="text-[10px] text-muted-foreground/70 line-clamp-1 italic mt-1 italic leading-relaxed">
-                              "{candidate.summary}"
-                            </p>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -428,12 +392,6 @@ const Dashboard: React.FC = () => {
           onClose={() => setToast(null)}
         />
       )}
-
-      <CandidateProfileDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        candidateId={selectedCandidate?.id}
-      />
     </>
   );
 };

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { SystemSettings } from '../types';
 
@@ -8,87 +8,76 @@ const DEFAULT_SETTINGS: SystemSettings = {
         mark_not_selected: true,
         return_candidate_stage: false,
         close_job: false
-    },
-    email_templates: {
-        received: { subject: 'Candidatura Recebida', body: 'Olá {{name}}, recebemos sua candidatura para a vaga {{job_title}}.', enabled: true },
-        screening: { subject: 'Atualização: Triagem Inicial', body: 'Olá {{name}}, seu perfil está em análise para a vaga {{job_title}}.', enabled: true },
-        technical: { subject: 'Convite: Teste Técnico', body: 'Olá {{name}}, convidamos você para a etapa técnica da vaga {{job_title}}.', enabled: true },
-        hr_interview: { subject: 'Agendamento: Entrevista RH', body: 'Olá {{name}}, queremos agendar uma conversa sobre a vaga {{job_title}}.', enabled: true },
-        manager_interview: { subject: 'Agendamento: Entrevista com Gestor', body: 'Olá {{name}}, você avançou para a entrevista com o gestor da vaga {{job_title}}.', enabled: true },
-        finalist: { subject: 'Você é Finalista!', body: 'Parabéns {{name}}, você é um dos finalistas para a vaga {{job_title}}.', enabled: true },
-        hired: { subject: 'Boas-vindas à Equipe!', body: 'Parabéns {{name}}! Você foi selecionado para a vaga {{job_title}}.', enabled: true },
-        rejected: { subject: 'Feedback sobre sua candidatura', body: 'Olá {{name}}, agradecemos seu interesse, mas não seguiremos com seu perfil para a vaga {{job_title}} neste momento.', enabled: true }
-    },
-    metadata: {
-        company_name: 'Minha Empresa',
-        portal_url: window.location.origin + '/portal'
     }
 };
 
 export function useSettings() {
-    const queryClient = useQueryClient();
+    const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const { data: settings = DEFAULT_SETTINGS, isLoading } = useQuery({
-        queryKey: ['settings'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('system_settings')
-                .select('*');
+    const loadSettings = useCallback(async () => {
+        const { data, error } = await supabase
+            .from('system_settings')
+            .select('*')
+            .eq('key', 'manager_permissions')
+            .single();
 
-            if (error) {
-                console.error('Error loading settings:', error);
-                throw error;
-            }
+        if (error && error.code !== 'PGRST116') {
+            console.error('Error loading settings:', error);
+        } else if (data) {
+            setSettings({ manager_permissions: data.value });
+        }
+        setIsLoading(false);
+    }, []);
 
-            const mergedSettings = { ...DEFAULT_SETTINGS };
-            data.forEach(item => {
-                if (item.key === 'manager_permissions') mergedSettings.manager_permissions = item.value;
-                if (item.key === 'email_templates') mergedSettings.email_templates = item.value;
-                if (item.key === 'metadata') mergedSettings.metadata = item.value;
+    useEffect(() => {
+        loadSettings();
+    }, [loadSettings]);
+
+    const updateSettings = async (newSettings: Partial<SystemSettings>) => {
+        const updated = { ...settings, ...newSettings };
+        setSettings(updated);
+
+        const { error } = await supabase
+            .from('system_settings')
+            .upsert({
+                key: 'manager_permissions',
+                value: updated.manager_permissions,
+                updated_at: new Date().toISOString()
             });
 
-            return mergedSettings;
-        },
-        staleTime: 1000 * 60 * 5,
-    });
-
-    const mutation = useMutation({
-        mutationFn: async ({ key, value }: { key: string, value: any }) => {
-            const { error } = await supabase
-                .from('system_settings')
-                .upsert({
-                    key,
-                    value,
-                    updated_at: new Date().toISOString()
-                });
-            if (error) throw error;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['settings'] });
+        if (error) {
+            console.error('Error saving settings:', error);
         }
-    });
+    };
 
-    const updateManagerPermission = (key: keyof SystemSettings['manager_permissions'], value: boolean) => {
-        const newPermissions = {
-            ...settings.manager_permissions,
-            [key]: value
+    const updateManagerPermission = async (key: keyof SystemSettings['manager_permissions'], value: boolean) => {
+        const updated = {
+            ...settings,
+            manager_permissions: {
+                ...settings.manager_permissions,
+                [key]: value
+            }
         };
-        mutation.mutate({ key: 'manager_permissions', value: newPermissions });
-    };
+        setSettings(updated);
 
-    const updateEmailTemplates = (templates: SystemSettings['email_templates']) => {
-        mutation.mutate({ key: 'email_templates', value: templates });
-    };
+        const { error } = await supabase
+            .from('system_settings')
+            .upsert({
+                key: 'manager_permissions',
+                value: updated.manager_permissions,
+                updated_at: new Date().toISOString()
+            });
 
-    const updateMetadata = (metadata: SystemSettings['metadata']) => {
-        mutation.mutate({ key: 'metadata', value: metadata });
+        if (error) {
+            console.error('Error saving permission:', error);
+        }
     };
 
     return {
         settings,
+        updateSettings,
         updateManagerPermission,
-        updateEmailTemplates,
-        updateMetadata,
         isLoading
     };
 }

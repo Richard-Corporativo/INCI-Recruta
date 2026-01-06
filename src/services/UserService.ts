@@ -33,7 +33,7 @@ export const UserService = {
     },
 
     async updateUser(id: string, updates: Partial<User>): Promise<User | null> {
-        console.log('Updating user:', id, updates);
+        console.log('Using Edge Function to update:', id);
 
         // Get current session to ensure we have a valid token
         const { data: { session } } = await supabase.auth.getSession();
@@ -42,52 +42,25 @@ export const UserService = {
             throw new Error('No active session. Please log in again.');
         }
 
-        // 1. Try to update business fields directly in the public table (faster and ensures persistence of JSONB fields)
-        // We do this BEFORE or IN PARALLEL to the Edge Function to ensure UI responsiveness for settings
-        const businessFields = ['scope', 'custom_permissions', 'role', 'status', 'department', 'name', 'avatar'];
-        const hasBusinessFields = Object.keys(updates).some(key => businessFields.includes(key));
-
-        if (hasBusinessFields) {
-            const { error: dbError } = await supabase
-                .from('users')
-                .update(updates)
-                .eq('id', id);
-
-            if (dbError) {
-                console.error('Error updating public user table:', dbError);
-                // We don't throw here immediately, we let the Edge Function try as well, 
-                // or if it's a permission error, the Edge Function might succeed (if it overrides RLS).
-            } else {
-                console.log('Public table updated successfully.');
+        // We use the Edge Function to handle both Auth (Email/Pass) and Public Profile updates securely
+        const { data, error } = await supabase.functions.invoke('update-user-admin', {
+            body: {
+                id,
+                ...updates
+            },
+            headers: {
+                Authorization: `Bearer ${session.access_token}`
             }
+        });
+
+        if (error) {
+            console.error(`Error updating user ${id}:`, error);
+            throw error;
         }
 
-        // 2. Invoke Edge Function for sensitive updates (Auth, Password) or complex logic
-        // We still call this to keep consistency if the backend has hooks
-        try {
-            const { data, error } = await supabase.functions.invoke('update-user-admin', {
-                body: {
-                    id,
-                    ...updates
-                },
-                headers: {
-                    Authorization: `Bearer ${session.access_token}`
-                }
-            });
+        console.log('Update success:', data);
 
-            if (error) {
-                console.warn('Edge Function returned error (possibly not deployed):', error);
-                // If direct DB update worked, we can ignore Edge Function error for non-auth fields
-                if (hasBusinessFields) return { id, ...updates } as User;
-                throw error;
-            }
-        } catch (err) {
-            console.warn('Edge Function invocation failed:', err);
-            // If direct DB update worked, return success
-            if (hasBusinessFields) return { id, ...updates } as User;
-            throw err;
-        }
-
+        // Return the updated local object optimistically or re-fetch
         return {
             id,
             ...updates

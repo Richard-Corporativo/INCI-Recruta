@@ -15,5 +15,4 @@ export const COLUMNS_CONFIG: Column[] = [
     { id: 'finalist', title: 'Finalista', dotColor: 'bg-primary/30' },
     { id: 'hired', title: 'Contratado', dotColor: 'bg-primary' },
     { id: 'rejected', title: 'Não Selecionado', dotColor: 'bg-muted-foreground/60' },
-    { id: 'withdrawn', title: 'Desistências', dotColor: 'bg-orange-500' },
 ];

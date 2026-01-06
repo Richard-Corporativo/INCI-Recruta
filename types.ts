@@ -12,15 +12,13 @@ export interface Job {
   salary_max: number;
   mission?: string;
   responsibilities?: string;
-  requirements?: string;
-  benefits?: string[];
   seniority?: string;
   candidates_count: number;
   created_at: string;
   manager_id?: string;
 }
 
-export type KanbanColumnId = 'received' | 'screening' | 'technical' | 'hr_interview' | 'manager_interview' | 'finalist' | 'hired' | 'rejected' | 'withdrawn';
+export type KanbanColumnId = 'received' | 'screening' | 'technical' | 'hr_interview' | 'manager_interview' | 'finalist' | 'hired' | 'rejected';
 
 export interface CandidateFeedback {
   id: string;
@@ -58,15 +56,10 @@ export interface Candidate {
   hired_at?: string;
   feedbacks?: CandidateFeedback[];
   user_id?: string;
-  time?: string;
-  experiences?: any[];
   nextInterview?: {
     type: string;
     date: string;
     time: string;
-  };
-  notification_preferences?: {
-    email: boolean;
   };
 }
 
@@ -81,8 +74,6 @@ export interface Role {
   updated_at: string;
   mission?: string;
   responsibilities?: string;
-  requirements?: string;
-  benefits?: string[];
   seniority?: string;
 }
 
@@ -116,18 +107,8 @@ export interface SystemSettings {
     return_candidate_stage: boolean;
     close_job: boolean;
   };
-  email_templates?: {
-    [key: string]: {
-      subject: string;
-      body: string;
-      enabled: boolean;
-    };
-  };
-  metadata?: {
-    company_name: string;
-    portal_url: string;
-  };
 }
+
 export interface AuditLog {
   id: string;
   action: string;

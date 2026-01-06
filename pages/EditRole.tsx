@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '../components/Breadcrumbs';
 import { useRoles } from '../hooks/useRoles';
-import StringListEditor from '../components/StringListEditor';
 
 const EditRole: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -17,7 +16,6 @@ const EditRole: React.FC = () => {
         seniority: 'Pleno',
         mission: '',
         responsibilities: '',
-        requirements: '',
         status: 'Ativo'
     });
 
@@ -32,7 +30,6 @@ const EditRole: React.FC = () => {
                 seniority: role.seniority || 'Pleno',
                 mission: role.mission || '',
                 responsibilities: role.responsibilities || '',
-                requirements: role.requirements || '',
                 status: role.status || 'Ativo'
             });
         }
@@ -41,10 +38,6 @@ const EditRole: React.FC = () => {
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleListChange = (name: string, items: string[]) => {
-        setFormData(prev => ({ ...prev, [name]: items.join('\n') }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -209,25 +202,11 @@ const EditRole: React.FC = () => {
                                         <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider transition-colors" htmlFor="responsibilities">
                                             Responsabilidades <span className="text-destructive">*</span>
                                         </label>
-                                        <StringListEditor
-                                            items={formData.responsibilities ? formData.responsibilities.split('\n') : []}
-                                            onChange={(items) => handleListChange('responsibilities', items)}
-                                            placeholder="Adicione uma responsabilidade..."
-                                            addButtonLabel="Adicionar responsabilidade"
-                                            icon="check_circle"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider transition-colors">
-                                            O que esperamos de você (Requisitos) <span className="text-destructive">*</span>
-                                        </label>
-                                        <StringListEditor
-                                            items={formData.requirements ? formData.requirements.split('\n') : []}
-                                            onChange={(items) => handleListChange('requirements', items)}
-                                            placeholder="Adicione um requisito..."
-                                            addButtonLabel="Adicionar requisito"
-                                            icon="verified"
-                                        />
+                                        <textarea
+                                            className="block w-full h-48 rounded-md border border-border bg-background text-foreground font-medium transition-all duration-200 ease-in-out outline-none hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 p-3.5 text-sm resize-none placeholder:text-muted-foreground"
+                                            id="responsibilities" name="responsibilities" placeholder="Liste as principais atividades..."
+                                            value={formData.responsibilities} onChange={handleInputChange} required
+                                        ></textarea>
                                     </div>
                                 </div>
                             </div>

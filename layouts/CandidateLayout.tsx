@@ -51,14 +51,6 @@ const CandidateLayout: React.FC = () => {
 
                 <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
                     <Link
-                        to="/vagas"
-                        className="flex items-center gap-4 px-4 py-3.5 rounded-base font-semibold text-xs tracking-wider transition-all duration-200 ease-in-out group outline-none focus-visible:ring-2 focus-visible:ring-ring text-sidebar-foreground hover:bg-sidebar-accent/50"
-                    >
-                        <span className="material-symbols-outlined text-[24px]">search</span>
-                        <span>Explorar Vagas</span>
-                    </Link>
-                    <div className="h-px bg-sidebar-border mx-4 my-2 opacity-50"></div>
-                    <Link
                         to="/candidate/applications"
                         className={`flex items-center gap-4 px-4 py-3.5 rounded-base font-semibold text-xs tracking-wider transition-all duration-200 ease-in-out group outline-none focus-visible:ring-2 focus-visible:ring-ring ${window.location.pathname === '/candidate/applications'
                             ? 'bg-sidebar-accent text-sidebar-accent-foreground'
@@ -133,20 +125,12 @@ const CandidateLayout: React.FC = () => {
                 <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border pb-safe-area z-20">
                     <div className="flex justify-around items-center p-3">
                         <Link
-                            to="/vagas"
-                            className={`flex flex-col items-center gap-1.5 p-2 transition-colors ${window.location.pathname === '/vagas' ? 'text-primary' : 'text-muted-foreground'
-                                }`}
-                        >
-                            <span className="material-symbols-outlined text-[24px]">search</span>
-                            <span className="text-[10px] font-semibold tracking-tight">Explorar</span>
-                        </Link>
-                        <Link
                             to="/candidate/applications"
                             className={`flex flex-col items-center gap-1.5 p-2 transition-colors ${window.location.pathname === '/candidate/applications' ? 'text-primary' : 'text-muted-foreground'
                                 }`}
                         >
                             <span className="material-symbols-outlined text-[24px]">business_center</span>
-                            <span className="text-[10px] font-semibold tracking-tight">Candidaturas</span>
+                            <span className="text-[10px] font-semibold tracking-tight">Vagas</span>
                         </Link>
                         <Link
                             to="/candidate/dashboard"
@@ -164,6 +148,13 @@ const CandidateLayout: React.FC = () => {
                             <span className="material-symbols-outlined text-[24px]">settings</span>
                             <span className="text-[10px] font-semibold tracking-tight">Ajustes</span>
                         </Link>
+                        <button
+                            onClick={handleLogout}
+                            className="flex flex-col items-center gap-1.5 p-2 text-muted-foreground hover:text-destructive transition-colors outline-none"
+                        >
+                            <span className="material-symbols-outlined text-[24px]">logout</span>
+                            <span className="text-[10px] font-semibold tracking-tight">Sair</span>
+                        </button>
                     </div>
                 </nav>
             </main>

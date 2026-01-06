@@ -12,7 +12,7 @@ interface DroppableKanbanColumnProps {
     onCardClick: (candidate: Candidate) => void;
 }
 
-const DroppableKanbanColumn: React.FC<DroppableKanbanColumnProps> = React.memo(({ id, title, dotColor, candidates, onCardClick }) => {
+const DroppableKanbanColumn: React.FC<DroppableKanbanColumnProps> = ({ id, title, dotColor, candidates, onCardClick }) => {
     const { setNodeRef, isOver } = useDroppable({
         id: id,
     });
@@ -58,6 +58,6 @@ const DroppableKanbanColumn: React.FC<DroppableKanbanColumnProps> = React.memo((
             </div>
         </div>
     );
-});
+};
 
 export default DroppableKanbanColumn;
