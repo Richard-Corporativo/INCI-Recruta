@@ -88,14 +88,6 @@ const JobCardPublic: React.FC<JobCardPublicProps> = ({ job, onApply, onDetails }
                     Ver detalhes
                 </button>
 
-                {/* Secondary Interaction - Save */}
-                <button
-                    aria-label="Salvar vaga"
-                    className="hidden md:flex items-center justify-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors mt-2"
-                >
-                    <span className="material-symbols-outlined text-[18px]">bookmark</span>
-                    Salvar para depois
-                </button>
             </div>
         </article>
     );

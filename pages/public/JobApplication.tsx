@@ -100,6 +100,36 @@ const JobApplication: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        // 0. Check for existing application if authenticated
+        if (isAuthenticated && user) {
+            const { data: existingApp } = await supabase
+                .from('candidates')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('job_id', id)
+                .maybeSingle();
+
+            if (existingApp) {
+                warning('Você já possui uma candidatura ativa para esta vaga. Acompanhe o status no seu painel.');
+                navigate('/candidate/dashboard');
+                return;
+            }
+        } else if (!isAuthenticated) {
+            // Check by email even for non-authenticated users to avoid duplicate profiles
+            const { data: existingAppByEmail } = await supabase
+                .from('candidates')
+                .select('id')
+                .eq('email', formData.email.trim().toLowerCase())
+                .eq('job_id', id)
+                .maybeSingle();
+
+            if (existingAppByEmail) {
+                warning('Já existe uma candidatura com este e-mail para esta vaga. Entre na sua conta para acompanhar.');
+                navigate('/login');
+                return;
+            }
+        }
+
         // 1. Resume Upload Logic
         let resumeUrl = '';
         try {
