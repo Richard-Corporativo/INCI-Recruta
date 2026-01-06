@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import TermsModal from '../components/candidate/TermsModal';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 const CandidateLayout: React.FC = () => {
     const navigate = useNavigate();
+    const { logout } = useAuth();
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     const [termsModal, setTermsModal] = useState<{ isOpen: boolean; type: 'terms' | 'privacy' }>({
         isOpen: false,
@@ -12,8 +14,17 @@ const CandidateLayout: React.FC = () => {
     });
 
     const handleLogout = async () => {
-        await supabase.auth.signOut();
-        navigate('/login');
+        if (isLoggingOut) return; // Prevent double-click
+
+        setIsLoggingOut(true);
+        try {
+            await logout();
+            navigate('/login');
+        } catch (error) {
+            console.error('Logout error:', error);
+        } finally {
+            setIsLoggingOut(false);
+        }
     };
 
     React.useEffect(() => {
@@ -82,10 +93,11 @@ const CandidateLayout: React.FC = () => {
                 <div className="p-6 border-t border-sidebar-border bg-muted/5 transition-colors">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center w-full gap-4 px-4 py-3.5 rounded-base text-xs font-semibold tracking-wider text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 ease-in-out outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                        disabled={isLoggingOut}
+                        className="flex items-center w-full gap-4 px-4 py-3.5 rounded-base text-xs font-semibold tracking-wider text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all duration-200 ease-in-out outline-none focus-visible:ring-2 focus-visible:ring-destructive disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <span className="material-symbols-outlined text-[24px]">logout</span>
-                        <span>Sair</span>
+                        <span className="material-symbols-outlined text-[24px]">{isLoggingOut ? 'progress_activity' : 'logout'}</span>
+                        <span>{isLoggingOut ? 'Saindo...' : 'Sair'}</span>
                     </button>
 
                     <div className="mt-6 pt-6 border-t border-sidebar-border flex justify-center gap-8 text-[10px] text-muted-foreground tracking-[0.2em] font-semibold">

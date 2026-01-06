@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCandidateData } from '../../hooks/useCandidateData';
 import { useToast } from '../../components/ui/Toast';
+import { useAuth } from '../../hooks/useAuth';
+import { CandidateService } from '../../src/services/CandidateService';
 
 const CandidateSettings: React.FC = () => {
     const { currentCandidate, updateProfile } = useCandidateData();
     const { success, error } = useToast();
+    const { logout } = useAuth();
+    const navigate = useNavigate();
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteConfirmation, setDeleteConfirmation] = useState('');
     const [notifications, setNotifications] = useState({
         email: true
     });
@@ -30,6 +37,43 @@ const CandidateSettings: React.FC = () => {
             error('Erro ao salvar: ' + err.message);
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        if (deleteConfirmation.toLowerCase() !== 'excluir') {
+            error('Digite "EXCLUIR" para confirmar a exclusão da conta');
+            return;
+        }
+
+        if (!currentCandidate?.id) {
+            error('Erro: Candidato não encontrado');
+            return;
+        }
+
+        setIsDeleting(true);
+        try {
+            // Delete candidate record from database
+            // This will cascade delete related records (applications, etc.)
+            const deleted = await CandidateService.deleteCandidate(currentCandidate.id);
+
+            if (!deleted) {
+                throw new Error('Falha ao excluir registro do candidato');
+            }
+
+            success('Conta excluída com sucesso');
+
+            // Sign out the user
+            // Note: The auth user record should be cleaned up via database trigger
+            // or you can create an edge function to handle auth user deletion
+            await logout();
+            navigate('/');
+        } catch (err: any) {
+            console.error('Error deleting account:', err);
+            error('Erro ao excluir conta: ' + err.message);
+        } finally {
+            setIsDeleting(false);
+            setShowDeleteModal(false);
         }
     };
 
@@ -168,7 +212,10 @@ const CandidateSettings: React.FC = () => {
                                 Ao excluir sua conta, todos os seus dados de currículo, candidaturas e histórico serão removidos permanentemente sem possibilidade de recuperação.
                             </p>
                             <div className="mt-auto pt-8">
-                                <button className="w-full h-12 rounded-base bg-destructive text-destructive-foreground text-[11px] font-semibold hover:bg-destructive/90 transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-lg shadow-destructive/10">
+                                <button
+                                    onClick={() => setShowDeleteModal(true)}
+                                    className="w-full h-12 rounded-base bg-destructive text-destructive-foreground text-[11px] font-semibold hover:bg-destructive/90 transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-lg shadow-destructive/10"
+                                >
                                     Excluir perfil
                                 </button>
                             </div>
@@ -176,6 +223,79 @@ const CandidateSettings: React.FC = () => {
                     </section>
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-card border border-destructive/20 rounded-xl max-w-md w-full p-8 space-y-6 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-4">
+                            <div className="size-12 rounded-xl bg-destructive/10 flex items-center justify-center">
+                                <span className="material-symbols-outlined text-destructive text-[28px]">warning</span>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-semibold text-foreground">Confirmar exclusão</h3>
+                                <p className="text-sm text-muted-foreground">Esta ação é irreversível</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <p className="text-sm text-foreground leading-relaxed">
+                                Ao excluir sua conta, <strong>todos os seus dados</strong> serão permanentemente removidos, incluindo:
+                            </p>
+                            <ul className="text-sm text-muted-foreground space-y-2 pl-4">
+                                <li className="flex items-start gap-2">
+                                    <span className="material-symbols-outlined text-[16px] mt-0.5">close</span>
+                                    Perfil e informações pessoais
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="material-symbols-outlined text-[16px] mt-0.5">close</span>
+                                    Todas as candidaturas e histórico
+                                </li>
+                                <li className="flex items-start gap-2">
+                                    <span className="material-symbols-outlined text-[16px] mt-0.5">close</span>
+                                    Currículo e documentos enviados
+                                </li>
+                            </ul>
+
+                            <div className="pt-4">
+                                <label className="flex flex-col gap-2.5">
+                                    <span className="text-xs font-semibold text-foreground">
+                                        Digite <span className="text-destructive">EXCLUIR</span> para confirmar
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value={deleteConfirmation}
+                                        onChange={(e) => setDeleteConfirmation(e.target.value)}
+                                        className="w-full h-12 rounded-md border border-border bg-background hover:border-ring focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 px-4 outline-none transition-all duration-200 text-sm font-semibold"
+                                        placeholder="Digite EXCLUIR"
+                                        autoFocus
+                                    />
+                                </label>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                onClick={() => {
+                                    setShowDeleteModal(false);
+                                    setDeleteConfirmation('');
+                                }}
+                                disabled={isDeleting}
+                                className="flex-1 h-12 rounded-base border border-border bg-background text-foreground text-[11px] font-semibold hover:bg-muted transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleDeleteAccount}
+                                disabled={isDeleting || deleteConfirmation.toLowerCase() !== 'excluir'}
+                                className="flex-1 h-12 rounded-base bg-destructive text-destructive-foreground text-[11px] font-semibold hover:bg-destructive/90 transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-destructive/10"
+                            >
+                                {isDeleting ? 'Excluindo...' : 'Excluir conta'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

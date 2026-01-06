@@ -111,12 +111,15 @@ const queryClient = new QueryClient({
       staleTime: 1000 * 60 * 5, // 5 minutes
       gcTime: 1000 * 60 * 60 * 24, // 24 hours
       retry: 1,
+      refetchOnMount: true, // Always refetch on mount to ensure fresh data
+      refetchOnWindowFocus: false, // Don't refetch on window focus to avoid unnecessary requests
     },
   },
 });
 
 const persister = createSyncStoragePersister({
   storage: window.localStorage,
+  key: 'INCI_RECRUTA_CACHE', // Use a specific key to avoid conflicts
 });
 
 const App: React.FC = () => {

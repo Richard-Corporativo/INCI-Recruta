@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { User } from '../types';
 import { supabase } from '../lib/supabase';
 import { LoadingScreen } from '../components/ui/LoadingScreen';
@@ -15,6 +16,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const queryClient = useQueryClient();
     const [user, setUser] = useState<User | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
     const [isEmailConfirmed, setIsEmailConfirmed] = useState<boolean>(false);
@@ -43,24 +45,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     useEffect(() => {
         let mounted = true;
+        let timeoutId: NodeJS.Timeout;
 
         const initializeAuth = async () => {
             try {
+                // Safety timeout: prevent infinite loading (only triggers if something goes wrong)
+                timeoutId = setTimeout(() => {
+                    if (mounted) {
+                        console.warn('[AuthContext] Auth initialization timeout - forcing loading to complete');
+                        setIsLoading(false);
+                    }
+                }, 15000); // 15 seconds max (increased from 10s)
+
                 // Check active session
                 const { data: { session } } = await supabase.auth.getSession();
+                console.log('[AuthContext] Session check:', session ? 'Active session found' : 'No session');
 
                 if (session?.user) {
                     setIsAuthenticated(true);
                     setIsEmailConfirmed(!!session.user.email_confirmed_at);
+
+                    console.log('[AuthContext] Fetching profile for user:', session.user.id);
                     const profile = await fetchProfile(session.user.id);
-                    if (mounted && profile) {
-                        setUser(profile);
+
+                    if (mounted) {
+                        if (profile) {
+                            console.log('[AuthContext] Profile loaded successfully:', profile.name);
+                            setUser(profile);
+                        } else {
+                            console.warn('[AuthContext] No profile found for user');
+                        }
                     }
+                } else {
+                    console.log('[AuthContext] No active session');
                 }
             } catch (error) {
-                console.error('Auth initialization error:', error);
+                console.error('[AuthContext] Auth initialization error:', error);
             } finally {
-                if (mounted) setIsLoading(false);
+                clearTimeout(timeoutId);
+                if (mounted) {
+                    console.log('[AuthContext] Auth initialization complete');
+                    setIsLoading(false);
+                }
             }
         };
 
@@ -87,6 +113,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     setUser(null);
                     setIsAuthenticated(false);
                     setIsEmailConfirmed(false);
+
+                    // Clear React Query cache on logout
+                    console.log('[AuthContext] Clearing cache on logout');
+                    queryClient.clear();
+                    // Also clear localStorage cache
+                    localStorage.removeItem('INCI_RECRUTA_CACHE');
                 }
             }
         });
@@ -95,7 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             mounted = false;
             subscription.unsubscribe();
         };
-    }, [fetchProfile]);
+    }, [fetchProfile, queryClient]);
 
     const login = useCallback(async (email: string, password: string, remember: boolean): Promise<boolean> => {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -108,10 +140,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const logout = useCallback(async () => {
+        console.log('[AuthContext] Logging out and clearing cache');
+
+        // Clear React Query cache
+        queryClient.clear();
+
+        // Clear localStorage cache
+        localStorage.removeItem('INCI_RECRUTA_CACHE');
+
+        // Sign out from Supabase
         await supabase.auth.signOut();
+
+        // Clear local state
         setUser(null);
         setIsAuthenticated(false);
-    }, []);
+    }, [queryClient]);
 
     const refreshProfileData = useCallback(async () => {
         const { data: { session } } = await supabase.auth.getSession();
