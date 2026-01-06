@@ -2,7 +2,7 @@
 
 ## 📋 Visão Geral
 
-O **RecruitSys** é uma plataforma completa de **Applicant Tracking System (ATS)** desenvolvida para otimizar o fluxo de contratação de empresas. O sistema permite que gestores de RH e líderes de equipe gerenciem vagas, acompanhem candidatos através de um pipeline visual (Kanban), e mantenham registros de auditoria detalhados.
+O **INCIRECRUTA** é uma plataforma completa de **Applicant Tracking System (ATS)** desenvolvida para otimizar o fluxo de contratação de empresas. O sistema permite que gestores de RH e líderes de equipe gerenciem vagas, acompanhem candidatos através de um pipeline visual (Kanban), e mantenham registros de auditoria detalhados.
 
 O projeto apresenta um design moderno, responsivo e suporta nativamente **Dark Mode**.
 

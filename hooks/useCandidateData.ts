@@ -88,8 +88,10 @@ export const useCandidateData = () => {
             // Critical: Remove fields that don't exist in DB or shouldn't be updated here
             if ('applied_at' in dbPayload) delete dbPayload.applied_at;
             if ('feedbacks' in dbPayload) delete dbPayload.feedbacks;
-            if ('completeness' in dbPayload) delete dbPayload.completeness;
-            if ('resumeName' in dbPayload) delete dbPayload.resumeName; // resume_name doesn't exist
+            if ('resumeName' in data) {
+                dbPayload.resume_name = data.resumeName;
+                delete dbPayload.resumeName;
+            }
 
             const { error } = await supabase
                 .from('candidates')

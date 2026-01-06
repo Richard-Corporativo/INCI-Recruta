@@ -25,27 +25,37 @@ const CandidateLogin: React.FC = () => {
         setUserNotFound(false);
 
         try {
+            // 1. Verificar se o e-mail existe na nossa tabela de usuários
+            const { data: profile, error: profileError } = await supabase
+                .from('users')
+                .select('id, role')
+                .eq('email', email.trim().toLowerCase())
+                .maybeSingle();
+
+            if (profileError) {
+                console.error('Erro ao verificar perfil:', profileError);
+            }
+
+            if (!profile) {
+                setUserNotFound(true);
+                toastError('Conta não encontrada. Verifique seu e-mail ou cadastre-se.');
+                setIsLoading(false);
+                return;
+            }
+
+            // 2. Se o usuário existe no banco, prossegue com a autenticação
             const success = await login(email, password, keepConnected);
 
-            if (!success) {
-                // Check if user actually exists to give a better hint
-                const { data: profile } = await supabase
-                    .from('users')
-                    .select('id')
-                    .eq('email', email.trim().toLowerCase())
-                    .maybeSingle();
-
-                if (!profile) {
-                    setUserNotFound(true);
-                    toastError('Conta não encontrada.');
-                } else {
-                    toastError('E-mail ou senha incorretos.');
-                }
-            } else {
+            if (success) {
                 navigate('/candidate/dashboard');
             }
         } catch (err: any) {
             console.error('Login error:', err.message);
+            const errorMessage = err.message === 'Invalid login credentials' || err.message === 'Invalid email or password'
+                ? 'E-mail ou senha incorretos.'
+                : 'Erro ao acessar: ' + err.message;
+
+            toastError(errorMessage);
             setIsLoading(false);
         }
     };

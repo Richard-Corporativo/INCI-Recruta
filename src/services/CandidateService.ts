@@ -11,6 +11,7 @@ const mapDbToCandidate = (dbCandidate: any): Candidate => ({
     location: dbCandidate.location,
     linkedin: dbCandidate.linkedin,
     portfolio: dbCandidate.portfolio,
+    resumeName: dbCandidate.resume_name,
     resume_url: dbCandidate.resume_url,
     columnId: dbCandidate.column_id,
     initials: dbCandidate.initials,
@@ -81,6 +82,7 @@ export const CandidateService = {
             location: candidate.location,
             linkedin: candidate.linkedin,
             portfolio: candidate.portfolio,
+            resume_name: candidate.resumeName,
             resume_url: (candidate as any).resume_url,
             user_id: candidate.user_id,
             column_id: candidate.columnId || 'received',
@@ -121,6 +123,10 @@ export const CandidateService = {
         if ('textColor' in updates) {
             dbPayload.text_color = updates.textColor;
             delete dbPayload.textColor;
+        }
+        if ('resumeName' in updates) {
+            dbPayload.resume_name = updates.resumeName;
+            delete dbPayload.resumeName;
         }
         if ('applied_at' in dbPayload) delete dbPayload.applied_at;
         if ('feedbacks' in dbPayload) delete dbPayload.feedbacks;

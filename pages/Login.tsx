@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
@@ -18,20 +19,46 @@ const Login: React.FC = () => {
         }
     }, [isAuthenticated, navigate]);
 
+    const [errorMessage, setErrorMessage] = useState('');
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         setError(false);
+        setErrorMessage('');
 
         try {
+            // 1. Verificar se o e-mail existe no banco de dados
+            const { data: profile, error: profileError } = await supabase
+                .from('users')
+                .select('id, role')
+                .eq('email', email.trim().toLowerCase())
+                .maybeSingle();
+
+            if (profileError) {
+                console.warn('[Login] Erro ao verificar perfil:', profileError);
+            }
+
+            if (!profile) {
+                setError(true);
+                setErrorMessage('Esta conta não foi encontrada em nossa base de administradores. Verifique se o e-mail está correto.');
+                setIsSubmitting(false);
+                return;
+            }
+
+            // 2. Prosseguir com autenticação
             const success = await login(email, password, keepConnected);
             if (success) {
                 navigate('/');
             } else {
                 setError(true);
+                setErrorMessage('Suas credenciais não conferem. Por favor, tente novamente.');
             }
         } catch (err: any) {
             setError(true);
+            setErrorMessage(err.message === 'Invalid login credentials'
+                ? 'E-mail ou senha incorretos.'
+                : 'Erro ao acessar o sistema: ' + err.message);
             console.error('[Login] Erro:', err.message);
         } finally {
             setIsSubmitting(false);
@@ -94,7 +121,7 @@ const Login: React.FC = () => {
                             <span className="material-symbols-outlined text-destructive text-[22px] shrink-0">error</span>
                             <div className="flex-1">
                                 <h4 className="text-sm font-semibold text-destructive mb-0.5">Falha na autenticação</h4>
-                                <p className="text-xs text-destructive/90 leading-snug font-medium">Suas credenciais não conferem. Por favor, tente novamente ou recupere sua senha.</p>
+                                <p className="text-xs text-destructive/90 leading-snug font-medium">{errorMessage || 'Suas credenciais não conferem. Por favor, tente novamente ou recupere sua senha.'}</p>
                             </div>
                         </div>
 

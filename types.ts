@@ -44,6 +44,7 @@ export interface Candidate {
   linkedin?: string;
   github?: string;
   portfolio?: string;
+  resumeName?: string;
   resume_url?: string;
   avatar?: string;
   match?: string;
