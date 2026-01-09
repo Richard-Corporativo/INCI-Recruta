@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCandidateData } from '../../hooks/useCandidateData';
-import { Skeleton } from '../../components/ui/Skeleton';
+import { Skeleton } from '../../components/atoms/Skeleton/Skeleton';
 import { useToast } from '../../components/ui/Toast';
 
 const CandidateDashboard: React.FC = () => {

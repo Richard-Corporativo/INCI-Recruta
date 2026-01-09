@@ -5,6 +5,9 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
 import PublicLayout from './layouts/PublicLayout';
 import CandidateLayout from './layouts/CandidateLayout';
+import AdminLayoutSkeleton from './components/AdminLayoutSkeleton';
+import CandidateLayoutSkeleton from './components/candidate/CandidateLayoutSkeleton';
+import { SplashScreen } from './components/ui/SplashScreen';
 
 // Static Imports for ALL pages to eliminate Lazy-Loading White Screens
 import Login from './pages/Login';
@@ -52,8 +55,8 @@ import QuickViewDrawer from './components/QuickViewDrawer';
 const RequireAuth = ({ children }: { children?: React.ReactNode }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
 
-  // If loading, render nothing (invisible wait) instead of a spinner
-  if (isLoading) return null;
+  // If loading, render layout skeleton for admin
+  if (isLoading) return <AdminLayoutSkeleton />;
 
   // If not authenticated or user profile missing, forced redirect to login
   if (!isAuthenticated || !user) {
@@ -74,7 +77,7 @@ const RequireAuth = ({ children }: { children?: React.ReactNode }) => {
 const RequireCandidateAuth = ({ children }: { children?: React.ReactNode }) => {
   const { isAuthenticated, user, isLoading } = useAuth();
 
-  if (isLoading) return null;
+  if (isLoading) return <CandidateLayoutSkeleton />;
 
   if (!isAuthenticated || !user) {
     console.warn('[Guard] RequireCandidateAuth: Redirecionando para login candidato.');
@@ -88,7 +91,7 @@ const RequireCandidateAuth = ({ children }: { children?: React.ReactNode }) => {
 const RoleRedirect = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
 
-  if (isLoading) return null;
+  if (isLoading) return <SplashScreen />;
 
   if (!isAuthenticated || !user) {
     console.log('[Guard] RoleRedirect: Usuário não logado. Indo para Vagas.');

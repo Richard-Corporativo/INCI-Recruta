@@ -9,9 +9,10 @@ import ExperienceListEditor from '../../components/ExperienceListEditor';
 import EducationListEditor from '../../components/EducationListEditor';
 import LanguagesSelector from '../../components/LanguagesSelector';
 import { Experience, Education } from '../../types';
+import ProfileSkeleton from '../../components/candidate/ProfileSkeleton';
 
 const CandidateSettings: React.FC = () => {
-    const { currentCandidate, updateProfile } = useCandidateData();
+    const { currentCandidate, updateProfile, isLoading } = useCandidateData();
     const { success, error } = useToast();
     const { logout } = useAuth();
     const navigate = useNavigate();
@@ -178,7 +179,7 @@ const CandidateSettings: React.FC = () => {
         }
     };
 
-    return (
+    return isLoading ? <ProfileSkeleton /> : (
         <div className="max-w-6xl mx-auto w-full px-4 md:px-10 lg:px-14 py-8 md:py-12">
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-10 pb-20">
                 <div className="flex flex-col gap-2">

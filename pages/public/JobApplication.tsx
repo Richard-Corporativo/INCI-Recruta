@@ -6,6 +6,7 @@ import { Job, Candidate } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../hooks/useAuth';
+import JobSummarySkeleton from '../../components/candidate/JobSummarySkeleton';
 
 const JobApplication: React.FC = () => {
     const { id } = useParams();
@@ -14,6 +15,7 @@ const JobApplication: React.FC = () => {
     const { isAuthenticated, user } = useAuth();
     const [step, setStep] = useState(1);
     const [job, setJob] = useState<Job | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Form data
     const [formData, setFormData] = useState({
@@ -32,6 +34,7 @@ const JobApplication: React.FC = () => {
     // Load job details
     useEffect(() => {
         const loadJob = async () => {
+            setIsLoading(true);
             if (id) {
                 const fetchedJob = await JobService.getJobById(id);
                 setJob(fetchedJob);
@@ -50,6 +53,7 @@ const JobApplication: React.FC = () => {
                     }
                 }
             }
+            setIsLoading(false);
         };
         loadJob();
     }, [id, navigate]);
@@ -524,58 +528,62 @@ const JobApplication: React.FC = () => {
 
                         {/* RIGHT COLUMN: Sidebar (Job Summary) */}
                         <div className="lg:col-span-4 flex flex-col gap-8 order-first lg:order-last">
-                            <div className="rounded-lg bg-card text-card-foreground border border-border sticky top-28 overflow-hidden transition-colors">
-                                <div className="p-8">
-                                    <h3 className="text-lg font-semibold text-foreground flex items-center gap-3 mb-8 tracking-tight">
-                                        <span className="material-symbols-outlined text-primary text-[24px]">work_outline</span>
-                                        Resumo da vaga
-                                    </h3>
-                                    <div className="flex flex-col gap-8">
-                                        <div className="flex items-center gap-5 transition-transform hover:translate-x-1 duration-300">
-                                            <div className="size-14 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0">
-                                                <span className="material-symbols-outlined text-primary text-3xl">hexagon</span>
-                                            </div>
-                                            <div className="flex flex-col gap-1">
-                                                <p className="text-lg font-semibold text-foreground tracking-tight leading-none">{job?.title}</p>
-                                                <p className="text-xs font-semibold text-muted-foreground">{job?.department} • {job?.location}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 gap-4">
-                                            {[
-                                                { icon: 'location_on', label: `${job?.location} (${job?.model})` },
-                                                {
-                                                    icon: 'payments',
-                                                    label: (job?.salary_min || job?.salary_max)
-                                                        ? `${job?.salary_min && job.salary_min > 0 ? `R$ ${job.salary_min}` : ''}${job?.salary_min > 0 && job?.salary_max > 0 ? ' - ' : ''}${job?.salary_max && job.salary_max > 0 ? `R$ ${job.salary_max}` : ''}`
-                                                        : 'A combinar'
-                                                },
-                                                { icon: 'schedule', label: 'Tempo integral' }
-                                            ].map((item, idx) => (
-                                                <div key={idx} className="flex items-center gap-4 text-xs font-semibold text-muted-foreground/80">
-                                                    <span className="material-symbols-outlined text-primary text-[18px]">{item.icon}</span>
-                                                    {item.label}
+                            {isLoading ? (
+                                <JobSummarySkeleton />
+                            ) : (
+                                <div className="rounded-lg bg-card text-card-foreground border border-border sticky top-28 overflow-hidden transition-colors">
+                                    <div className="p-8">
+                                        <h3 className="text-lg font-semibold text-foreground flex items-center gap-3 mb-8 tracking-tight">
+                                            <span className="material-symbols-outlined text-primary text-[24px]">work_outline</span>
+                                            Resumo da vaga
+                                        </h3>
+                                        <div className="flex flex-col gap-8">
+                                            <div className="flex items-center gap-5 transition-transform hover:translate-x-1 duration-300">
+                                                <div className="size-14 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0">
+                                                    <span className="material-symbols-outlined text-primary text-3xl">hexagon</span>
                                                 </div>
-                                            ))}
-                                            {job?.registration_deadline && (
-                                                <div className="flex items-center gap-4 text-xs font-semibold text-primary">
-                                                    <span className="material-symbols-outlined text-primary text-[18px]">event</span>
-                                                    Inscrições até {new Date(job.registration_deadline).toLocaleDateString('pt-BR')}
+                                                <div className="flex flex-col gap-1">
+                                                    <p className="text-lg font-semibold text-foreground tracking-tight leading-none">{job?.title}</p>
+                                                    <p className="text-xs font-semibold text-muted-foreground">{job?.department} • {job?.location}</p>
                                                 </div>
-                                            )}
-                                        </div>
+                                            </div>
 
-                                        <div className="bg-muted/30 p-5 rounded-lg border border-border/50">
-                                            <p className="text-xs font-medium text-muted-foreground leading-relaxed line-clamp-3">
-                                                {job?.context}
-                                            </p>
-                                            <Link to={`/vagas/${id}`} className="text-xs font-semibold text-primary hover:text-primary/70 transition-all mt-4 inline-block underline underline-offset-4 decoration-primary/30">
-                                                Ver detalhes
-                                            </Link>
+                                            <div className="grid grid-cols-1 gap-4">
+                                                {[
+                                                    { icon: 'location_on', label: `${job?.location} (${job?.model})` },
+                                                    {
+                                                        icon: 'payments',
+                                                        label: (job?.salary_min || job?.salary_max)
+                                                            ? `${job?.salary_min && job.salary_min > 0 ? `R$ ${job.salary_min}` : ''}${job?.salary_min > 0 && job?.salary_max > 0 ? ' - ' : ''}${job?.salary_max && job.salary_max > 0 ? `R$ ${job.salary_max}` : ''}`
+                                                            : 'A combinar'
+                                                    },
+                                                    { icon: 'schedule', label: 'Tempo integral' }
+                                                ].map((item, idx) => (
+                                                    <div key={idx} className="flex items-center gap-4 text-xs font-semibold text-muted-foreground/80">
+                                                        <span className="material-symbols-outlined text-primary text-[18px]">{item.icon}</span>
+                                                        {item.label}
+                                                    </div>
+                                                ))}
+                                                {job?.registration_deadline && (
+                                                    <div className="flex items-center gap-4 text-xs font-semibold text-primary">
+                                                        <span className="material-symbols-outlined text-primary text-[18px]">event</span>
+                                                        Inscrições até {new Date(job.registration_deadline).toLocaleDateString('pt-BR')}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="bg-muted/30 p-5 rounded-lg border border-border/50">
+                                                <p className="text-xs font-medium text-muted-foreground leading-relaxed line-clamp-3">
+                                                    {job?.context}
+                                                </p>
+                                                <Link to={`/vagas/${id}`} className="text-xs font-semibold text-primary hover:text-primary/70 transition-all mt-4 inline-block underline underline-offset-4 decoration-primary/30">
+                                                    Ver detalhes
+                                                </Link>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 </main>

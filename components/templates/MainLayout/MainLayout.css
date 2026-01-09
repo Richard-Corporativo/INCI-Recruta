@@ -1,0 +1,31 @@
+.main-template {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    background-color: hsl(var(--background));
+}
+
+.main-template__sidebar {
+    width: 280px;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    flex-shrink: 0;
+    z-index: 40;
+}
+
+.main-template__content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    /* Prevents overflow-x in flex children */
+}
+
+.main-template__main {
+    flex: 1;
+    padding: 32px;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+}

@@ -1,0 +1,72 @@
+/* Variáveis para fácil customização (Dark Mode friendly) */
+:root {
+    --skeleton-base: #e0e0e0;
+    --skeleton-highlight: #f5f5f5;
+}
+
+.dark {
+    --skeleton-base: #2d2d2d;
+    --skeleton-highlight: #3d3d3d;
+}
+
+.skeleton {
+    background-color: var(--skeleton-base);
+    border-radius: 4px;
+    display: inline-block;
+    line-height: 1;
+    width: 100%;
+
+    /* Acessibilidade: remove interação */
+    pointer-events: none;
+    user-select: none;
+
+    /* Animação Shimmer */
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0,
+            rgba(255, 255, 255, 0.2) 20%,
+            rgba(255, 255, 255, 0.5) 60%,
+            rgba(255, 255, 255, 0));
+    animation: shimmer 2s infinite;
+}
+
+.dark .skeleton::after {
+    background-image: linear-gradient(90deg,
+            rgba(255, 255, 255, 0) 0,
+            rgba(255, 255, 255, 0.05) 20%,
+            rgba(255, 255, 255, 0.1) 60%,
+            rgba(255, 255, 255, 0));
+}
+
+@keyframes shimmer {
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+/* Variantes de formato */
+.skeleton.text {
+    height: 1em;
+    /* Altura de linha de texto padrão */
+    margin-bottom: 0.5em;
+}
+
+.skeleton.title {
+    height: 2em;
+    margin-bottom: 1em;
+}
+
+.skeleton.avatar {
+    border-radius: 50%;
+}

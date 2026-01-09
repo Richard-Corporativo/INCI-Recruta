@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 
 import JobFilterSidebar from '../../components/candidate/JobFilterSidebar';
 import JobCardPublic, { PublicJob } from '../../components/candidate/JobCardPublic';
+import JobCardSkeleton from '../../components/candidate/JobCardSkeleton';
 
 import { JobService } from '../../src/services/JobService';
 import { Job } from '../../types';
@@ -296,7 +297,9 @@ const JobsList: React.FC = () => {
 
 
                         <div className="grid grid-cols-1 gap-6">
-                            {paginatedJobs.length > 0 ? (
+                            {isLoading ? (
+                                [1, 2, 3].map(i => <JobCardSkeleton key={i} />)
+                            ) : paginatedJobs.length > 0 ? (
                                 paginatedJobs.map(job => (
                                     <JobCardPublic
                                         key={job.id}

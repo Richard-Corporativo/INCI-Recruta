@@ -7,7 +7,7 @@ import { useUsers } from '../hooks/useUsers';
 import { useAuth } from '../hooks/useAuth';
 import Toast from '../components/Toast';
 
-import { Skeleton } from '../components/ui/Skeleton';
+import { Skeleton } from '../components/atoms/Skeleton/Skeleton';
 
 const Dashboard: React.FC = () => {
   const { jobs, isLoading: jobsLoading } = useJobs();
