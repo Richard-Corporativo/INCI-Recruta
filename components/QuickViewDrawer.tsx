@@ -60,68 +60,99 @@ const JobView = ({ job, canViewSalaries }: { job: Job, canViewSalaries: boolean 
     </div>
 );
 
-const CandidateView = ({ candidate }: { candidate: Candidate }) => (
-    <div className="space-y-6">
-        <div className="flex flex-col items-center py-4 bg-muted/20 rounded-lg border border-border/50">
-            <div className={`size-20 rounded-full ${candidate.avatarColor || 'bg-slate-100'} text-2xl font-bold flex items-center justify-center ${candidate.textColor || 'text-slate-600'} mb-3 border-2 border-background shadow-sm`}>
-                {candidate.avatar ? (
-                    <img src={candidate.avatar} alt={candidate.name} className="w-full h-full object-cover rounded-full" />
-                ) : (
-                    candidate.initials
-                )}
-            </div>
-            <h3 className="text-lg font-bold text-foreground">{candidate.name}</h3>
-            <p className="text-sm text-muted-foreground font-medium">{candidate.role || 'Candidato'}</p>
-            <div className="flex gap-2 mt-3">
-                {candidate.linkedin && (
-                    <a href={candidate.linkedin} target="_blank" rel="noreferrer" className="p-2 bg-background border border-border rounded-full text-blue-600 hover:scale-110 transition-transform">
-                        <span className="material-symbols-outlined text-[18px]">public</span>
-                    </a>
-                )}
-                {candidate.resume_url && (
-                    <a href={candidate.resume_url} target="_blank" rel="noreferrer" className="p-2 bg-background border border-border rounded-full text-red-500 hover:scale-110 transition-transform">
-                        <span className="material-symbols-outlined text-[18px]">description</span>
-                    </a>
-                )}
-                {candidate.phone && (
-                    <a href={`https://wa.me/${candidate.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="p-2 bg-background border border-border rounded-full text-green-500 hover:scale-110 transition-transform">
-                        <span className="material-symbols-outlined text-[18px]">chat</span>
-                    </a>
-                )}
-            </div>
-        </div>
+const CandidateView = ({ candidate }: { candidate: Candidate }) => {
+    const handleDownload = async () => {
+        try {
+            // Dynamically import to avoid circular dependencies if any, or just standard import at top.
+            // But since I can't easily add import at top with this tool without replacing the whole file or multiple chunks.
+            // I'll add the import at the top using multi_replace_file_content.
+            // For now, assume top import is added.
 
-        <div className="space-y-2">
-            <InfoRow icon="email" label="E-mail" value={candidate.email} />
-            <InfoRow icon="call" label="Telefone" value={candidate.phone} />
-            <InfoRow icon="location_on" label="Localização" value={candidate.location} />
-        </div>
+            // Wait, I should add the import.
+            const { CandidateService } = await import('../src/services/CandidateService');
 
-        {candidate.summary && (
-            <div className="bg-muted/30 p-4 rounded-lg border border-border/50">
-                <h4 className="text-sm font-semibold text-foreground mb-2">Sobre</h4>
-                <p className="text-sm text-muted-foreground leading-relaxed text-pretty">
-                    {candidate.summary}
-                </p>
+            const result = await CandidateService.downloadResume(candidate.id);
+            if (result) {
+                const url = URL.createObjectURL(result.blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = result.fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } else {
+                alert('Currículo não encontrado.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Erro ao baixar currículo.');
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col items-center py-4 bg-muted/20 rounded-lg border border-border/50">
+                <div className={`size-20 rounded-full ${candidate.avatarColor || 'bg-slate-100'} text-2xl font-bold flex items-center justify-center ${candidate.textColor || 'text-slate-600'} mb-3 border-2 border-background shadow-sm`}>
+                    {candidate.avatar ? (
+                        <img src={candidate.avatar} alt={candidate.name} className="w-full h-full object-cover rounded-full" />
+                    ) : (
+                        candidate.initials
+                    )}
+                </div>
+                <h3 className="text-lg font-bold text-foreground">{candidate.name}</h3>
+                <p className="text-sm text-muted-foreground font-medium">{candidate.role || 'Candidato'}</p>
+                <div className="flex gap-2 mt-3">
+                    {candidate.linkedin && (
+                        <a href={candidate.linkedin} target="_blank" rel="noreferrer" className="p-2 bg-background border border-border rounded-full text-blue-600 hover:scale-110 transition-transform">
+                            <span className="material-symbols-outlined text-[18px]">public</span>
+                        </a>
+                    )}
+                    {candidate.has_resume && (
+                        <button onClick={handleDownload} className="p-2 bg-background border border-border rounded-full text-red-500 hover:scale-110 transition-transform">
+                            <span className="material-symbols-outlined text-[18px]">description</span>
+                        </button>
+                    )}
+                    {candidate.phone && (
+                        <a href={`https://wa.me/${candidate.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="p-2 bg-background border border-border rounded-full text-green-500 hover:scale-110 transition-transform">
+                            <span className="material-symbols-outlined text-[18px]">chat</span>
+                        </a>
+                    )}
+                </div>
             </div>
-        )}
 
-        <div className="flex justify-end pt-4">
-            {/* If candidate has jobId, link to application detail, else talent bank? */}
-            {candidate.jobId ? (
-                <Link to={`/admin/jobs/${candidate.jobId}/kanban`} className="w-full">
-                    <button className="w-full py-2.5 bg-primary text-primary-foreground font-semibold rounded-lg shadow-sm hover:bg-primary/90 transition-all text-sm">
-                        Ver no Kanban
-                    </button>
-                </Link>
-            ) : (
-                <button className="w-full py-2.5 bg-secondary text-secondary-foreground font-semibold rounded-lg shadow-sm hover:bg-secondary/90 transition-all text-sm">
-                    Ver Perfil Completo
-                </button>
+            <div className="space-y-2">
+                <InfoRow icon="email" label="E-mail" value={candidate.email} />
+                <InfoRow icon="call" label="Telefone" value={candidate.phone} />
+                <InfoRow icon="location_on" label="Localização" value={candidate.location} />
+            </div>
+
+            {candidate.summary && (
+                <div className="bg-muted/30 p-4 rounded-lg border border-border/50">
+                    <h4 className="text-sm font-semibold text-foreground mb-2">Sobre</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed text-pretty">
+                        {candidate.summary}
+                    </p>
+                </div>
             )}
+
+            <div className="flex justify-end pt-4">
+                {/* If candidate has jobId, link to application detail, else talent bank? */}
+                {candidate.jobId ? (
+                    <Link to={`/admin/jobs/${candidate.jobId}/kanban`} className="w-full">
+                        <button className="w-full py-2.5 bg-primary text-primary-foreground font-semibold rounded-lg shadow-sm hover:bg-primary/90 transition-all text-sm">
+                            Ver no Kanban
+                        </button>
+                    </Link>
+                ) : (
+                    <button className="w-full py-2.5 bg-secondary text-secondary-foreground font-semibold rounded-lg shadow-sm hover:bg-secondary/90 transition-all text-sm">
+                        Ver Perfil Completo
+                    </button>
+                )}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const UserView = ({ user }: { user: User }) => (
     <div className="space-y-6">

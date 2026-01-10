@@ -32,7 +32,6 @@ const CandidateSettings: React.FC = () => {
         linkedin: '',
         github: '',
         portfolio: '',
-        resume_url: '',
         resume_name: '',
         skills: [] as string[],
         experience: [] as Experience[],
@@ -58,7 +57,6 @@ const CandidateSettings: React.FC = () => {
                 linkedin: currentCandidate.linkedin || '',
                 github: currentCandidate.github || '',
                 portfolio: currentCandidate.portfolio || '',
-                resume_url: currentCandidate.resume_url || '',
                 resume_name: currentCandidate.resumeName || currentCandidate.resume_name || '',
                 skills: currentCandidate.skills || [],
                 experience: currentCandidate.experience || [],
@@ -80,7 +78,7 @@ const CandidateSettings: React.FC = () => {
 
     const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
+        if (!file || !currentCandidate?.id) return;
 
         if (file.type !== 'application/pdf') {
             error('Por favor, envie apenas arquivos PDF.');
@@ -94,18 +92,41 @@ const CandidateSettings: React.FC = () => {
 
         setIsSaving(true);
         try {
-            const publicUrl = await CandidateService.uploadResume(file, currentCandidate?.email || 'unknown');
+            const successUpload = await CandidateService.uploadResume(file, currentCandidate.id);
+            if (!successUpload) throw new Error('Falha no upload');
+
             setFormData(prev => ({
                 ...prev,
-                resume_url: publicUrl,
                 resume_name: file.name
             }));
-            await updateProfile({ resume_url: publicUrl, resumeName: file.name });
+            await updateProfile({ resumeName: file.name, has_resume: true });
             success('Currículo enviado com sucesso!');
         } catch (err: any) {
             error('Erro ao enviar currículo: ' + err.message);
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleDownloadResume = async () => {
+        if (!currentCandidate?.id) return;
+        try {
+            const result = await CandidateService.downloadResume(currentCandidate.id);
+            if (result) {
+                const url = URL.createObjectURL(result.blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = result.fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } else {
+                error('Currículo não encontrado.');
+            }
+        } catch (err) {
+            console.error(err);
+            error('Erro ao baixar currículo.');
         }
     };
 
@@ -122,7 +143,7 @@ const CandidateSettings: React.FC = () => {
                 linkedin: formData.linkedin,
                 github: formData.github,
                 portfolio: formData.portfolio,
-                resume_url: formData.resume_url,
+                // resume_url removed
                 resumeName: formData.resume_name,
                 skills: formData.skills,
                 experience: formData.experience,
@@ -294,7 +315,7 @@ const CandidateSettings: React.FC = () => {
                                             <span className="material-symbols-outlined text-red-500">picture_as_pdf</span>
                                             <div className="flex flex-col overflow-hidden">
                                                 <span className="text-sm font-semibold truncate">{formData.resume_name}</span>
-                                                <a href={formData.resume_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">Baixar atual</a>
+                                                <button type="button" onClick={handleDownloadResume} className="text-xs text-primary hover:underline text-left">Baixar atual</button>
                                             </div>
                                         </div>
                                     )}

@@ -223,6 +223,12 @@ const TalentBank: React.FC = () => {
                                                 <span className="material-symbols-outlined text-[16px]">mail</span>
                                                 <span className="truncate">{candidate.email}</span>
                                             </div>
+                                            {candidate.has_resume && (
+                                                <div className="flex items-center gap-2 text-xs font-medium text-primary/80">
+                                                    <span className="material-symbols-outlined text-[16px]">description</span>
+                                                    <span className="truncate">Currículo disponível</span>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {candidate.skills && candidate.skills.length > 0 && (

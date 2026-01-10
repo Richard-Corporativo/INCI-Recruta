@@ -163,9 +163,7 @@ const CandidateDashboard: React.FC = () => {
                                     <p className="text-xs font-semibold text-muted-foreground">PDF • 1.2 MB</p>
                                 </div>
                             </div>
-                            <button className="size-12 flex items-center justify-center rounded-xl bg-background border border-border text-muted-foreground hover:text-primary hover:border-ring transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring" title="Download CV" aria-label="Baixar currículo PDF">
-                                <span className="material-symbols-outlined text-[24px]">cloud_download</span>
-                            </button>
+
                         </div>
                     </div>
                 </div>

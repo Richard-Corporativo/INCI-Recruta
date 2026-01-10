@@ -56,6 +56,12 @@ const SortableCandidateCard: React.FC<SortableCandidateCardProps> = ({ candidate
                         </span>
                     </div>
                 </div>
+
+                {candidate.has_resume && (
+                    <div className="shrink-0" title="Currículo disponível">
+                        <span className="material-symbols-outlined text-[16px] text-primary/70">description</span>
+                    </div>
+                )}
             </div>
 
             <div className="flex flex-wrap gap-1 mb-2 transition-all">
@@ -87,7 +93,7 @@ const SortableCandidateCard: React.FC<SortableCandidateCardProps> = ({ candidate
                     <span className="material-symbols-outlined text-muted-foreground text-[14px]">arrow_forward</span>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

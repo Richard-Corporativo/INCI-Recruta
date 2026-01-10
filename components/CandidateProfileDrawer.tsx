@@ -7,6 +7,7 @@ import { useCandidates } from '../hooks/useCandidates';
 import { useAudit } from '../hooks/useAudit';
 import { useJobs } from '../hooks/useJobs';
 import { COLUMNS_CONFIG } from '../constants';
+import { CandidateService } from '../src/services/CandidateService';
 
 interface CandidateProfileDrawerProps {
   isOpen: boolean;
@@ -46,6 +47,29 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
     }
   };
 
+  const handleDownloadResume = async () => {
+    if (!candidateId) return;
+    try {
+      const result = await CandidateService.downloadResume(candidateId);
+      if (result) {
+        const url = URL.createObjectURL(result.blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = result.fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        alert('Currículo não encontrado.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao baixar currículo.');
+    }
+  };
+
+
   return (
     <>
       <div className="fixed inset-0 z-50 flex justify-end bg-background/80 backdrop-blur-sm transition-opacity duration-200 ease-in-out" onClick={onClose}>
@@ -79,9 +103,17 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
                   <span className="flex items-center gap-1.5 hover:text-primary transition-colors cursor-default">
                     <span className="material-symbols-outlined text-[18px]">location_on</span> {candidate.location}
                   </span>
-                  <a href="#" className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors font-semibold outline-none focus-visible:underline">
+                  <a href={candidate.linkedin || '#'} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors font-semibold outline-none focus-visible:underline">
                     <span className="material-symbols-outlined text-[18px]">link</span> LinkedIn
                   </a>
+                  {candidate.has_resume && (
+                    <button
+                      onClick={handleDownloadResume}
+                      className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors font-semibold outline-none focus-visible:underline"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">description</span> Currículo
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

@@ -66,7 +66,7 @@ export interface Candidate {
   linkedin?: string;
   github?: string;
   portfolio?: string;
-  resume_url?: string;
+  has_resume?: boolean;
   resume_name?: string;
   user_id?: string;
   resumeName?: string;
@@ -89,6 +89,16 @@ export interface Candidate {
     date: string;
     time: string;
   };
+}
+
+export interface CandidateResume {
+  id: string;
+  candidate_id: string;
+  file_data: Uint8Array; // BYTEA
+  file_name: string;
+  mime_type: string;
+  file_size: number;
+  created_at: string;
 }
 
 export interface Role {

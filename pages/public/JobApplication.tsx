@@ -149,12 +149,7 @@ const JobApplication: React.FC = () => {
         }
 
         // 1. Resume Upload Logic
-        let resumeUrl = '';
         try {
-            if (formData.resume) {
-                resumeUrl = await CandidateService.uploadResume(formData.resume, formData.email);
-            }
-
             const newCandidate: Omit<Candidate, 'id'> = {
                 jobId: id,
                 name: formData.name,
@@ -168,11 +163,10 @@ const JobApplication: React.FC = () => {
                 textColor: 'text-white',
                 linkedin: formData.linkedin,
                 portfolio: formData.portfolio,
-                resume_url: resumeUrl,
                 user_id: user?.id // Use user from useAuth
             };
 
-            await CandidateService.addCandidate(newCandidate);
+            await CandidateService.addCandidate(newCandidate, formData.resume || undefined);
 
             success('Sua candidatura foi enviada com sucesso!');
             navigate('/candidate/dashboard');

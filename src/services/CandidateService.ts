@@ -12,7 +12,7 @@ const mapDbToCandidate = (dbCandidate: any): Candidate => ({
     linkedin: dbCandidate.linkedin,
     portfolio: dbCandidate.portfolio,
     resumeName: dbCandidate.resume_name,
-    resume_url: dbCandidate.resume_url,
+    has_resume: dbCandidate.has_resume,
     columnId: dbCandidate.column_id,
     initials: dbCandidate.initials,
     avatarColor: dbCandidate.avatar_color || 'bg-primary',
@@ -56,28 +56,90 @@ export const CandidateService = {
         return (data || []).map(mapDbToCandidate);
     },
 
-    async uploadResume(file: File, candidateEmail: string): Promise<string> {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${candidateEmail}_${Date.now()}.${fileExt}`;
-        const filePath = `resumes/${fileName}`;
-
-        const { data, error } = await supabase.storage
-            .from('resumes') // Consistent with RLS policies
-            .upload(filePath, file);
-
-        if (error) {
-            console.error('Error uploading resume:', error);
-            throw error;
+    async uploadResume(file: File, candidateId: string): Promise<boolean> {
+        // Validation
+        if (file.size > 5 * 1024 * 1024) {
+            throw new Error('Tamanho do arquivo excede 5MB');
+        }
+        if (file.type !== 'application/pdf') {
+            throw new Error('Apenas arquivos PDF são permitidos');
         }
 
-        const { data: { publicUrl } } = supabase.storage
-            .from('resumes')
-            .getPublicUrl(filePath);
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const buffer = new Uint8Array(arrayBuffer);
+            // Convert to hex string for Postgres BYTEA: \xDEADBEEF...
+            const hex = '\\x' + Array.from(buffer) // Double backslash for JS string escaping
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
 
-        return publicUrl;
+            const { error } = await supabase
+                .from('candidate_resumes')
+                .upsert({
+                    candidate_id: candidateId,
+                    file_data: hex,
+                    file_name: file.name,
+                    mime_type: file.type,
+                    file_size: file.size
+                });
+
+            if (error) {
+                console.error('Error uploading resume:', error);
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.error('Error processing resume file:', error);
+            return false;
+        }
     },
 
-    async addCandidate(candidate: Omit<Candidate, 'id' | 'applied_at'>): Promise<Candidate | null> {
+    async downloadResume(candidateId: string): Promise<{ blob: Blob; fileName: string } | null> {
+        const { data, error } = await supabase
+            .from('candidate_resumes')
+            .select('file_data, file_name, mime_type')
+            .eq('candidate_id', candidateId)
+            .single();
+
+        if (error || !data) return null;
+
+        try {
+            // Postgres returns BYTEA as hex string: \xDEADBEEF...
+            const hexString = data.file_data as unknown as string;
+            // Remove \x prefix
+            const hex = hexString.startsWith('\\x') ? hexString.slice(2) : hexString;
+
+            const bytes = new Uint8Array(hex.length / 2);
+            for (let i = 0; i < hex.length; i += 2) {
+                bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+            }
+
+            const blob = new Blob([bytes], { type: data.mime_type });
+            return { blob, fileName: data.file_name };
+        } catch (e) {
+            console.error('Error converting resume data:', e);
+            return null;
+        }
+    },
+
+    async hasResume(candidateId: string): Promise<boolean> {
+        const { count, error } = await supabase
+            .from('candidate_resumes')
+            .select('*', { count: 'exact', head: true })
+            .eq('candidate_id', candidateId);
+
+        return !error && (count || 0) > 0;
+    },
+
+    async deleteResume(candidateId: string): Promise<boolean> {
+        const { error } = await supabase
+            .from('candidate_resumes')
+            .delete()
+            .eq('candidate_id', candidateId);
+        return !error;
+    },
+
+    async addCandidate(candidate: Omit<Candidate, 'id' | 'applied_at'>, resumeFile?: File): Promise<Candidate | null> {
         const dbPayload: any = {
             job_id: candidate.jobId,
             name: candidate.name,
@@ -87,13 +149,14 @@ export const CandidateService = {
             linkedin: candidate.linkedin,
             portfolio: candidate.portfolio,
             resume_name: candidate.resumeName,
-            resume_url: (candidate as any).resume_url,
+            // resume_url removed
             user_id: candidate.user_id,
             column_id: candidate.columnId || 'received',
             avatar_color: candidate.avatarColor,
             text_color: candidate.textColor
         };
 
+        // 1. Insert Candidate
         const { data, error } = await supabase
             .from('candidates')
             .insert([dbPayload])
@@ -103,6 +166,19 @@ export const CandidateService = {
         if (error) {
             console.error('Error adding candidate:', error);
             throw error;
+        }
+
+        const newCandidate = mapDbToCandidate(data);
+
+        // 2. Upload Resume if provided
+        if (resumeFile) {
+            const uploadSuccess = await CandidateService.uploadResume(resumeFile, newCandidate.id);
+            if (!uploadSuccess) {
+                console.error('Failed to upload resume, rolling back candidate creation');
+                // Rollback
+                await supabase.from('candidates').delete().eq('id', newCandidate.id);
+                throw new Error('Falha ao fazer upload do currículo');
+            }
         }
 
         // Sync with public.users profile if user_id exists
@@ -116,12 +192,12 @@ export const CandidateService = {
                     linkedin: candidate.linkedin,
                     portfolio: candidate.portfolio,
                     resume_name: candidate.resumeName,
-                    resume_url: (candidate as any).resume_url
+                    // resume_url removed
                 })
                 .eq('id', candidate.user_id);
         }
 
-        return mapDbToCandidate(data);
+        return newCandidate;
     },
 
     async updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | null> {
@@ -148,6 +224,7 @@ export const CandidateService = {
             dbPayload.resume_name = updates.resumeName;
             delete dbPayload.resumeName;
         }
+        // resume_url removed from updates handling
 
         // Ensure array/json fields are passed correctly
         if ('skills' in updates) dbPayload.skills = updates.skills;
