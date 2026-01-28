@@ -3,22 +3,35 @@ import Breadcrumbs from '../components/Breadcrumbs';
 import { useCandidates } from '../hooks/useCandidates';
 import { useJobs } from '../hooks/useJobs';
 import CandidateProfileDrawer from '../components/CandidateProfileDrawer';
-import { Candidate } from '../types';
+import { Candidate, Job } from '../types';
+import AdvancedSearchFilters from '../components/AdvancedSearchFilters';
+import { CandidateService } from '../src/services/CandidateService';
+import { useToast } from '../components/ui/Toast';
 
 const TalentBank: React.FC = () => {
-    const { candidates, isLoading: candidatesLoading } = useCandidates();
+    const { candidates, isLoading: candidatesLoading, searchCandidates, refresh } = useCandidates();
     const { jobs } = useJobs();
-    const [search, setSearch] = useState('');
+    const { success, error: showError } = useToast();
+
     const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-    // Filter states
-    const [filterSkill, setFilterSkill] = useState('');
-    const [filterLocation, setFilterLocation] = useState('');
-    const [filterStatus, setFilterStatus] = useState('all');
-    const [filterType, setFilterType] = useState('all'); // all, active, orphan
+    const [isInviting, setIsInviting] = useState(false);
+    const [inviteCandidate, setInviteCandidate] = useState<Candidate | null>(null);
+    const [selectedJobId, setSelectedJobId] = useState<string>('');
 
-    // Extract unique skills and locations for filters
+    const STATUS_MAP: Record<string, string> = {
+        received: 'Inscrição',
+        screening: 'Triagem',
+        technical: 'Entrevista Téc.',
+        hr_interview: 'Entrevista RH',
+        manager_interview: 'Entrevista Gest.',
+        finalist: 'Finalista',
+        hired: 'Contratado',
+        rejected: 'Reprovado'
+    };
+
+    // Extract unique skills and locations for filter options
     const allSkills = useMemo(() => {
         const skillsSet = new Set<string>();
         candidates.forEach(c => {
@@ -35,18 +48,7 @@ const TalentBank: React.FC = () => {
         return Array.from(locationsSet).sort();
     }, [candidates]);
 
-    const STATUS_MAP: Record<string, string> = {
-        received: 'Inscrição',
-        screening: 'Triagem',
-        technical: 'Entrevista Téc.',
-        hr_interview: 'Entrevista RH',
-        manager_interview: 'Entrevista Gest.',
-        finalist: 'Finalista',
-        hired: 'Contratado',
-        rejected: 'Reprovado'
-    };
-
-    // Group candidates by email to avoid duplicates
+    // Group candidates by email to avoid duplicates in the "Talent Lake"
     const uniqueProfiles = useMemo(() => {
         const grouped = new Map<string, Candidate & { applications: Candidate[] }>();
 
@@ -70,43 +72,31 @@ const TalentBank: React.FC = () => {
         return Array.from(grouped.values());
     }, [candidates]);
 
-    const filteredCandidates = useMemo(() => {
-        return uniqueProfiles.filter(profile => {
-            // Search checks
-            const matchesSearch = profile.name.toLowerCase().includes(search.toLowerCase()) ||
-                profile.email.toLowerCase().includes(search.toLowerCase()) ||
-                (profile.role && profile.role.toLowerCase().includes(search.toLowerCase()));
-
-            // Check if ANY application matches the filters
-            const hasMatchingApplication = profile.applications.some(app => {
-                const matchesSkill = !filterSkill || (app.skills && app.skills.includes(filterSkill));
-                const matchesLocation = !filterLocation || app.location === filterLocation;
-
-                let matchesStatus = true;
-                if (filterStatus !== 'all') {
-                    if (filterStatus === 'process') {
-                        matchesStatus = !['hired', 'rejected'].includes(app.columnId);
-                    } else {
-                        matchesStatus = app.columnId === filterStatus;
-                    }
-                }
-
-                let matchesType = true;
-                if (filterType !== 'all') {
-                    const hasJob = jobs.some(j => j.id.toString() === app.jobId?.toString());
-                    matchesType = filterType === 'active' ? hasJob : !hasJob;
-                }
-
-                return matchesSkill && matchesLocation && matchesStatus && matchesType;
-            });
-
-            return matchesSearch && hasMatchingApplication;
-        });
-    }, [uniqueProfiles, jobs, search, filterSkill, filterLocation, filterStatus, filterType]);
-
-    const handleOpenProfile = (id: string) => {
+    const handleOpenProfile = (id: string, e: React.MouseEvent) => {
+        // Prevent opening profile when clicking specific actions
+        if ((e.target as HTMLElement).closest('button')) return;
         setSelectedCandidateId(id);
         setIsDrawerOpen(true);
+    };
+
+    const handleInviteToJob = async () => {
+        if (!inviteCandidate || !selectedJobId) return;
+        setIsInviting(true);
+        try {
+            await CandidateService.updateCandidate(inviteCandidate.id, { jobId: selectedJobId, columnId: 'received' });
+            success(`Candidato vinculado à vaga com sucesso!`);
+            setInviteCandidate(null);
+            setSelectedJobId('');
+            refresh();
+        } catch (e) {
+            showError('Erro ao vincular candidato.');
+        } finally {
+            setIsInviting(false);
+        }
+    };
+
+    const handleSearch = (filters: any) => {
+        searchCandidates(filters);
     };
 
     return (
@@ -120,177 +110,161 @@ const TalentBank: React.FC = () => {
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                             <div className="flex flex-col gap-1">
                                 <h1 className="text-3xl font-semibold text-foreground tracking-tight leading-tight transition-colors">Banco de Talentos</h1>
-                                <p className="text-muted-foreground text-sm font-medium transition-colors">Visualize todos os profissionais cadastrados em sua rede.</p>
-                            </div>
-                            <div className="w-full md:w-80">
-                                <div className="relative">
-                                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[20px]">search</span>
-                                    <input
-                                        type="text"
-                                        placeholder="Buscar por nome, email ou cargo..."
-                                        value={search}
-                                        onChange={(e) => setSearch(e.target.value)}
-                                        className="w-full h-11 pl-10 pr-4 bg-muted/50 border border-border rounded-md text-sm outline-none focus:ring-2 focus:ring-primary/20 hover:border-ring transition-all"
-                                    />
-                                </div>
+                                <p className="text-muted-foreground text-sm font-medium transition-colors">Visualize e filtre profissionais em toda a sua rede.</p>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-muted/20 border border-border rounded-lg">
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Habilidade</label>
-                                <select
-                                    value={filterSkill}
-                                    onChange={(e) => setFilterSkill(e.target.value)}
-                                    className="h-10 px-3 bg-background border border-border rounded-md text-xs font-semibold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                                >
-                                    <option value="">Todas as Skills</option>
-                                    {allSkills.map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Localização</label>
-                                <select
-                                    value={filterLocation}
-                                    onChange={(e) => setFilterLocation(e.target.value)}
-                                    className="h-10 px-3 bg-background border border-border rounded-md text-xs font-semibold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                                >
-                                    <option value="">Todas as Cidades</option>
-                                    {allLocations.map(l => <option key={l} value={l}>{l}</option>)}
-                                </select>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Status</label>
-                                <select
-                                    value={filterStatus}
-                                    onChange={(e) => setFilterStatus(e.target.value)}
-                                    className="h-10 px-3 bg-background border border-border rounded-md text-xs font-semibold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                                >
-                                    <option value="all">Todos os Status</option>
-                                    <option value="process">Em Processo</option>
-                                    <option value="hired">Contratados</option>
-                                    <option value="rejected">Reprovados</option>
-                                    <option value="received">Novas Inscrições</option>
-                                </select>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Engajamento</label>
-                                <select
-                                    value={filterType}
-                                    onChange={(e) => setFilterType(e.target.value)}
-                                    className="h-10 px-3 bg-background border border-border rounded-md text-xs font-semibold focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                                >
-                                    <option value="all">Todos</option>
-                                    <option value="active">Em Vaga Ativa</option>
-                                    <option value="orphan">Sem Vaga Ativa</option>
-                                </select>
-                            </div>
-                        </div>
+                        <AdvancedSearchFilters
+                            onSearch={handleSearch}
+                            allSkills={allSkills}
+                            allLocations={allLocations}
+                        />
                     </div>
                 </div>
             </header>
 
-            <main className="flex-1 overflow-y-auto p-8 bg-muted/20 transition-colors">
+            <main className="flex-1 overflow-y-auto p-8 bg-muted/20 transition-colors custom-scrollbar">
                 <div className="max-w-7xl mx-auto">
                     {candidatesLoading ? (
-                        <div className="text-center py-20 text-muted-foreground font-semibold">Carregando talentos...</div>
-                    ) : filteredCandidates.length > 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 gap-4">
+                            <div className="animate-spin size-8 border-4 border-primary border-t-transparent rounded-full"></div>
+                            <p className="text-muted-foreground font-semibold">Consultando motor de busca...</p>
+                        </div>
+                    ) : uniqueProfiles.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {filteredCandidates.map((candidate) => {
-                                const job = jobs.find(j => j.id.toString() === candidate.jobId?.toString());
+                            {uniqueProfiles.map((candidate) => {
+                                const activeJob = jobs.find(j => j.id.toString() === candidate.jobId?.toString());
                                 return (
                                     <div
                                         key={candidate.id}
-                                        onClick={() => handleOpenProfile(candidate.id)}
-                                        className="group bg-card border border-border rounded-lg p-6 shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer animate-in fade-in slide-in-from-bottom-2 duration-300"
+                                        onClick={(e) => handleOpenProfile(candidate.id, e)}
+                                        className="group bg-card border border-border rounded-xl p-5 shadow-sm hover:shadow-xl hover:border-primary/40 transition-all cursor-pointer animate-in fade-in slide-in-from-bottom-2 duration-300 relative flex flex-col"
                                     >
-                                        <div className="flex items-start gap-4 mb-6">
-                                            <div className={`size-14 rounded-2xl ${candidate.avatarColor} ${candidate.textColor} flex items-center justify-center text-xl font-bold border-2 border-background ring-1 ring-border group-hover:scale-105 transition-transform`}>
+                                        <div className="flex items-start gap-4 mb-4">
+                                            <div className={`size-12 rounded-xl ${candidate.avatarColor} ${candidate.textColor} flex items-center justify-center text-lg font-bold border-2 border-background ring-1 ring-border group-hover:scale-105 transition-transform shrink-0`}>
                                                 {candidate.initials}
                                             </div>
-                                            <div className="flex-1 min-w-0 pt-1">
-                                                <h3 className="text-base font-semibold text-foreground truncate group-hover:text-primary transition-colors">{candidate.name}</h3>
-                                                <p className="text-xs font-semibold text-muted-foreground truncate transition-colors">{candidate.role || 'Candidato'}</p>
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">{candidate.name}</h3>
+                                                <p className="text-[11px] font-bold text-muted-foreground truncate uppercase tracking-tight">{candidate.role || 'Profissional'}</p>
                                             </div>
                                         </div>
 
-                                        <div className="space-y-3">
-                                            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                                                <span className="material-symbols-outlined text-[16px]">location_on</span>
-                                                <span className="truncate">{candidate.location}</span>
+                                        <div className="space-y-2.5 mb-6">
+                                            <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground">
+                                                <span className="material-symbols-outlined text-[16px] text-primary/60">location_on</span>
+                                                <span className="truncate">{candidate.location || 'Não informado'}</span>
                                             </div>
-                                            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                                                <span className="material-symbols-outlined text-[16px]">mail</span>
-                                                <span className="truncate">{candidate.email}</span>
+                                            <div className="flex items-center gap-3 text-[11px] font-medium text-muted-foreground">
+                                                {candidate.has_resume && (
+                                                    <span className="flex items-center gap-1.5 text-primary font-bold">
+                                                        <span className="material-symbols-outlined text-[16px]">description</span>
+                                                        CV
+                                                    </span>
+                                                )}
                                             </div>
-                                            {candidate.has_resume && (
-                                                <div className="flex items-center gap-2 text-xs font-medium text-primary/80">
-                                                    <span className="material-symbols-outlined text-[16px]">description</span>
-                                                    <span className="truncate">Currículo disponível</span>
-                                                </div>
-                                            )}
                                         </div>
 
                                         {candidate.skills && candidate.skills.length > 0 && (
-                                            <div className="flex flex-wrap gap-1 mt-2">
+                                            <div className="flex flex-wrap gap-1.5 mt-auto">
                                                 {candidate.skills.slice(0, 3).map(skill => (
-                                                    <span key={skill} className="px-1.5 py-0.5 rounded-sm bg-muted text-[9px] font-semibold text-muted-foreground border border-border/50">
+                                                    <span key={skill} className="px-1.5 py-0.5 rounded bg-muted text-[9px] font-bold text-muted-foreground border border-border/50 uppercase">
                                                         {skill}
                                                     </span>
                                                 ))}
                                                 {candidate.skills.length > 3 && (
-                                                    <span className="text-[9px] text-muted-foreground font-semibold px-1">+{candidate.skills.length - 3}</span>
+                                                    <span className="text-[9px] text-muted-foreground font-bold px-1 uppercase tracking-tighter">+{candidate.skills.length - 3}</span>
                                                 )}
                                             </div>
                                         )}
 
-                                        <div className="mt-8 pt-6 border-t border-border flex flex-col gap-3">
-                                            <div className="flex flex-wrap gap-2">
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${candidate.columnId === 'hired' ? 'bg-emerald-500/10 text-emerald-600' :
-                                                    candidate.columnId === 'rejected' ? 'bg-red-500/10 text-red-600' :
-                                                        'bg-muted text-muted-foreground'
+                                        <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className={`text-[10px] font-bold uppercase tracking-wider ${candidate.columnId === 'hired' ? 'text-emerald-600' :
+                                                    candidate.columnId === 'rejected' ? 'text-red-600' :
+                                                        'text-muted-foreground'
                                                     }`}>
-                                                    {STATUS_MAP[candidate.columnId] || 'Em processo'}
+                                                    {STATUS_MAP[candidate.columnId] || 'Disponível'}
                                                 </span>
-                                                {candidate.match && (
-                                                    <span className="px-2 py-0.5 rounded bg-primary/10 text-[10px] font-bold text-primary uppercase tracking-wider">
-                                                        {candidate.match} Match
-                                                    </span>
-                                                )}
+                                                <span className="text-[9px] font-medium text-muted-foreground/60 truncate max-w-[120px]">
+                                                    {activeJob ? `Vaga: ${activeJob.title}` : 'Sem vaga ativa'}
+                                                </span>
                                             </div>
-                                            <p className="text-[10px] font-semibold text-muted-foreground/60 transition-colors">
-                                                {job ? `Vaga: ${job.title}` : 'Sem vaga ativa'}
-                                                {((candidate as any).applications?.length > 1) &&
-                                                    ` (+${(candidate as any).applications.length - 1} outra${(candidate as any).applications.length - 1 > 1 ? 's' : ''})`
-                                                }
-                                            </p>
+                                            <button
+                                                onClick={() => setInviteCandidate(candidate)}
+                                                className="size-8 rounded-lg bg-primary/5 text-primary border border-primary/20 flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-sm"
+                                                title="Convidar para Vaga"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">person_add</span>
+                                            </button>
                                         </div>
                                     </div>
                                 );
                             })}
                         </div>
                     ) : (
-                        <div className="bg-card border border-border rounded-lg p-16 text-center max-w-xl mx-auto shadow-sm">
-                            <span className="material-symbols-outlined text-muted-foreground/30 text-6xl mb-6">person_search</span>
-                            <h3 className="text-xl font-semibold text-foreground mb-2">Nenhum talento encontrado</h3>
-                            <p className="text-muted-foreground text-sm font-medium">Ajuste seus filtros de busca para encontrar profissionais.</p>
+                        <div className="bg-card border border-border rounded-xl p-16 text-center max-w-xl mx-auto shadow-sm">
+                            <div className="size-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <span className="material-symbols-outlined text-muted-foreground/30 text-4xl">person_search</span>
+                            </div>
+                            <h3 className="text-xl font-bold text-foreground mb-2">Sem resultados para a busca</h3>
+                            <p className="text-muted-foreground text-sm font-medium">Não encontramos talentos com estes critérios específicos.</p>
                             <button
-                                onClick={() => {
-                                    setSearch('');
-                                    setFilterSkill('');
-                                    setFilterLocation('');
-                                    setFilterStatus('all');
-                                    setFilterType('all');
-                                }}
-                                className="mt-8 text-primary font-bold text-xs hover:underline flex items-center gap-2 mx-auto outline-none transition-all"
+                                onClick={() => refresh()}
+                                className="mt-8 bg-primary/10 text-primary px-6 py-2 rounded-base text-xs font-bold uppercase tracking-widest hover:bg-primary/20 transition-all flex items-center gap-2 mx-auto"
                             >
-                                <span className="material-symbols-outlined text-[18px]">close</span>
-                                Limpar filtros
+                                <span className="material-symbols-outlined text-[18px]">refresh</span>
+                                Resetar Banco
                             </button>
                         </div>
                     )}
                 </div>
             </main>
+
+            {/* Invite to Job Modal */}
+            {inviteCandidate && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setInviteCandidate(null)}></div>
+                    <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md relative overflow-hidden">
+                        <div className="p-6 border-b border-border bg-muted/30">
+                            <h3 className="text-lg font-bold text-foreground">Vincular a uma Vaga</h3>
+                            <p className="text-xs text-muted-foreground font-medium mt-1">
+                                O candidato <strong>{inviteCandidate.name}</strong> será movido para o pipeline da vaga selecionada.
+                            </p>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Selecione a Vaga</label>
+                                <select
+                                    value={selectedJobId}
+                                    onChange={(e) => setSelectedJobId(e.target.value)}
+                                    className="h-11 w-full px-3 bg-muted/30 border border-border rounded-base text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20"
+                                >
+                                    <option value="">Escolha uma vaga ativa...</option>
+                                    {jobs.filter(j => j.status === 'Ativa').map(j => (
+                                        <option key={j.id} value={j.id}>{j.title} ({j.department})</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="p-6 bg-muted/30 border-t border-border flex justify-end gap-3">
+                            <button
+                                onClick={() => setInviteCandidate(null)}
+                                className="px-4 py-2 text-xs font-bold text-muted-foreground hover:text-foreground uppercase tracking-widest"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleInviteToJob}
+                                disabled={!selectedJobId || isInviting}
+                                className="bg-primary text-primary-foreground px-6 py-2 rounded-base text-xs font-bold uppercase tracking-widest hover:bg-primary/90 transition-all disabled:opacity-50"
+                            >
+                                {isInviting ? 'Vinculando...' : 'Confirmar Vínculo'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {selectedCandidateId && (
                 <CandidateProfileDrawer

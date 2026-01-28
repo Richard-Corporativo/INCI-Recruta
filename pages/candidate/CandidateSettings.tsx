@@ -36,7 +36,10 @@ const CandidateSettings: React.FC = () => {
         skills: [] as string[],
         experience: [] as Experience[],
         education: [] as Education[],
-        languages: [] as string[]
+        languages: [] as string[],
+        pretension_min: '',
+        pretension_max: '',
+        availability: ''
     });
 
     const [notifications, setNotifications] = useState({
@@ -61,7 +64,10 @@ const CandidateSettings: React.FC = () => {
                 skills: currentCandidate.skills || [],
                 experience: currentCandidate.experience || [],
                 education: currentCandidate.education || [],
-                languages: currentCandidate.languages || []
+                languages: currentCandidate.languages || [],
+                pretension_min: currentCandidate.pretension_min?.toString() || '',
+                pretension_max: currentCandidate.pretension_max?.toString() || '',
+                availability: currentCandidate.availability || ''
             });
 
             if (currentCandidate.notification_preferences) {
@@ -148,7 +154,10 @@ const CandidateSettings: React.FC = () => {
                 skills: formData.skills,
                 experience: formData.experience,
                 education: formData.education,
-                languages: formData.languages
+                languages: formData.languages,
+                pretension_min: formData.pretension_min ? Number(formData.pretension_min) : undefined,
+                pretension_max: formData.pretension_max ? Number(formData.pretension_max) : undefined,
+                availability: formData.availability
             });
             success('Perfil atualizado com sucesso!');
         } catch (err: any) {
@@ -200,6 +209,41 @@ const CandidateSettings: React.FC = () => {
         }
     };
 
+    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !currentCandidate?.id) return;
+
+        // Simple validation
+        if (!file.type.startsWith('image/')) {
+            error('Por favor, envie apenas arquivos de imagem.');
+            return;
+        }
+
+        if (file.size > 2 * 1024 * 1024) { // 2MB limit as requested
+            error('A imagem deve ter no máximo 2MB.');
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            // Using the new service method
+            const publicUrl = await CandidateService.uploadAvatar(file, currentCandidate.id);
+
+            if (!publicUrl) throw new Error('Falha no upload da imagem');
+
+            // Force update local state
+            await updateProfile({ avatar: publicUrl });
+            success('Foto de perfil atualizada com sucesso!');
+        } catch (err: any) {
+            console.error(err);
+            error('Erro ao enviar foto: ' + err.message);
+        } finally {
+            setIsSaving(false);
+            // Reset input
+            if (e.target) e.target.value = '';
+        }
+    };
+
     return isLoading ? <ProfileSkeleton /> : (
         <div className="max-w-6xl mx-auto w-full px-4 md:px-10 lg:px-14 py-8 md:py-12">
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col gap-10 pb-20">
@@ -216,9 +260,9 @@ const CandidateSettings: React.FC = () => {
                             <div className="flex flex-col gap-4 flex-1 w-full text-center md:text-left">
                                 <label className="flex flex-col gap-2.5">
                                     <span className="text-xs font-bold text-muted-foreground">Foto de perfil</span>
-                                    <input accept="image/*" className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90 transition-all cursor-pointer" disabled type="file" />
+                                    <input accept="image/*" className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90 transition-all cursor-pointer" type="file" onChange={handleAvatarUpload} />
                                 </label>
-                                <p className="text-xs text-muted-foreground font-medium">Envie uma foto profissional para seu perfil.</p>
+                                <p className="text-xs text-muted-foreground font-medium">Envie uma foto profissional para seu perfil (Máx. 2MB).</p>
                             </div>
                         </div>
                         <div className="p-8 md:p-12 space-y-10">
@@ -239,6 +283,20 @@ const CandidateSettings: React.FC = () => {
                                 <label className="flex flex-col gap-2.5">
                                     <span className="text-xs font-semibold text-muted-foreground px-1">Cidade e UF</span>
                                     <input className="w-full h-12 rounded-md border border-border bg-background px-4 outline-none text-sm font-semibold focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Ex: São Paulo, SP" type="text" value={formData.location} onChange={handleInputChange} name="location" />
+                                </label>
+                                <label className="flex flex-col gap-2.5">
+                                    <span className="text-xs font-semibold text-muted-foreground px-1">Pretensão Salarial (R$)</span>
+                                    <input className="w-full h-12 rounded-md border border-border bg-background px-4 outline-none text-sm font-semibold focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Ex: 5000" type="number" value={formData.pretension_min} onChange={handleInputChange} name="pretension_min" />
+                                </label>
+                                <label className="flex flex-col gap-2.5">
+                                    <span className="text-xs font-semibold text-muted-foreground px-1">Disponibilidade</span>
+                                    <select className="w-full h-12 rounded-md border border-border bg-background px-4 outline-none text-sm font-semibold focus:ring-2 focus:ring-primary/20 transition-all" value={formData.availability} onChange={handleInputChange} name="availability">
+                                        <option value="">Selecione...</option>
+                                        <option value="Imediata">Imediata</option>
+                                        <option value="15 dias">15 dias</option>
+                                        <option value="30 dias">30 dias</option>
+                                        <option value="A combinar">A combinar</option>
+                                    </select>
                                 </label>
                             </div>
                         </div>
@@ -423,45 +481,47 @@ const CandidateSettings: React.FC = () => {
                         </section>
                     </div>
                 </div>
-            </div>
+            </div >
 
             {/* Delete Modal - Kept separate to keep main structure clean */}
-            {showDeleteModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-card w-full max-w-md rounded-xl shadow-xl overflow-hidden border border-border">
-                        <div className="p-6 border-b border-border">
-                            <h3 className="text-lg font-semibold text-foreground">Excluir conta permanentemente?</h3>
-                            <p className="text-sm text-muted-foreground mt-2">Esta ação não pode ser desfeita. Todos os seus dados serão perdidos.</p>
-                        </div>
-                        <div className="p-6 space-y-4">
-                            <p className="text-sm font-medium text-foreground">Digite <span className="font-bold text-destructive">EXCLUIR</span> para confirmar:</p>
-                            <input
-                                autoFocus
-                                type="text"
-                                className="w-full h-10 px-3 rounded-md border border-border bg-background text-sm font-semibold outline-none focus:ring-2 focus:ring-destructive/30"
-                                value={deleteConfirmation}
-                                onChange={(e) => setDeleteConfirmation(e.target.value)}
-                            />
-                        </div>
-                        <div className="p-4 bg-muted/20 flex justify-end gap-3">
-                            <button
-                                onClick={() => setShowDeleteModal(false)}
-                                className="px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted rounded-md transition-colors"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleDeleteAccount}
-                                disabled={deleteConfirmation.toLowerCase() !== 'excluir' || isDeleting}
-                                className="px-4 py-2 text-xs font-semibold text-destructive-foreground bg-destructive hover:bg-destructive/90 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isDeleting ? 'Excluindo...' : 'Confirmar exclusão'}
-                            </button>
+            {
+                showDeleteModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-card w-full max-w-md rounded-xl shadow-xl overflow-hidden border border-border">
+                            <div className="p-6 border-b border-border">
+                                <h3 className="text-lg font-semibold text-foreground">Excluir conta permanentemente?</h3>
+                                <p className="text-sm text-muted-foreground mt-2">Esta ação não pode ser desfeita. Todos os seus dados serão perdidos.</p>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <p className="text-sm font-medium text-foreground">Digite <span className="font-bold text-destructive">EXCLUIR</span> para confirmar:</p>
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    className="w-full h-10 px-3 rounded-md border border-border bg-background text-sm font-semibold outline-none focus:ring-2 focus:ring-destructive/30"
+                                    value={deleteConfirmation}
+                                    onChange={(e) => setDeleteConfirmation(e.target.value)}
+                                />
+                            </div>
+                            <div className="p-4 bg-muted/20 flex justify-end gap-3">
+                                <button
+                                    onClick={() => setShowDeleteModal(false)}
+                                    className="px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted rounded-md transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleDeleteAccount}
+                                    disabled={deleteConfirmation.toLowerCase() !== 'excluir' || isDeleting}
+                                    className="px-4 py-2 text-xs font-semibold text-destructive-foreground bg-destructive hover:bg-destructive/90 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isDeleting ? 'Excluindo...' : 'Confirmar exclusão'}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 

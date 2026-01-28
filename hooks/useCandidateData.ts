@@ -11,7 +11,7 @@ export const useCandidateData = () => {
 
     const calculateCompleteness = (candidate: Candidate) => {
         const fields: (keyof Candidate)[] = [
-            'name', 'phone', 'location', 'summary', 'linkedin', 'github', 'portfolio', 'resume_url', 'avatar'
+            'name', 'phone', 'location', 'summary', 'linkedin', 'github', 'portfolio', 'has_resume', 'avatar'
         ];
         const filled = fields.filter(f => !!candidate[f]).length;
         return Math.round((filled / fields.length) * 100);
@@ -41,8 +41,21 @@ export const useCandidateData = () => {
                 const userProfiles = allCandidates.filter(c => c.user_id === session.user.id);
 
                 if (userProfiles.length > 0) {
-                    // The first item is our latest profile
-                    setCurrentCandidate(userProfiles[0]);
+                    const profile = userProfiles[0];
+
+                    // Fetch avatar if stored in DB BLOB
+                    if (profile.has_avatar) {
+                        try {
+                            const avatarUrl = await CandidateService.getAvatarUrl(profile.id);
+                            if (avatarUrl) {
+                                profile.avatar = avatarUrl;
+                            }
+                        } catch (err) {
+                            console.warn('Failed to fetch avatar BLOB:', err);
+                        }
+                    }
+
+                    setCurrentCandidate(profile);
 
                     // All items that have a jobId are applications
                     const apps = userProfiles.filter(p => !!p.jobId);
@@ -88,6 +101,9 @@ export const useCandidateData = () => {
             // Critical: Remove fields that don't exist in DB or shouldn't be updated here
             if ('applied_at' in dbPayload) delete dbPayload.applied_at;
             if ('feedbacks' in dbPayload) delete dbPayload.feedbacks;
+            // Avatar is now stored in candidate_avatars satellite table
+            if ('avatar' in dbPayload) delete dbPayload.avatar;
+            if ('has_avatar' in dbPayload) delete dbPayload.has_avatar;
 
             // NOTE: Fields 'role', 'github', 'summary', 'education' are expected in DB (run migration 005)
 

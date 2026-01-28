@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase';
-import { Job } from '../../types';
+import { Job, User } from '../../types';
+import { AuditService } from './AuditService';
 
 export const JobService = {
     async getJobs(): Promise<Job[]> {
@@ -75,7 +76,7 @@ export const JobService = {
         }
         return true;
     },
-    async syncJobsByRole(roleId: string, updates: { title: string, department: string, salary_min: number, salary_max: number }): Promise<void> {
+    async syncJobsByRole(roleId: string, updates: { title: string, department: string }): Promise<void> {
         const { error } = await supabase
             .from('jobs')
             .update(updates)
@@ -84,5 +85,75 @@ export const JobService = {
         if (error) {
             console.error('Error syncing jobs with role:', error);
         }
+    },
+
+    async transitionStatus(
+        jobId: string,
+        nextStatus: Job['workflow_status'],
+        user: User
+    ): Promise<Job | null> {
+        const currentJob = await this.getJobById(jobId);
+        if (!currentJob) throw new Error('Job not found');
+
+        const currentStatus = currentJob.workflow_status || 'draft';
+
+        // 1. Define allowed transitions
+        const allowedTransitions: Record<string, string[]> = {
+            'draft': ['pending_approval', 'archived'],
+            'pending_approval': ['approved', 'draft', 'archived'],
+            'approved': ['published', 'archived'],
+            'published': ['archived'],
+            'archived': ['draft'] // Allow re-opening if needed
+        };
+
+        if (!allowedTransitions[currentStatus]?.includes(nextStatus as string)) {
+            throw new Error(`Transition from ${currentStatus} to ${nextStatus} not allowed.`);
+        }
+
+        // 2. Role-based validation
+        const isAdmin = ['admin', 'quality'].includes(user.role);
+
+        if (nextStatus === 'approved' && !isAdmin) {
+            throw new Error('Only Admin or Quality users can approve jobs.');
+        }
+
+        if (nextStatus === 'published' && !isAdmin && !user.custom_permissions?.close_job) {
+            // Basic check: if you can't manage job closing you probably shouldn't be publishing without approval
+            // But usually publishing requires approved state.
+        }
+
+        // 3. Update the job
+        const updates: Partial<Job> = { workflow_status: nextStatus };
+
+        // Map to legacy fields for compatibility
+        if (nextStatus === 'published') {
+            updates.status = 'Ativa';
+            updates.approval_status = 'Aprovado';
+        } else if (nextStatus === 'pending_approval') {
+            updates.approval_status = 'Pendente';
+        } else if (nextStatus === 'approved') {
+            updates.approval_status = 'Aprovado';
+        } else if (nextStatus === 'archived') {
+            updates.status = 'Encerrada';
+        } else if (nextStatus === 'draft') {
+            updates.status = 'Rascunho';
+            updates.approval_status = 'Rascunho';
+        }
+
+        const updatedJob = await this.updateJob(jobId, updates);
+
+        // 4. Audit the change
+        if (updatedJob) {
+            await AuditService.logChange(
+                'job',
+                jobId,
+                `Workflow Transition: ${currentStatus} -> ${nextStatus}`,
+                currentJob,
+                updatedJob,
+                'job_management'
+            );
+        }
+
+        return updatedJob;
     }
 };

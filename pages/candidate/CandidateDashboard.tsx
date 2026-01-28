@@ -23,7 +23,10 @@ const CandidateDashboard: React.FC = () => {
                 portfolio: currentCandidate.portfolio || '',
                 resumeName: currentCandidate.resumeName || 'Clique para anexar curriculo',
                 avatar: currentCandidate.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-                lastUpdate: currentCandidate.applied_at || 'Recente'
+                lastUpdate: currentCandidate.applied_at || 'Recente',
+                pretension_min: currentCandidate.pretension_min,
+                pretension_max: currentCandidate.pretension_max,
+                availability: currentCandidate.availability
             });
         }
     }, [currentCandidate]);
@@ -126,6 +129,17 @@ const CandidateDashboard: React.FC = () => {
                             <div className="flex flex-col gap-2">
                                 <span className="text-[10px] font-semibold text-muted-foreground/60">Sincronizado em</span>
                                 <p className="text-sm font-semibold text-foreground">{formData.lastUpdate}</p>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <span className="text-[10px] font-semibold text-muted-foreground/60 text-emerald-600 uppercase tracking-wider">Pretensão Salarial</span>
+                                <p className="text-sm font-bold text-foreground">
+                                    {formData.pretension_min ? `R$ ${formData.pretension_min.toLocaleString()}` : 'Não informada'}
+                                    {formData.pretension_max ? ` até R$ ${formData.pretension_max.toLocaleString()}` : ''}
+                                </p>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <span className="text-[10px] font-semibold text-muted-foreground/60 text-amber-600 uppercase tracking-wider">Disponibilidade</span>
+                                <p className="text-sm font-bold text-foreground">{formData.availability || 'Não informada'}</p>
                             </div>
                         </div>
                     </div>

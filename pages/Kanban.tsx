@@ -200,6 +200,8 @@ const KanbanBoard: React.FC = () => {
                     candidates={columnCandidates}
                     onCardClick={openProfile}
                     onQuickView={(candidate) => openQuickView('candidate', candidate)}
+                    slaLimit={job?.sla_settings?.[col.id]?.days}
+                    slaOwner={job?.sla_settings?.[col.id]?.owner}
                   />
                 );
               })}

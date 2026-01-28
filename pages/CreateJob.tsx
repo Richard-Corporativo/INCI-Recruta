@@ -8,6 +8,7 @@ import RequirementsSelector from '../components/RequirementsSelector';
 import { useRoles } from '../hooks/useRoles';
 import { Role } from '../types';
 import { JOB_BENEFITS_OPTIONS } from '../constants';
+import SLAConfig from '../components/SLAConfig';
 
 interface JobFormData {
   roleTitle: string;
@@ -28,6 +29,11 @@ interface JobFormData {
   roleId?: string;
   seniority?: string;
   registrationDeadline?: string;
+  positionsCount: number;
+  workSchedule: string;
+  experienceMin?: string;
+  reportsTo?: string;
+  slaSettings: Record<string, { days: number }>;
 }
 
 const CreateJob: React.FC = () => {
@@ -57,7 +63,19 @@ const CreateJob: React.FC = () => {
     requirements: [],
     benefits: [],
     seniority: 'Pleno',
-    registrationDeadline: ''
+    registrationDeadline: '',
+    positionsCount: 1,
+    workSchedule: 'Escala 5x2 (44h semanais)',
+    experienceMin: '',
+    reportsTo: '',
+    slaSettings: {
+      received: { days: 2 },
+      screening: { days: 2 },
+      technical: { days: 3 },
+      hr_interview: { days: 2 },
+      manager_interview: { days: 3 },
+      finalist: { days: 5 },
+    }
   });
 
   useEffect(() => {
@@ -82,6 +100,12 @@ const CreateJob: React.FC = () => {
 
   const handleSelectRole = (role: Role) => {
     setSelectedRole(role);
+
+    // Combine technical and behavioral requirements for the job
+    const techReqs = role.requirements_technical ? role.requirements_technical.split('\n').filter(Boolean) : [];
+    const behReqs = role.requirements_behavioral ? role.requirements_behavioral.split('\n').filter(Boolean) : [];
+    const combinedRequirements = [...techReqs, ...behReqs];
+
     setFormData(prev => ({
       ...prev,
       roleTitle: role.title,
@@ -90,9 +114,12 @@ const CreateJob: React.FC = () => {
       mission: role.mission || '',
       responsibilities: role.responsibilities || '',
       roleId: role.id,
-      seniority: role.seniority || 'Pleno',
-      salaryMin: role.salary_min?.toString() || '0',
-      salaryMax: role.salary_max?.toString() || '0'
+      seniority: role.seniority || (role.level ? `Nível ${role.level}` : 'Pleno'),
+      requirements: combinedRequirements.length > 0 ? combinedRequirements : (role.requirements ? role.requirements.split('\n').filter(Boolean) : []),
+      salaryMin: '0',
+      salaryMax: '0',
+      experienceMin: role.experience_min || '',
+      reportsTo: role.reports_to || ''
     }));
     setSearchTerm(role.title);
     setIsDropdownOpen(false);
@@ -117,7 +144,13 @@ const CreateJob: React.FC = () => {
       benefits: formData.benefits,
       seniority: formData.seniority,
       candidates_count: 0,
-      registration_deadline: formData.registrationDeadline || null
+      registration_deadline: formData.registrationDeadline || null,
+      positions_count: formData.positionsCount,
+      work_schedule: formData.workSchedule,
+      experience_min: formData.experienceMin,
+      reports_to: formData.reportsTo,
+      sla_settings: formData.slaSettings,
+      approval_status: 'Pendente' as const // Envia para aprovação
     };
 
     try {
@@ -125,7 +158,6 @@ const CreateJob: React.FC = () => {
       navigate('/jobs');
     } catch (error) {
       console.error('Error creating job:', error);
-      // Ideally we'd have a toast here too, but let's at least fix the race condition
     }
   };
 
@@ -368,6 +400,30 @@ const CreateJob: React.FC = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="flex flex-col gap-2">
+                        <label className="text-[11px] font-semibold text-muted-foreground transition-colors">Quantidade de vagas <span className="text-destructive">*</span></label>
+                        <input
+                          name="positionsCount"
+                          value={formData.positionsCount}
+                          onChange={(e) => setFormData(prev => ({ ...prev, positionsCount: parseInt(e.target.value) }))}
+                          className="w-full h-11 h-12 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out font-medium hover:border-ring"
+                          type="number"
+                          min="1"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[11px] font-semibold text-muted-foreground transition-colors">Jornada/Carga horária <span className="text-destructive">*</span></label>
+                        <input
+                          name="workSchedule"
+                          value={formData.workSchedule}
+                          onChange={handleInputChange}
+                          className="w-full h-11 h-12 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out font-medium hover:border-ring"
+                          placeholder="Ex: Escala 5x2 (44h semanais)"
+                          type="text"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="flex flex-col gap-2">
                         <label className="text-[11px] font-semibold text-muted-foreground transition-colors">Período de inscrição</label>
                         <input
                           name="registrationDeadline"
@@ -399,7 +455,7 @@ const CreateJob: React.FC = () => {
                       </div>
                       <div className="flex flex-col gap-2">
                         <label className="text-[11px] font-semibold text-muted-foreground transition-colors">
-                          Faixa salarial (Mensal) - <span className="text-primary italic">Herdado do cargo</span>
+                          Faixa salarial (Mensal)
                         </label>
                         <div className="flex items-center gap-2">
                           <div className="relative flex-1">
@@ -410,7 +466,7 @@ const CreateJob: React.FC = () => {
                               onChange={handleInputChange}
                               className="w-full h-10 pl-9 pr-3 rounded-md border border-border bg-background text-foreground text-sm focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 ease-in-out font-mono"
                               type="number"
-                              placeholder="Min"
+                              placeholder="Ex: 1500"
                             />
                           </div>
                           <span className="text-muted-foreground/50 transition-colors">—</span>
@@ -422,10 +478,11 @@ const CreateJob: React.FC = () => {
                               onChange={handleInputChange}
                               className="w-full h-10 pl-9 pr-3 rounded-md border border-border bg-background text-foreground text-sm focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 ease-in-out font-mono"
                               type="number"
-                              placeholder="Max"
+                              placeholder="Ex: 3000"
                             />
                           </div>
                         </div>
+                        <p className="text-[9px] text-muted-foreground mt-1 italic font-medium">Insira o valor cheio sem pontos ou vírgulas (Ex: 1500).</p>
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -438,6 +495,12 @@ const CreateJob: React.FC = () => {
                       <RequirementsSelector
                         selectedRequirements={formData.requirements}
                         onChange={(items) => setFormData(prev => ({ ...prev, requirements: items }))}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <SLAConfig
+                        settings={formData.slaSettings}
+                        onChange={(settings) => setFormData(prev => ({ ...prev, slaSettings: settings }))}
                       />
                     </div>
                     <div className="flex flex-col gap-2">

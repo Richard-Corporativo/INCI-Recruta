@@ -7,6 +7,7 @@ import BenefitsSelector from '../components/BenefitsSelector';
 import RequirementsSelector from '../components/RequirementsSelector';
 import { JOB_BENEFITS_OPTIONS } from '../constants';
 import Toast from '../components/Toast';
+import SLAConfig from '../components/SLAConfig';
 
 const EditJob: React.FC = () => {
   const { id } = useParams();
@@ -30,7 +31,8 @@ const EditJob: React.FC = () => {
     requirements: [] as string[],
     benefits: [] as string[],
     status: '',
-    registrationDeadline: ''
+    registrationDeadline: '',
+    slaSettings: {} as Record<string, { days: number }>
   });
 
   useEffect(() => {
@@ -45,10 +47,11 @@ const EditJob: React.FC = () => {
         salaryMin: job.salary_min.toString(),
         salaryMax: job.salary_max.toString(),
         context: job.context,
-        requirements: job.requirements ? job.requirements.split('\n').filter(r => r.trim() !== '') : [],
+        requirements: typeof job.requirements === 'string' ? job.requirements.split('\n').filter(r => r.trim() !== '') : (Array.isArray(job.requirements) ? job.requirements : []),
         benefits: job.benefits || [],
         status: job.status,
-        registrationDeadline: job.registration_deadline || ''
+        registrationDeadline: job.registration_deadline || '',
+        slaSettings: job.sla_settings || {}
       });
     }
   }, [job]);
@@ -72,7 +75,8 @@ const EditJob: React.FC = () => {
         requirements: formData.requirements.join('\n'),
         benefits: formData.benefits,
         status: formData.status as any,
-        registration_deadline: formData.registrationDeadline || null
+        registration_deadline: formData.registrationDeadline || null,
+        sla_settings: formData.slaSettings
       });
 
       setToast({ message: 'Vaga atualizada com sucesso!', type: 'success' });
@@ -207,7 +211,7 @@ const EditJob: React.FC = () => {
                           value={formData.salaryMin}
                           onChange={handleInputChange}
                           className="w-full h-10 pl-10 pr-3 rounded-md border border-border bg-background text-sm font-mono focus:ring-1 focus:ring-primary outline-none"
-                          placeholder="0"
+                          placeholder="Ex: 1500"
                         />
                       </div>
                       <div className="relative">
@@ -218,10 +222,11 @@ const EditJob: React.FC = () => {
                           value={formData.salaryMax}
                           onChange={handleInputChange}
                           className="w-full h-10 pl-10 pr-3 rounded-md border border-border bg-background text-sm font-mono focus:ring-1 focus:ring-primary outline-none"
-                          placeholder="0"
+                          placeholder="Ex: 3000"
                         />
                       </div>
                     </div>
+                    <p className="text-[9px] text-muted-foreground mt-2 italic font-medium">Insira o valor cheio sem pontos ou vírgulas (Ex: 1500).</p>
                   </div>
                 </div>
               </div>
@@ -305,6 +310,12 @@ const EditJob: React.FC = () => {
                     />
                   </div>
 
+                  <div className="flex flex-col gap-2">
+                    <SLAConfig
+                      settings={formData.slaSettings}
+                      onChange={(settings) => setFormData(prev => ({ ...prev, slaSettings: settings }))}
+                    />
+                  </div>
                   <div className="flex flex-col gap-2">
                     <BenefitsSelector
                       selectedBenefits={formData.benefits}

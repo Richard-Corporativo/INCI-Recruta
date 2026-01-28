@@ -4,6 +4,7 @@ import { JobService } from '../../src/services/JobService';
 import { CandidateService } from '../../src/services/CandidateService';
 import { Job, Candidate } from '../../types';
 import { supabase } from '../../lib/supabase';
+import { formatSalaryRange } from '../../src/utils/formatters';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../hooks/useAuth';
 import JobSummarySkeleton from '../../components/candidate/JobSummarySkeleton';
@@ -16,6 +17,7 @@ const JobApplication: React.FC = () => {
     const [step, setStep] = useState(1);
     const [job, setJob] = useState<Job | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const isTalentPool = !id;
 
     // Form data
     const [formData, setFormData] = useState({
@@ -28,7 +30,15 @@ const JobApplication: React.FC = () => {
         experiences: [
             { company: '', position: '', duration: '', description: '' }
         ],
-        resume: null as File | null
+        resume: null as File | null,
+        pretension_min: '',
+        pretension_max: '',
+
+        // Diversity Fields (Optional & Segregated)
+        gender: '',
+        race: '',
+        isPcd: false,
+        pcdDetails: ''
     });
 
     // Load job details
@@ -52,6 +62,23 @@ const JobApplication: React.FC = () => {
                         navigate(`/vagas/${id}`);
                     }
                 }
+            } else {
+                // Talent Pool Virtual Job
+                setJob({
+                    id: 'talentos',
+                    title: 'Banco de Talentos',
+                    department: 'Talentos INCI',
+                    location: 'Brasil',
+                    model: 'Remoto/Híbrido/Presencial',
+                    contract: 'A combinar',
+                    urgency: 'Média',
+                    status: 'Ativa',
+                    salary_min: 0,
+                    salary_max: 0,
+                    context: 'Candidatura espontânea para futuras oportunidades em nossa base de dados.',
+                    candidates_count: 0,
+                    created_at: new Date().toISOString()
+                } as Job);
             }
             setIsLoading(false);
         };
@@ -62,6 +89,13 @@ const JobApplication: React.FC = () => {
     useEffect(() => {
         const autofillForm = async () => {
             if (isAuthenticated && user) {
+                // SECURITY: If logged in but profile incomplete, force Wizard
+                if (user.profile_status === 'incomplete') {
+                    warning('Você precisa completar seu perfil e enviar seu currículo antes de se candidatar.');
+                    navigate('/perfil/completar');
+                    return;
+                }
+
                 // Fetch latest candidate profile to autofill
                 const { data: profile, error: profileError } = await supabase
                     .from('candidates')
@@ -85,12 +119,15 @@ const JobApplication: React.FC = () => {
                         city: profile.location || '',
                         linkedin: profile.linkedin || '',
                         portfolio: profile.portfolio || '',
+                        pretension_min: profile.pretension_min?.toString() || '',
+                        pretension_max: profile.pretension_max?.toString() || '',
+                        availability: profile.availability || ''
                     }));
                 }
             }
         };
         autofillForm();
-    }, [isAuthenticated, user]);
+    }, [isAuthenticated, user, navigate, warning]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -112,8 +149,14 @@ const JobApplication: React.FC = () => {
         }
     };
 
-    const nextStep = () => setStep(prev => prev + 1);
-    const prevStep = () => setStep(prev => prev - 1);
+    const nextStep = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setStep(prev => prev + 1);
+    };
+    const prevStep = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setStep(prev => prev - 1);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -124,11 +167,13 @@ const JobApplication: React.FC = () => {
                 .from('candidates')
                 .select('id')
                 .eq('user_id', user.id)
-                .eq('job_id', id)
+                .is('job_id', id || null)
                 .maybeSingle();
 
             if (existingApp) {
-                warning('Você já possui uma candidatura ativa para esta vaga. Acompanhe o status no seu painel.');
+                warning(isTalentPool
+                    ? 'Você já possui um cadastro em nosso Banco de Talentos.'
+                    : 'Você já possui uma candidatura ativa para esta vaga. Acompanhe o status no seu painel.');
                 navigate('/candidate/dashboard');
                 return;
             }
@@ -138,11 +183,13 @@ const JobApplication: React.FC = () => {
                 .from('candidates')
                 .select('id')
                 .eq('email', formData.email.trim().toLowerCase())
-                .eq('job_id', id)
+                .is('job_id', id || null)
                 .maybeSingle();
 
             if (existingAppByEmail) {
-                warning('Já existe uma candidatura com este e-mail para esta vaga. Entre na sua conta para acompanhar.');
+                warning(isTalentPool
+                    ? 'Já existe um cadastro com este e-mail em nosso Banco de Talentos. Entre na sua conta para atualizar.'
+                    : 'Já existe uma candidatura com este e-mail para esta vaga. Entre na sua conta para acompanhar.');
                 navigate('/login');
                 return;
             }
@@ -151,7 +198,7 @@ const JobApplication: React.FC = () => {
         // 1. Resume Upload Logic
         try {
             const newCandidate: Omit<Candidate, 'id'> = {
-                jobId: id,
+                jobId: isTalentPool ? undefined : id,
                 name: formData.name,
                 email: formData.email,
                 phone: formData.phone,
@@ -163,10 +210,26 @@ const JobApplication: React.FC = () => {
                 textColor: 'text-white',
                 linkedin: formData.linkedin,
                 portfolio: formData.portfolio,
-                user_id: user?.id // Use user from useAuth
+                user_id: user?.id,
+                pretension_min: formData.pretension_min ? Number(formData.pretension_min) : undefined,
+                pretension_max: formData.pretension_max ? Number(formData.pretension_max) : undefined,
+                availability: formData.availability
             };
 
-            await CandidateService.addCandidate(newCandidate, formData.resume || undefined);
+            const createdCandidate = await CandidateService.addCandidate(newCandidate, formData.resume || undefined);
+
+            if (createdCandidate && createdCandidate.id) {
+                // 2. Save Diversity Data (Fire & Forget / Segregated)
+                // We check if any diversity data was filled to avoid unnecessary calls/empty records if totally skipped
+                if (formData.gender || formData.race || formData.isPcd) {
+                    await CandidateService.saveDiversityData(createdCandidate.id, {
+                        gender: formData.gender,
+                        race: formData.race,
+                        isPcd: formData.isPcd
+                    });
+                }
+            }
+
 
             success('Sua candidatura foi enviada com sucesso!');
             navigate('/candidate/dashboard');
@@ -251,6 +314,45 @@ const JobApplication: React.FC = () => {
                                 onChange={handleInputChange}
                                 required
                             />
+                        </label>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <label className="flex flex-col gap-2.5">
+                            <span className="text-xs font-semibold text-muted-foreground px-1">Pretensão Salarial Mín.</span>
+                            <input
+                                className="w-full h-12 rounded-md border border-border bg-background px-4 text-sm text-foreground font-medium outline-none focus:ring-2 focus:ring-primary/20 hover:border-ring transition-all"
+                                placeholder="R$ Min"
+                                type="number"
+                                name="pretension_min"
+                                value={formData.pretension_min}
+                                onChange={handleInputChange}
+                            />
+                        </label>
+                        <label className="flex flex-col gap-2.5">
+                            <span className="text-xs font-semibold text-muted-foreground px-1">Pretensão Salarial Máx.</span>
+                            <input
+                                className="w-full h-12 rounded-md border border-border bg-background px-4 text-sm text-foreground font-medium outline-none focus:ring-2 focus:ring-primary/20 hover:border-ring transition-all"
+                                placeholder="R$ Max"
+                                type="number"
+                                name="pretension_max"
+                                value={formData.pretension_max}
+                                onChange={handleInputChange}
+                            />
+                        </label>
+                        <label className="flex flex-col gap-2.5">
+                            <span className="text-xs font-semibold text-muted-foreground px-1">Disponibilidade</span>
+                            <select
+                                className="w-full h-12 rounded-md border border-border bg-background px-4 text-sm text-foreground font-medium outline-none focus:ring-2 focus:ring-primary/20 hover:border-ring transition-all"
+                                name="availability"
+                                value={formData.availability}
+                                onChange={handleInputChange as any}
+                            >
+                                <option value="">Selecione...</option>
+                                <option value="Imediata">Imediata</option>
+                                <option value="15 dias">15 dias</option>
+                                <option value="30 dias">30 dias</option>
+                                <option value="A combinar">A combinar</option>
+                            </select>
                         </label>
                     </div>
                 </div>
@@ -402,8 +504,116 @@ const JobApplication: React.FC = () => {
         </div>
     );
 
-    // Step 3: Review
-    const renderStep3 = () => (
+    // Step 3: Diversity (New)
+    const renderStepDiversity = () => (
+        <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="rounded-lg bg-card text-card-foreground border border-border overflow-hidden transition-colors">
+                <div className="p-8 pb-4">
+                    <div className="flex items-center gap-3 mb-2">
+                        <span className="material-symbols-outlined text-primary text-[28px]">diversity_3</span>
+                        <h2 className="text-2xl font-semibold text-foreground tracking-tight">Diversidade & Inclusão</h2>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2 font-medium leading-relaxed">
+                        Acreditamos na construção de times diversos. Estas perguntas são <strong>opcionais</strong> e têm fins <strong>estritamente estatísticos</strong>.
+                    </p>
+                </div>
+
+                {/* LGPD Disclaimer Box */}
+                <div className="px-8 pb-4">
+                    <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-lg p-4 flex gap-3">
+                        <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 shrink-0">lock</span>
+                        <div className="flex flex-col gap-1">
+                            <p className="text-xs font-bold text-blue-700 dark:text-blue-300">Privacidade Garantida (LGPD)</p>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                Suas respostas <strong>não serão exibidas individualmente</strong> aos recrutadores durante o processo seletivo e não impactam sua avaliação. Os dados são analisados apenas de forma agregada e anônima.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-8 flex flex-col gap-8 pt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <label className="flex flex-col gap-2.5">
+                            <span className="text-xs font-semibold text-muted-foreground px-1">Como você se identifica? (Gênero)</span>
+                            <select
+                                className="w-full h-12 rounded-md border border-border bg-background px-4 text-sm text-foreground font-medium outline-none focus:ring-2 focus:ring-primary/20 hover:border-ring transition-all"
+                                name="gender"
+                                value={formData.gender}
+                                onChange={handleInputChange as any}
+                            >
+                                <option value="">Prefiro não informar</option>
+                                <option value="female">Mulher (Cis ou Trans)</option>
+                                <option value="male">Homem (Cis ou Trans)</option>
+                                <option value="non_binary">Não-binário</option>
+                                <option value="other">Outro</option>
+                            </select>
+                        </label>
+                        <label className="flex flex-col gap-2.5">
+                            <span className="text-xs font-semibold text-muted-foreground px-1">Cor ou Raça (IBGE)</span>
+                            <select
+                                className="w-full h-12 rounded-md border border-border bg-background px-4 text-sm text-foreground font-medium outline-none focus:ring-2 focus:ring-primary/20 hover:border-ring transition-all"
+                                name="race"
+                                value={formData.race}
+                                onChange={handleInputChange as any}
+                            >
+                                <option value="">Prefiro não informar</option>
+                                <option value="white">Branca</option>
+                                <option value="black">Preta</option>
+                                <option value="brown">Parda</option>
+                                <option value="yellow">Amarela</option>
+                                <option value="indigenous">Indígena</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <div className="flex flex-col gap-4 p-5 rounded-lg border border-border bg-muted/5">
+                        <div className="flex items-start gap-3">
+                            <input
+                                type="checkbox"
+                                id="isPcd"
+                                name="isPcd"
+                                checked={formData.isPcd}
+                                onChange={(e) => setFormData(prev => ({ ...prev, isPcd: e.target.checked }))}
+                                className="mt-1 size-5 rounded border-border text-primary focus:ring-primary/20 cursor-pointer"
+                            />
+                            <div className="flex flex-col">
+                                <label htmlFor="isPcd" className="text-sm font-semibold text-foreground cursor-pointer">Sou Pessoa com Deficiência (PcD)</label>
+                                <p className="text-xs text-muted-foreground mt-1">Marque se você possui alguma deficiência conforme critérios legais. Isso nos ajuda a promover acessibilidade.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex justify-between pt-4">
+                <button
+                    onClick={prevStep}
+                    className="h-12 px-8 rounded-base border border-border bg-background text-foreground text-xs font-semibold hover:bg-accent transition-all duration-200 outline-none flex items-center gap-2"
+                >
+                    <span className="material-symbols-outlined text-lg">west</span>
+                    Voltar
+                </button>
+                <div className="flex gap-4">
+                    <button
+                        onClick={nextStep}
+                        className="h-12 px-6 rounded-base hover:bg-muted text-muted-foreground text-xs font-semibold hover:text-foreground transition-all duration-200 flex items-center justify-center"
+                        title="Pular esta etapa"
+                    >
+                        Pular
+                    </button>
+                    <button
+                        onClick={nextStep}
+                        className="h-12 px-10 rounded-base bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-300 w-full sm:w-auto active:scale-95 border border-border/40"
+                    >
+                        Continuar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
+    // Step 4: Review
+    const renderStep4 = () => (
         <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="rounded-lg bg-card text-card-foreground border border-border overflow-hidden transition-colors">
                 <div className="p-8 pb-4 bg-muted/20">
@@ -441,6 +651,13 @@ const JobApplication: React.FC = () => {
                                 <span className="text-xs text-muted-foreground font-semibold">LinkedIn</span>
                                 <p className="text-sm font-semibold text-foreground">{formData.linkedin || 'Não informado'}</p>
                             </div>
+                            <div className="flex flex-col gap-1">
+                                <span className="text-xs text-muted-foreground font-semibold">Pretensão Salarial</span>
+                                <p className="text-sm font-semibold text-foreground">
+                                    {formData.pretension_min ? `R$ ${Number(formData.pretension_min).toLocaleString()}` : 'N/A'}
+                                    {formData.pretension_max ? ` até R$ ${Number(formData.pretension_max).toLocaleString()}` : ''}
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -469,11 +686,11 @@ const JobApplication: React.FC = () => {
                     {/* Top Navigation / Back Link */}
                     <div className="flex items-center gap-2 pb-10">
                         <button
-                            onClick={() => navigate(`/vagas/${id}`)}
+                            onClick={() => navigate(isTalentPool ? '/vagas' : `/vagas/${id}`)}
                             className="group flex items-center text-xs font-semibold text-muted-foreground hover:text-primary transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-3 py-2"
                         >
                             <span className="material-symbols-outlined text-xl mr-2 transition-transform group-hover:-translate-x-1">keyboard_backspace</span>
-                            Ver detalhes da vaga
+                            {isTalentPool ? 'Voltar para Vagas' : 'Ver detalhes da vaga'}
                         </button>
                     </div>
 
@@ -483,11 +700,11 @@ const JobApplication: React.FC = () => {
                             {/* Header Section */}
                             <div className="flex flex-col gap-3">
                                 <h1 className="text-foreground text-3xl font-semibold tracking-tight transition-colors">
-                                    Candidatura simplificada
+                                    {isTalentPool ? 'Candidatura Espontânea' : 'Candidatura simplificada'}
                                 </h1>
                                 <p className="text-muted-foreground text-sm font-medium leading-relaxed flex items-center gap-2.5 transition-colors">
-                                    <span className="material-symbols-outlined text-[20px] text-primary">timer</span>
-                                    <span>Processo rápido para {job?.title || 'vaga'} • Leva aprox. 3 min</span>
+                                    <span className="material-symbols-outlined text-[20px] text-primary">{isTalentPool ? 'account_circle' : 'timer'}</span>
+                                    <span>{isTalentPool ? 'Seu perfil no Banco de Talentos' : `Processo rápido para ${job?.title || 'vaga'}`} • Leva aprox. 3 min</span>
                                 </p>
                             </div>
 
@@ -498,15 +715,15 @@ const JobApplication: React.FC = () => {
                                         <div className="flex flex-col gap-1">
                                             <p className="text-xs font-semibold text-muted-foreground">Etapa atual</p>
                                             <p className="text-foreground text-sm font-semibold transition-colors">
-                                                {step}. {step === 1 ? 'Dados pessoais' : step === 2 ? 'Experiência' : 'Revisão final'}
+                                                {step}. {step === 1 ? 'Dados pessoais' : step === 2 ? 'Experiência' : step === 3 ? 'Diversidade' : 'Revisão final'}
                                             </p>
                                         </div>
-                                        <p className="text-primary text-lg font-semibold tracking-tight">{Math.round((step / 3) * 100)}%</p>
+                                        <p className="text-primary text-lg font-semibold tracking-tight">{Math.round((step / 4) * 100)}%</p>
                                     </div>
                                     <div className="rounded-full bg-muted h-2.5 w-full overflow-hidden transition-colors">
                                         <div
                                             className="h-full rounded-full bg-primary transition-all duration-700 ease-in-out"
-                                            style={{ width: `${(step / 3) * 100}%` }}
+                                            style={{ width: `${(step / 4) * 100}%` }}
                                         ></div>
                                     </div>
                                 </div>
@@ -516,7 +733,8 @@ const JobApplication: React.FC = () => {
                             <div className="transition-all duration-300">
                                 {step === 1 && renderStep1()}
                                 {step === 2 && renderStep2()}
-                                {step === 3 && renderStep3()}
+                                {step === 3 && renderStepDiversity()}
+                                {step === 4 && renderStep4()}
                             </div>
                         </div>
 
@@ -547,9 +765,7 @@ const JobApplication: React.FC = () => {
                                                     { icon: 'location_on', label: `${job?.location} (${job?.model})` },
                                                     {
                                                         icon: 'payments',
-                                                        label: (job?.salary_min || job?.salary_max)
-                                                            ? `${job?.salary_min && job.salary_min > 0 ? `R$ ${job.salary_min}` : ''}${job?.salary_min > 0 && job?.salary_max > 0 ? ' - ' : ''}${job?.salary_max && job.salary_max > 0 ? `R$ ${job.salary_max}` : ''}`
-                                                            : 'A combinar'
+                                                        label: formatSalaryRange(job?.salary_min, job?.salary_max)
                                                     },
                                                     { icon: 'schedule', label: 'Tempo integral' }
                                                 ].map((item, idx) => (
@@ -570,8 +786,8 @@ const JobApplication: React.FC = () => {
                                                 <p className="text-xs font-medium text-muted-foreground leading-relaxed line-clamp-3">
                                                     {job?.context}
                                                 </p>
-                                                <Link to={`/vagas/${id}`} className="text-xs font-semibold text-primary hover:text-primary/70 transition-all mt-4 inline-block underline underline-offset-4 decoration-primary/30">
-                                                    Ver detalhes
+                                                <Link to={isTalentPool ? '/vagas' : `/vagas/${id}`} className="text-xs font-semibold text-primary hover:text-primary/70 transition-all mt-4 inline-block underline underline-offset-4 decoration-primary/30">
+                                                    {isTalentPool ? 'Ver vagas abertas' : 'Ver detalhes'}
                                                 </Link>
                                             </div>
                                         </div>

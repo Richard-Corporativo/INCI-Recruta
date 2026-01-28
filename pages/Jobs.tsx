@@ -66,6 +66,8 @@ const Jobs: React.FC = () => {
     }
   };
 
+  const isAdmin = user?.role === 'admin' || user?.role === 'recruiter' || user?.role === 'quality';
+
   const filteredJobs = React.useMemo(() => {
     return jobs.filter(job => {
       // Search: Title, Dept, Location
@@ -77,17 +79,18 @@ const Jobs: React.FC = () => {
       // Status Filter
       const matchesStatus = statusFilter === 'Todas' || job.status === statusFilter;
 
-      // Manager Filter
+      // Manager Filter - Enforce for non-admins
       let matchesManager = true;
-      if (managerFilter !== 'all') {
+      if (!isAdmin) {
+        matchesManager = job.manager_id === user?.id;
+      } else if (managerFilter !== 'all') {
         matchesManager = job.manager_id === managerFilter;
       }
 
       return matchesSearch && matchesStatus && matchesManager;
     });
-  }, [jobs, debouncedSearchTerm, statusFilter, managerFilter]);
+  }, [jobs, debouncedSearchTerm, statusFilter, managerFilter, isAdmin, user]);
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'recruiter';
 
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden bg-background transition-colors duration-200 ease-in-out">
@@ -189,6 +192,7 @@ const Jobs: React.FC = () => {
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Contrato</th>
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Urgência</th>
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Status</th>
+                      <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Aprovação</th>
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Prazo Inscrição</th>
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground transition-colors">Candidatos</th>
                       <th className="px-6 py-5 text-[11px] font-semibold text-muted-foreground text-right transition-colors">Ações</th>
@@ -226,6 +230,14 @@ const Jobs: React.FC = () => {
                           <td className="px-6 py-5">
                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${getStatusStyles(job.status)}`}>
                               <span className={`size-1.5 rounded-full transition-colors ${getStatusDotColor(job.status)}`}></span> {job.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-5">
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold border transition-colors ${job.approval_status === 'Aprovado' ? 'bg-blue-50 text-blue-600 border-blue-200' :
+                                job.approval_status === 'Pendente' ? 'bg-amber-50 text-amber-600 border-amber-200' :
+                                  'bg-slate-50 text-slate-600 border-slate-200'
+                              }`}>
+                              {job.approval_status || 'Rascunho'}
                             </span>
                           </td>
                           <td className="px-6 py-5 text-sm text-foreground transition-colors">

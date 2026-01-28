@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { RoleService } from '../src/services/RoleService';
 import { Role } from '../types';
 
 export const useRoles = () => {
@@ -7,16 +7,9 @@ export const useRoles = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     const loadRoles = useCallback(async () => {
-        const { data, error } = await supabase
-            .from('roles')
-            .select('*')
-            .order('title');
-
-        if (error) {
-            console.error('Error loading roles:', error);
-        } else if (data) {
-            setRoles(data as Role[]);
-        }
+        setIsLoading(true);
+        const data = await RoleService.getRoles();
+        setRoles(data);
         setIsLoading(false);
     }, []);
 
@@ -25,50 +18,25 @@ export const useRoles = () => {
     }, [loadRoles]);
 
     const addRole = useCallback(async (role: Omit<Role, 'id' | 'updated_at'>) => {
-        const { data, error } = await supabase
-            .from('roles')
-            .insert([{
-                ...role,
-                updated_at: new Date().toISOString()
-            }])
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Error adding role:', error);
-        } else {
-            loadRoles();
+        const result = await RoleService.addRole(role);
+        if (result) {
+            await loadRoles();
         }
     }, [loadRoles]);
 
     const updateRole = useCallback(async (id: string, roleData: Partial<Role>) => {
-        const { error } = await supabase
-            .from('roles')
-            .update({
-                ...roleData,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', id);
-
-        if (error) {
-            console.error('Error updating role:', error);
-        } else {
-            loadRoles();
+        const result = await RoleService.updateRole(id, roleData);
+        if (result) {
+            await loadRoles();
         }
     }, [loadRoles]);
 
     const deleteRole = useCallback(async (id: string) => {
-        const { error } = await supabase
-            .from('roles')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            console.error('Error deleting role:', error);
-        } else {
-            loadRoles();
+        const success = await RoleService.deleteRole(id);
+        if (success) {
+            await loadRoles();
         }
     }, [loadRoles]);
 
-    return { roles, addRole, updateRole, deleteRole, isLoading };
+    return { roles, addRole, updateRole, deleteRole, isLoading, refresh: loadRoles };
 };

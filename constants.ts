@@ -13,14 +13,13 @@ export const COLUMNS_CONFIG = [
 
 // Predefined Benefits for Jobs
 export const JOB_BENEFITS_OPTIONS = [
-    "Vale Alimentação",
-    "Vale Refeição",
+    "Vale iFood",
     "Plano de Saúde",
     "Plano Odontológico",
-    "Gympass / TotalPass",
+    "Gympass Exclusive",
     "Auxílio Home Office",
     "Horário Flexível",
-    "Day Off no Aniversário",
+    "Pix Day Aniversário",
     "Seguro de Vida",
     "Auxílio Creche",
     "Vale Transporte",

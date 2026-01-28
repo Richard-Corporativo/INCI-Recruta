@@ -14,7 +14,22 @@ export const useCandidates = (jobId?: string | number) => {
         } else {
             data = await CandidateService.getCandidates();
         }
-        setCandidates(data);
+        // Fetch avatars for candidates who have them
+        const candidatesWithAvatars = await Promise.all((data || []).map(async (c) => {
+            if (c.has_avatar) {
+                try {
+                    const avatarUrl = await CandidateService.getAvatarUrl(c.id);
+                    if (avatarUrl) {
+                        return { ...c, avatar: avatarUrl };
+                    }
+                } catch (err) {
+                    console.warn(`Failed to fetch avatar for candidate ${c.id}:`, err);
+                }
+            }
+            return c;
+        }));
+
+        setCandidates(candidatesWithAvatars);
         setIsLoading(false);
     }, [jobId]);
 
@@ -56,5 +71,15 @@ export const useCandidates = (jobId?: string | number) => {
         await loadCandidates();
     }, [loadCandidates]);
 
-    return { candidates, isLoading, addCandidate, moveCandidate, updateCandidate, addFeedback, deleteCandidate, refresh };
+    const searchCandidates = useCallback(async (filters: any) => {
+        setIsLoading(true);
+        try {
+            const data = await CandidateService.searchCandidates(filters);
+            setCandidates(data);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    return { candidates, isLoading, addCandidate, moveCandidate, updateCandidate, addFeedback, deleteCandidate, refresh, searchCandidates };
 };

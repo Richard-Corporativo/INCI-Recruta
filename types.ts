@@ -18,7 +18,7 @@ export interface Experience {
 
 export interface Job {
   id: string | number;
-  role_id?: string;
+  role_id: string;
   title: string;
   context: string;
   department: string;
@@ -38,6 +38,13 @@ export interface Job {
   created_at: string;
   manager_id?: string;
   registration_deadline?: string;
+  positions_count?: number;
+  work_schedule?: string;
+  approval_status?: 'Rascunho' | 'Pendente' | 'Aprovado';
+  workflow_status?: 'draft' | 'pending_approval' | 'approved' | 'published' | 'archived';
+  experience_min?: string;
+  reports_to?: string;
+  sla_settings?: Record<string, { days: number; owner_id?: string }>;
 }
 
 export type KanbanColumnId = 'received' | 'screening' | 'technical' | 'hr_interview' | 'manager_interview' | 'finalist' | 'hired' | 'rejected';
@@ -67,6 +74,7 @@ export interface Candidate {
   github?: string;
   portfolio?: string;
   has_resume?: boolean;
+  has_avatar?: boolean;
   resume_name?: string;
   user_id?: string;
   resumeName?: string;
@@ -84,11 +92,27 @@ export interface Candidate {
   applied_at?: string;
   hired_at?: string;
   feedbacks?: CandidateFeedback[];
+  pretension_min?: number;
+  pretension_max?: number;
+  availability?: string;
+  search_status?: string;
+  competencies?: string[];
   nextInterview?: {
     type: string;
     date: string;
     time: string;
   };
+  currentStageEntry?: string;
+}
+
+export interface CandidateAvatar {
+  id: string;
+  candidate_id: string;
+  file_data: Uint8Array; // BYTEA
+  file_name: string;
+  mime_type: string;
+  file_size: number;
+  created_at: string;
 }
 
 export interface CandidateResume {
@@ -113,10 +137,18 @@ export interface Role {
   mission?: string;
   responsibilities?: string;
   seniority?: string;
-  salary_min?: number;
-  salary_max?: number;
   requirements?: string;
   activeJobsCount?: number;
+  salary_min?: number;
+  salary_max?: number;
+  requirements_technical?: string;
+  requirements_behavioral?: string;
+  kpis?: string;
+  competencies?: string;
+  revision_code?: string;
+  level?: number;
+  experience_min?: string;
+  reports_to?: string;
 }
 
 export interface User {
@@ -178,4 +210,16 @@ export interface AuditLog {
   affected_user_name?: string;
   reason?: string;
   category?: AuditLogCategory;
+  old_value?: any;
+  new_value?: any;
 }
+
+export interface StageHistory {
+  id: string;
+  candidate_id: string;
+  stage_id: KanbanColumnId | string;
+  entry_time: string;
+  exit_time?: string;
+  duration_seconds?: number;
+}
+

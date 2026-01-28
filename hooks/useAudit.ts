@@ -26,10 +26,42 @@ export const useAudit = () => {
                 affected_user_id: log.affected_user_id,
                 affected_user_name: log.affected_user_name,
                 reason: log.reason,
-                category: log.category
+                category: log.category,
+                old_value: log.old_value,
+                new_value: log.new_value
             })) as AuditLog[]);
         }
         setIsLoading(false);
+    }, []);
+
+    const getLogsByEntity = useCallback(async (entityType: string, entityId: string) => {
+        const { data, error } = await supabase
+            .from('audit_logs')
+            .select('*')
+            .eq('entity_type', entityType)
+            .eq('entity_id', entityId)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Error loading entity logs:', error);
+            return [];
+        }
+
+        return data.map(log => ({
+            id: log.id,
+            action: log.action,
+            details: log.details || '',
+            timestamp: log.created_at,
+            user_name: log.user_name || log.user_email || 'Sistema',
+            entity_type: log.entity_type,
+            entity_id: log.entity_id,
+            affected_user_id: log.affected_user_id,
+            affected_user_name: log.affected_user_name,
+            reason: log.reason,
+            category: log.category,
+            old_value: log.old_value,
+            new_value: log.new_value
+        })) as AuditLog[];
     }, []);
 
     useEffect(() => {
@@ -45,13 +77,15 @@ export const useAudit = () => {
                 action: log.action,
                 details: log.details,
                 user_id: session?.user?.id,
-                user_email: session?.user?.email || 'Sistema',
+                user_name: session?.user?.user_metadata?.name || session?.user?.email || 'Sistema',
                 entity_type: log.entity_type,
                 entity_id: log.entity_id,
                 affected_user_id: log.affected_user_id,
                 affected_user_name: log.affected_user_name,
                 reason: log.reason,
-                category: log.category
+                category: log.category,
+                old_value: log.old_value,
+                new_value: log.new_value
             }]);
 
         if (error) {
@@ -61,5 +95,5 @@ export const useAudit = () => {
         }
     }, [loadLogs]);
 
-    return { logs, addLog, isLoading };
+    return { logs, addLog, getLogsByEntity, isLoading };
 };

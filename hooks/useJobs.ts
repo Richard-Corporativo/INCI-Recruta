@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { JobService } from '../src/services/JobService';
-import { Job } from '../types';
+import { Job, User } from '../types';
 
 export const useJobs = () => {
     const [jobs, setJobs] = useState<Job[]>([]);
@@ -36,5 +36,15 @@ export const useJobs = () => {
         await loadJobs(); // Refresh to ensure consistency
     }, [loadJobs]);
 
-    return { jobs, isLoading, addJob, updateJob, deleteJob };
+    const transitionJobStatus = useCallback(async (id: string | number, nextStatus: Job['workflow_status'], user: User) => {
+        setIsLoading(true);
+        try {
+            await JobService.transitionStatus(String(id), nextStatus, user);
+            await loadJobs();
+        } finally {
+            setIsLoading(false);
+        }
+    }, [loadJobs]);
+
+    return { jobs, isLoading, addJob, updateJob, deleteJob, transitionJobStatus };
 };

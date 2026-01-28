@@ -22,6 +22,8 @@ import TermsOfUse from './pages/public/TermsOfUse';
 import PrivacyPolicy from './pages/public/PrivacyPolicy';
 import VerifyEmail from './pages/public/VerifyEmail';
 import NotFound from './pages/public/NotFound';
+import TalentLanding from './pages/public/TalentLanding'; // Novo
+import CandidateWizard from './pages/candidate/CandidateWizard'; // Novo
 
 import CreateJob from './pages/CreateJob';
 import EditJob from './pages/EditJob';
@@ -84,6 +86,13 @@ const RequireCandidateAuth = ({ children }: { children?: React.ReactNode }) => {
     return <Navigate to="/login" replace />;
   }
 
+  // Se o perfil estiver incompleto, força o Wizard (a menos que já esteja no wizard)
+  // Nota: A rota do wizard deve estar FORA do layout que usa esse guard ou tratada aqui
+  if (user.profile_status === 'incomplete' && window.location.pathname !== '/perfil/completar') {
+    console.log('[Guard] RequireCandidateAuth: Perfil incompleto. Redirecionando para Wizard.');
+    return <Navigate to="/perfil/completar" replace />;
+  }
+
   console.log('[Guard] RequireCandidateAuth: Acesso autorizado para', user.name);
   return <>{children}</>;
 };
@@ -141,10 +150,18 @@ const App: React.FC = () => {
                 <Route path="/vagas" element={<JobsList />} />
                 <Route path="/vagas/:id" element={<JobDetailPublic />} />
                 <Route path="/vagas/:id/candidatar" element={<JobApplication />} />
+                <Route path="/talentos" element={<TalentLanding />} />
                 <Route path="/termos" element={<TermsOfUse />} />
                 <Route path="/privacidade" element={<PrivacyPolicy />} />
                 <Route path="/verificar-email" element={<VerifyEmail />} />
               </Route>
+
+              {/* Unique route for Step-by-Step Wizard (Protected but without sidebar) */}
+              <Route path="/perfil/completar" element={
+                <RequireCandidateAuth>
+                  <CandidateWizard />
+                </RequireCandidateAuth>
+              } />
 
               {/* Candidate Protected Routes */}
               <Route path="/candidate" element={

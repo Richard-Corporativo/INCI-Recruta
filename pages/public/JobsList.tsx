@@ -319,6 +319,10 @@ const JobsList: React.FC = () => {
                                         <button onClick={handleClearFilters} className="h-14 px-8 border border-slate-300 bg-white text-slate-900 font-semibold text-xs hover:bg-slate-50 transition-colors rounded-xl active:scale-95">
                                             Limpar filtros
                                         </button>
+                                        <button onClick={() => navigate('/talentos')} className="h-14 px-8 bg-primary text-white font-semibold text-xs hover:bg-slate-900 transition-all rounded-xl shadow-lg shadow-primary/20 active:scale-95 flex items-center justify-center gap-2">
+                                            <span className="material-symbols-outlined text-lg">person_add</span>
+                                            Candidatura Espontânea
+                                        </button>
                                     </div>
                                 </div>
                             )}

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { JobService } from '../../src/services/JobService';
 import { Job } from '../../types';
+import { formatSalaryRange } from '../../src/utils/formatters';
 
 // Robust benefit icon mapping
 const BENEFIT_ICON_MAP: Record<string, string> = {
@@ -203,9 +204,7 @@ const JobDetailPublic: React.FC = () => {
                                         <div className="flex flex-col">
                                             <span className="text-[10px] font-semibold text-slate-500">Faixa Salarial</span>
                                             <span className="text-sm font-semibold text-slate-900">
-                                                {job.salary.min > 0 ? `R$ ${job.salary.min}` : ''}
-                                                {job.salary.min > 0 && job.salary.max > 0 ? ' - ' : ''}
-                                                {job.salary.max > 0 ? `R$ ${job.salary.max}` : ''}
+                                                {formatSalaryRange(job.salary.min, job.salary.max)}
                                             </span>
                                         </div>
                                     </div>

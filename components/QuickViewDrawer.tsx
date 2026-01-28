@@ -3,16 +3,23 @@ import { useQuickView } from '../context/QuickViewContext';
 import { useAuth } from '../hooks/useAuth';
 import { useSettings } from '../hooks/useSettings';
 import { Job, Candidate, User, Role } from '../types';
+import { formatSalaryRange } from '../src/utils/formatters';
 import { Link } from 'react-router-dom';
 
 const InfoRow = ({ icon, label, value }: { icon: string, label: string, value: string | undefined }) => {
     if (!value) return null;
+
+    // Defensive check to avoid rendering Tailwind class-like strings (e.g., text-emerald-600)
+    // that might be accidentally passed as content.
+    const isStyleString = typeof value === 'string' && (value.startsWith('text-') || value.startsWith('bg-'));
+    if (isStyleString) return null;
+
     return (
         <div className="flex items-start gap-3 mb-3">
             <span className="material-symbols-outlined text-muted-foreground text-[18px] mt-0.5">{icon}</span>
             <div>
                 <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-                <p className="text-sm text-foreground font-medium text-balance">{value}</p>
+                <div className="text-sm text-foreground font-medium text-balance">{value}</div>
             </div>
         </div>
     );
@@ -34,7 +41,7 @@ const JobView = ({ job, canViewSalaries }: { job: Job, canViewSalaries: boolean 
             <InfoRow icon="work_history" label="Contrato" value={job.contract} />
             <InfoRow icon="school" label="Senioridade" value={job.seniority} />
             {canViewSalaries && (
-                <InfoRow icon="payments" label="Faixa Salarial" value={`R$ ${job.salary_min?.toLocaleString()} - R$ ${job.salary_max?.toLocaleString()}`} />
+                <InfoRow icon="payments" label="Faixa Salarial" value={formatSalaryRange(job.salary_min, job.salary_max)} />
             )}
             <InfoRow icon="timer" label="Urgência" value={job.urgency} />
         </div>
@@ -201,9 +208,11 @@ const RoleView = ({ role, canViewSalaries }: { role: Role, canViewSalaries: bool
 
         <div className="grid grid-cols-2 gap-4">
             <InfoRow icon="person" label="Senioridade" value={role.seniority} />
-            <InfoRow icon="work_outline text-primary" label="Vagas Abertas" value={String(role.open_positions)} />
+            <InfoRow icon="work_outline" label="Vagas Abertas" value={String(role.open_positions)} />
             {canViewSalaries && (
-                <InfoRow icon="payments text-emerald-600" label="Faixa Salarial" value={`R$ ${role.salary_min?.toLocaleString()} - R$ ${role.salary_max?.toLocaleString()}`} />
+                <div className="col-span-2">
+                    <InfoRow icon="payments" label="Faixa Salarial Referência" value={formatSalaryRange(role.salary_min, role.salary_max)} />
+                </div>
             )}
         </div>
 

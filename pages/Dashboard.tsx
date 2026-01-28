@@ -112,6 +112,26 @@ const Dashboard: React.FC = () => {
     };
   }, [filteredJobs, filteredCandidates, candidates]);
 
+  const priorities = React.useMemo(() => {
+    return candidates
+      .filter(c => {
+        if (c.columnId === 'hired' || c.columnId === 'rejected' || !c.jobId) return false;
+        const job = jobsMap.get(c.jobId);
+        if (!job) return false;
+
+        const slaLimit = job.sla_settings?.[c.columnId]?.days || 2;
+        const entryDate = c.currentStageEntry ? new Date(c.currentStageEntry) : new Date(c.applied_at || Date.now());
+        const daysInStage = Math.floor((Date.now() - new Date(entryDate).getTime()) / (1000 * 3600 * 24));
+
+        return daysInStage >= slaLimit;
+      })
+      .sort((a, b) => {
+        const entryA = a.currentStageEntry ? new Date(a.currentStageEntry) : new Date(a.applied_at || Date.now());
+        const entryB = b.currentStageEntry ? new Date(b.currentStageEntry) : new Date(b.applied_at || Date.now());
+        return new Date(entryA).getTime() - new Date(entryB).getTime();
+      });
+  }, [candidates, jobsMap]);
+
   const { activeJobs, totalCandidates, delayedJobs, avgTime } = stats;
 
   const handleFilterChange = React.useCallback((key: string, value: string) => {
@@ -292,7 +312,45 @@ const Dashboard: React.FC = () => {
             </div>
           </section>
 
+          {priorities.length > 0 && (
+            <section className="bg-destructive/5 border border-destructive/20 rounded-lg p-6 animate-in fade-in duration-500">
+              <div className="flex items-center gap-2 mb-6">
+                <span className="material-symbols-outlined text-destructive">priority_high</span>
+                <h2 className="text-lg font-bold text-destructive tracking-tight">Prioridades do Dia (SLA Atrasado)</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {priorities.slice(0, 4).map(c => {
+                  const job = jobsMap.get(c.jobId!);
+                  const entryDate = c.currentStageEntry ? new Date(c.currentStageEntry) : new Date(c.applied_at || Date.now());
+                  const daysInStage = Math.floor((Date.now() - new Date(entryDate).getTime()) / (1000 * 3600 * 24));
+                  return (
+                    <Link
+                      to={`/jobs/${c.jobId}/kanban`}
+                      key={c.id}
+                      className="bg-card p-4 rounded-lg border border-border shadow-sm hover:shadow-md hover:border-destructive/40 transition-all group"
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`size-8 rounded-full ${c.avatarColor} ${c.textColor} flex items-center justify-center text-xs font-bold`}>
+                          {c.initials}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-foreground truncate group-hover:text-destructive transition-colors">{c.name}</p>
+                          <p className="text-[10px] font-medium text-muted-foreground truncate uppercase">{job?.title}</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center bg-destructive/10 px-3 py-2 rounded-md">
+                        <span className="text-[10px] font-bold text-destructive uppercase">Atraso</span>
+                        <span className="text-xs font-bold text-destructive">{daysInStage} dias nesta etapa</span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
           <section className="bg-card rounded-lg border border-border shadow-sm p-6 transition-all duration-200">
+
             <h2 className="text-lg font-semibold text-foreground mb-6 transition-colors">Conversão por Etapa</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative">
               <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-muted -translate-y-1/2 z-0"></div>

@@ -80,8 +80,11 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
           {/* Header */}
           <header className="flex items-start justify-between p-8 border-b border-border bg-card shrink-0 px-8 py-6 transition-colors">
             <div className="flex items-start gap-5">
-              <div className={`size-20 rounded-full ${candidate.avatarColor} ${candidate.textColor} flex items-center justify-center text-3xl font-semibold shrink-0 shadow-lg border-2 border-background ring-2 ring-border/50 transition-colors`}>
-                {candidate.initials}
+              <div
+                className={`size-20 rounded-full ${candidate.avatarColor} ${candidate.textColor} flex items-center justify-center text-3xl font-semibold shrink-0 shadow-lg border-2 border-background ring-2 ring-border/50 transition-colors bg-cover bg-center`}
+                style={candidate.avatar ? { backgroundImage: `url("${candidate.avatar}")` } : {}}
+              >
+                {!candidate.avatar && candidate.initials}
               </div>
               <div className="pt-1">
                 <div className="flex flex-wrap items-center gap-3 mb-2">
@@ -106,6 +109,18 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
                   <a href={candidate.linkedin || '#'} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors font-semibold outline-none focus-visible:underline">
                     <span className="material-symbols-outlined text-[18px]">link</span> LinkedIn
                   </a>
+                  {candidate.pretension_min && (
+                    <span className="flex items-center gap-1.5 text-emerald-600 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/20 font-bold">
+                      <span className="material-symbols-outlined text-[18px]">payments</span>
+                      R$ {candidate.pretension_min.toLocaleString()}
+                      {candidate.pretension_max ? ` - ${candidate.pretension_max.toLocaleString()}` : ''}
+                    </span>
+                  )}
+                  {candidate.availability && (
+                    <span className="flex items-center gap-1.5 text-amber-600 bg-amber-500/5 px-2 py-0.5 rounded border border-amber-500/20 font-bold">
+                      <span className="material-symbols-outlined text-[18px]">schedule</span> {candidate.availability}
+                    </span>
+                  )}
                   {candidate.has_resume && (
                     <button
                       onClick={handleDownloadResume}
@@ -239,6 +254,33 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
                         <p className="text-sm text-foreground/80 leading-relaxed bg-muted/10 p-4 rounded-lg border border-border">
                           {candidate.summary || 'Nenhuma biografia informada.'}
                         </p>
+                      </div>
+
+                      {/* Profissional Info Grid in Profile Tab */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                          <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-primary">payments</span>
+                            Condições Salariais
+                          </h4>
+                          <div className="bg-muted/10 p-4 rounded-lg border border-border">
+                            <p className="text-sm font-bold text-foreground">
+                              {candidate.pretension_min ? `R$ ${candidate.pretension_min.toLocaleString()}` : 'Não informada'}
+                              {candidate.pretension_max ? ` até R$ ${candidate.pretension_max.toLocaleString()}` : ''}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold mt-1 tracking-wider">Pretensão Salarial</p>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-primary">event_available</span>
+                            Disponibilidade
+                          </h4>
+                          <div className="bg-muted/10 p-4 rounded-lg border border-border">
+                            <p className="text-sm font-bold text-foreground">{candidate.availability || 'Não informada'}</p>
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold mt-1 tracking-wider">Início imediato / Aviso</p>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Skills */}

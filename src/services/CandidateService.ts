@@ -1,5 +1,5 @@
 import { supabase } from '../../lib/supabase';
-import { Candidate } from '../../types';
+import { Candidate, KanbanColumnId } from '../../types';
 
 // Helper to map database fields (snake_case) to TypeScript interface (camelCase)
 const mapDbToCandidate = (dbCandidate: any): Candidate => ({
@@ -13,8 +13,10 @@ const mapDbToCandidate = (dbCandidate: any): Candidate => ({
     portfolio: dbCandidate.portfolio,
     resumeName: dbCandidate.resume_name,
     has_resume: dbCandidate.has_resume,
+    has_avatar: dbCandidate.has_avatar,
     columnId: dbCandidate.column_id,
     initials: dbCandidate.initials,
+    avatar: dbCandidate.avatar_url,
     avatarColor: dbCandidate.avatar_color || 'bg-primary',
     textColor: dbCandidate.text_color || 'text-white',
     applied_at: dbCandidate.applied_at,
@@ -23,7 +25,13 @@ const mapDbToCandidate = (dbCandidate: any): Candidate => ({
     skills: dbCandidate.skills || [],
     languages: dbCandidate.languages || [],
     education: dbCandidate.education || [],
-    experience: dbCandidate.experience || []
+    experience: dbCandidate.experience || [],
+    pretension_min: dbCandidate.pretension_min,
+    pretension_max: dbCandidate.pretension_max,
+    availability: dbCandidate.availability,
+    search_status: dbCandidate.search_status,
+    competencies: dbCandidate.competencies || [],
+    currentStageEntry: dbCandidate.current_stage_entry || dbCandidate.applied_at
 });
 
 export const CandidateService = {
@@ -42,19 +50,139 @@ export const CandidateService = {
     },
 
     async getCandidatesByJob(jobId: string): Promise<Candidate[]> {
-        const { data, error } = await supabase
-            .from('candidates')
-            .select('*, feedbacks(*)')
-            .eq('job_id', jobId)
-            .order('applied_at', { ascending: false });
+        const { data, error } = await supabase.rpc('get_candidates_with_stage_entry', { p_job_id: jobId });
 
         if (error) {
             console.error(`Error fetching candidates for job ${jobId}:`, error);
-            return [];
+            // Fallback to standard fetch if RPC fails (e.g. migration hasn't run yet)
+            const { data: fallbackData } = await supabase
+                .from('candidates')
+                .select('*, feedbacks(*)')
+                .eq('job_id', jobId)
+                .order('applied_at', { ascending: false });
+
+            return (fallbackData || []).map(mapDbToCandidate);
         }
 
         return (data || []).map(mapDbToCandidate);
     },
+
+    async getJobForecast(jobId: string) {
+        // 1. Get average durations for all stages
+        const averages = await CandidateService.getAverageStageDurations();
+
+        // 2. Get current candidates and their stages
+        const candidates = await CandidateService.getCandidatesByJob(jobId);
+
+        // 3. For each candidate, estimate time to finish
+        // Standard flow
+        const stageOrder: KanbanColumnId[] = ['received', 'screening', 'technical', 'hr_interview', 'manager_interview', 'finalist', 'hired'];
+
+        let totalEstimatedSeconds = 0;
+        let candidatesToFinish = 0;
+
+        candidates.forEach(c => {
+            if (c.columnId === 'hired' || c.columnId === 'rejected') return;
+
+            const currentIdx = stageOrder.indexOf(c.columnId);
+            if (currentIdx === -1) return;
+
+            candidatesToFinish++;
+            // Sum up averages of remaining stages
+            for (let i = currentIdx; i < stageOrder.indexOf('hired'); i++) {
+                const stage = stageOrder[i];
+                totalEstimatedSeconds += (averages[stage] || (3 * 24 * 3600)); // Default 3 days if no data
+            }
+        });
+
+        if (candidatesToFinish === 0) return null;
+
+        const averageTimeToClose = totalEstimatedSeconds / candidatesToFinish;
+        const estimatedClosingDate = new Date();
+        estimatedClosingDate.setSeconds(estimatedClosingDate.getSeconds() + averageTimeToClose);
+
+        return {
+            estimatedClosingDate: estimatedClosingDate.toISOString(),
+            averageTimeToCloseDays: Math.round(averageTimeToClose / (24 * 3600))
+        };
+    },
+
+    async uploadAvatar(file: File, candidateId: string): Promise<string | null> {
+        // Validation: 2MB limit as requested
+        if (file.size > 2 * 1024 * 1024) {
+            throw new Error('Tamanho da imagem excede 2MB');
+        }
+        if (!file.type.startsWith('image/')) {
+            throw new Error('Apenas arquivos de imagem são permitidos');
+        }
+
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const buffer = new Uint8Array(arrayBuffer);
+            // Convert to hex string for Postgres BYTEA: \xDEADBEEF...
+            const hex = '\\x' + Array.from(buffer)
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+
+            const { error } = await supabase
+                .from('candidate_avatars')
+                .upsert({
+                    candidate_id: candidateId,
+                    file_data: hex,
+                    file_name: file.name,
+                    mime_type: file.type,
+                    file_size: file.size
+                }, { onConflict: 'candidate_id' });
+
+            if (error) {
+                console.error('Error uploading avatar to DB:', error);
+                return null;
+            }
+
+            // Return a Data URL for immediate use in the UI
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(file);
+            });
+        } catch (error) {
+            console.error('Error in uploadAvatar:', error);
+            return null;
+        }
+    },
+
+    async downloadAvatar(candidateId: string): Promise<{ blob: Blob; fileName: string } | null> {
+        const { data, error } = await supabase
+            .from('candidate_avatars')
+            .select('file_data, file_name, mime_type')
+            .eq('candidate_id', candidateId)
+            .single();
+
+        if (error || !data) return null;
+
+        try {
+            const hexString = data.file_data as unknown as string;
+            const hex = hexString.startsWith('\\x') ? hexString.slice(2) : hexString;
+
+            const bytes = new Uint8Array(hex.length / 2);
+            for (let i = 0; i < hex.length; i += 2) {
+                bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+            }
+
+            const blob = new Blob([bytes], { type: data.mime_type });
+            return { blob, fileName: data.file_name };
+        } catch (e) {
+            console.error('Error converting avatar data:', e);
+            return null;
+        }
+    },
+
+    async getAvatarUrl(candidateId: string): Promise<string | null> {
+        const result = await this.downloadAvatar(candidateId);
+        if (!result) return null;
+        return URL.createObjectURL(result.blob);
+    },
+
 
     async uploadResume(file: File, candidateId: string): Promise<boolean> {
         // Validation
@@ -141,7 +269,7 @@ export const CandidateService = {
 
     async addCandidate(candidate: Omit<Candidate, 'id' | 'applied_at'>, resumeFile?: File): Promise<Candidate | null> {
         const dbPayload: any = {
-            job_id: candidate.jobId,
+            job_id: candidate.jobId || null,
             name: candidate.name,
             email: candidate.email,
             phone: candidate.phone,
@@ -170,7 +298,20 @@ export const CandidateService = {
 
         const newCandidate = mapDbToCandidate(data);
 
-        // 2. Upload Resume if provided
+        // 1.5 Record initial stage history
+        await CandidateService.recordStageEntry(newCandidate.id, newCandidate.columnId);
+
+        // 2. Trigger HR notification if it's a Talent Bank registration (no jobId)
+        if (!candidate.jobId) {
+            console.log('[CandidateService] Spontaneous registration detected, triggering HR notification...');
+            supabase.functions.invoke('notify-talent-bank', {
+                body: { candidate: newCandidate }
+            }).catch(err => {
+                console.warn('[CandidateService] Failed to trigger HR notification:', err);
+            });
+        }
+
+        // 3. Upload Resume if provided
         if (resumeFile) {
             const uploadSuccess = await CandidateService.uploadResume(resumeFile, newCandidate.id);
             if (!uploadSuccess) {
@@ -231,8 +372,16 @@ export const CandidateService = {
         if ('languages' in updates) dbPayload.languages = updates.languages;
         if ('education' in updates) dbPayload.education = updates.education;
         if ('experience' in updates) dbPayload.experience = updates.experience;
-        if ('applied_at' in dbPayload) delete dbPayload.applied_at;
         if ('feedbacks' in dbPayload) delete dbPayload.feedbacks;
+
+        // SLA: Check if stage is changing
+        const { data: currentCandidate } = await supabase
+            .from('candidates')
+            .select('column_id')
+            .eq('id', id)
+            .single();
+
+        const isStageChanging = updates.columnId && currentCandidate && currentCandidate.column_id !== updates.columnId;
 
         const { data, error } = await supabase
             .from('candidates')
@@ -246,7 +395,89 @@ export const CandidateService = {
             throw error;
         }
 
-        return mapDbToCandidate(data);
+        const updatedCandidate = mapDbToCandidate(data);
+
+        // SLA: If stage changed, record the transition
+        if (isStageChanging) {
+            await CandidateService.recordStageTransition(id, currentCandidate.column_id, updates.columnId as string);
+        }
+
+        return updatedCandidate;
+    },
+
+    async recordStageEntry(candidateId: string, stageId: string) {
+        await supabase
+            .from('candidate_stage_history')
+            .insert([{
+                candidate_id: candidateId,
+                stage_id: stageId,
+                entry_time: new Date().toISOString()
+            }]);
+    },
+
+    async recordStageTransition(candidateId: string, oldStage: string, newStage: string) {
+        const now = new Date();
+
+        // 1. Close previous stage
+        const { data: lastStage } = await supabase
+            .from('candidate_stage_history')
+            .select('*')
+            .eq('candidate_id', candidateId)
+            .eq('stage_id', oldStage)
+            .is('exit_time', null)
+            .order('entry_time', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (lastStage) {
+            const entryTime = new Date(lastStage.entry_time);
+            const durationSeconds = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
+
+            await supabase
+                .from('candidate_stage_history')
+                .update({
+                    exit_time: now.toISOString(),
+                    duration_seconds: durationSeconds
+                })
+                .eq('id', lastStage.id);
+        }
+
+        // 2. Open new stage
+        await CandidateService.recordStageEntry(candidateId, newStage);
+    },
+
+    async getStageHistory(candidateId: string) {
+        const { data, error } = await supabase
+            .from('candidate_stage_history')
+            .select('*')
+            .eq('candidate_id', candidateId)
+            .order('entry_time', { ascending: true });
+
+        return error ? [] : data;
+    },
+
+    async getAverageStageDurations() {
+        // Average duration per stage across all candidates
+        const { data, error } = await supabase
+            .from('candidate_stage_history')
+            .select('stage_id, duration_seconds')
+            .not('duration_seconds', 'is', null);
+
+        if (error || !data) return {};
+
+        const totals: Record<string, { sum: number; count: number }> = {};
+        data.forEach(item => {
+            if (!totals[item.stage_id]) totals[item.stage_id] = { sum: 0, count: 0 };
+            totals[item.stage_id].sum += item.duration_seconds;
+            totals[item.stage_id].count += 1;
+        });
+
+        const averages: Record<string, number> = {};
+        Object.keys(totals).forEach(stage => {
+            averages[stage] = Math.round(totals[stage].sum / totals[stage].count);
+        });
+
+        return averages;
     },
 
     async deleteCandidate(id: string): Promise<boolean> {
@@ -291,5 +522,56 @@ export const CandidateService = {
             return false;
         }
         return true;
+    },
+
+    async searchCandidates(filters: {
+        query?: string;
+        skills?: string[];
+        competencies?: string[];
+        minSalary?: number;
+        maxSalary?: number;
+        location?: string;
+        availability?: string;
+        status?: string;
+    }): Promise<Candidate[]> {
+        const { data, error } = await supabase.rpc('search_candidates', {
+            p_search_query: filters.query || null,
+            p_skills: filters.skills && filters.skills.length > 0 ? filters.skills : null,
+            p_competencies: filters.competencies && filters.competencies.length > 0 ? filters.competencies : null,
+            p_min_salary: filters.minSalary || null,
+            p_max_salary: filters.maxSalary || null,
+            p_location: filters.location || null,
+            p_availability: filters.availability || null,
+            p_search_status: filters.status || null
+        });
+
+        if (error) {
+            console.error('Error searching candidates:', error);
+            return [];
+        }
+
+        return (data || []).map(mapDbToCandidate);
+    },
+
+    async saveDiversityData(candidateId: string, data: { gender?: string; race?: string; isPcd?: boolean }): Promise<boolean> {
+        try {
+            const { error } = await supabase
+                .from('candidate_demographics')
+                .upsert({
+                    candidate_id: candidateId,
+                    gender: data.gender || 'prefer_not_to_say',
+                    race: data.race || 'prefer_not_to_say',
+                    is_pcd: data.isPcd
+                }, { onConflict: 'candidate_id' });
+
+            if (error) {
+                console.error('Error saving diversity data:', error);
+                return false;
+            }
+            return true;
+        } catch (err) {
+            console.error('Exception saving diversity data:', err);
+            return false;
+        }
     }
 };

@@ -8,7 +8,7 @@ interface BenefitsSelectorProps {
 
 const getBenefitIcon = (benefit: string): string => {
     const lower = benefit.toLowerCase();
-    if (lower.includes('alimentação') || lower.includes('refeição')) return 'restaurant';
+    if (lower.includes('alimentação') || lower.includes('refeição') || lower.includes('ifood')) return 'restaurant';
     if (lower.includes('saúde') || lower.includes('médico')) return 'favorite';
     if (lower.includes('odontológico') || lower.includes('dental')) return 'dentistry';
     if (lower.includes('gym') || lower.includes('academia') || lower.includes('fitness')) return 'fitness_center';
@@ -50,8 +50,8 @@ const BenefitsSelector: React.FC<BenefitsSelectorProps> = ({ selectedBenefits, o
                             type="button"
                             onClick={() => toggleBenefit(benefit)}
                             className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-primary/20 ${isSelected
-                                    ? 'bg-primary/5 border-primary shadow-sm'
-                                    : 'bg-background border-border hover:border-primary/50 hover:bg-muted/5'
+                                ? 'bg-primary/5 border-primary shadow-sm'
+                                : 'bg-background border-border hover:border-primary/50 hover:bg-muted/5'
                                 }`}
                         >
                             <div className={`size-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
