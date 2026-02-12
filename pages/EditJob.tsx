@@ -14,7 +14,7 @@ const EditJob: React.FC = () => {
   const navigate = useNavigate();
   const { jobs, updateJob } = useJobs();
   const [isLoading, setIsLoading] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{ messaged: string; type: 'success' | 'error' } | null>(null);
 
   const job = jobs.find(j => j.id.toString() === id);
 
