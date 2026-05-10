@@ -31,10 +31,11 @@ const JobDetailHeader: React.FC<JobDetailHeaderProps> = ({ job, user, transition
 
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col gap-3">
                         <h1 className="text-3xl font-semibold text-foreground tracking-tight leading-tight">{job.title}</h1>
-                        <span className="bg-primary/5 text-primary text-[10px] font-semibold px-2 py-0.5 rounded border border-primary/10 tracking-widest uppercase">#{String(job.id).slice(-6).toUpperCase()}</span>
-                        <span className="bg-muted/60 text-muted-foreground text-[10px] font-semibold px-2 py-0.5 rounded border border-border/40 tracking-widest uppercase">Rev. {job.revision ?? 0}</span>
+                        <p className="text-[10px] text-muted-foreground/50 font-mono tracking-wider">
+                            ID #{String(job.id).slice(-6).toUpperCase()} · Rev. {job.revision ?? 0}
+                        </p>
                     </div>
                     <div className="flex items-center gap-4 text-muted-foreground">
                         <div className="flex items-center gap-1.5">

@@ -46,7 +46,7 @@ const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onApply }) => {
                                 {job.title}
                             </h1>
                             <p className="text-[10px] text-muted-foreground/50 font-mono tracking-wider mt-1">
-                                ID #{String(job.id).slice(-6).toUpperCase()} · Rev. {job.revision ?? 0}
+                                ID #{String(job.id).slice(-6).toUpperCase()}
                             </p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
