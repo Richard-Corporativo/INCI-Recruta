@@ -109,11 +109,14 @@ const CreateRole: React.FC = () => {
             <form className="divide-y divide-border" onSubmit={handleSubmit}>
               {/* Section 1: Dados Cadastrais */}
               <div className="p-6 md:p-8">
-                <div className="flex items-center gap-2 mb-6">
-                  <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Icon icon="material-symbols:badge" className="text-sm h-5 w-5" aria-hidden="true" />
-                  </span>
-                  <h3 className="text-lg font-semibold text-foreground">Dados Cadastrais</h3>
+                <div className="flex items-center justify-between gap-2 mb-6">
+                  <div className="flex items-center gap-2">
+                    <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Icon icon="material-symbols:badge" className="text-sm h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <h3 className="text-lg font-semibold text-foreground">Dados Cadastrais</h3>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground/60 font-mono tracking-wide">Código auto-gerado</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">

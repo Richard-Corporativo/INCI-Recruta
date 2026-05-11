@@ -147,11 +147,14 @@ const EditRole: React.FC = () => {
                         <form className="divide-y divide-border" onSubmit={handleSubmit}>
                             {/* Section 1: Dados Cadastrais */}
                             <div className="p-6 md:p-8 transition-colors">
-                                <div className="flex items-center gap-3 mb-8">
-                                    <div className="size-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center /20 transition-all">
-                                        <Icon icon="material-symbols:badge" className="h-5 w-5" aria-hidden="true" />
+                                <div className="flex items-center justify-between gap-3 mb-8">
+                                    <div className="flex items-center gap-3">
+                                        <div className="size-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center /20 transition-all">
+                                            <Icon icon="material-symbols:badge" className="h-5 w-5" aria-hidden="true" />
+                                        </div>
+                                        <h3 className="text-xl font-semibold text-foreground transition-colors uppercase tracking-tight">Dados Cadastrais</h3>
                                     </div>
-                                    <h3 className="text-xl font-semibold text-foreground transition-colors uppercase tracking-tight">Dados Cadastrais</h3>
+                                    <span className="text-[10px] text-muted-foreground/60 font-mono tracking-wide">Código auto-gerado</span>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
