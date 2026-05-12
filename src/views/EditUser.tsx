@@ -108,7 +108,7 @@ const EditUser: React.FC = () => {
         </div>
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
-            <div className="size-14 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xl font-semibold border border-primary/20">
+            <div className="size-20 bg-primary/10 rounded-2xl flex items-center justify-center text-3xl font-bold text-primary border border-primary/20">
               {formData.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
             </div>
             <div>
@@ -196,7 +196,7 @@ const EditUser: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-foreground" htmlFor="department">Departamento Principal</label>
+                  <label className="block text-sm font-semibold text-foreground" htmlFor="department">Departamento/Setor Principal</label>
                   <select
                     id="department"
                     name="department"

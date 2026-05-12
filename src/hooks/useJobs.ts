@@ -10,9 +10,12 @@ export const useJobs = () => {
 
     const loadJobs = useCallback(async () => {
         setIsLoading(true);
-        const data = await JobService.getJobs();
-        setJobs(data);
-        setIsLoading(false);
+        try {
+            const data = await JobService.getJobs();
+            setJobs(data);
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
 
     useEffect(() => {

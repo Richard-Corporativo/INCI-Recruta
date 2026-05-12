@@ -23,9 +23,10 @@ export function useSettings() {
             .from('system_settings')
             .select('*')
             .eq('key', 'manager_permissions')
-            .single();
+            .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') {
+        // 42P01 = tabela não existe ainda; PGRST116 = sem linhas — ambos usam o default
+        if (error && error.code !== 'PGRST116' && error.code !== '42P01') {
             console.error('Error loading settings:', error);
         } else if (data) {
             setSettings({ manager_permissions: data.value });

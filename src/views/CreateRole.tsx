@@ -20,6 +20,8 @@ const CreateRole: React.FC = () => {
   const { addRole } = useRoles();
   const { user } = useAuth();
   const [isAuthorized, setIsAuthorized] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user && user.role === 'manager') {
@@ -50,19 +52,30 @@ const CreateRole: React.FC = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    addRole({
-      ...formData,
-      status: formData.status as Role['status'],
-
-      requirements_technical: formData.requirements_technical.join('\n'),
-      requirements_behavioral: formData.requirements_behavioral.join('\n'),
-      kpis: formData.kpis.join('\n'),
-      competencies: formData.competencies.join('\n'),
-      open_positions: 0
-    });
-    navigate('/roles');
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      const success = await addRole({
+        ...formData,
+        status: formData.status as Role['status'],
+        requirements_technical: formData.requirements_technical.join('\n'),
+        requirements_behavioral: formData.requirements_behavioral.join('\n'),
+        kpis: formData.kpis.join('\n'),
+        competencies: formData.competencies.join('\n'),
+        open_positions: 0
+      });
+      if (success) {
+        navigate('/roles');
+      } else {
+        setSaveError('Não foi possível salvar o cargo. Verifique sua conexão e tente novamente.');
+      }
+    } catch {
+      setSaveError('Erro inesperado ao salvar. Tente novamente.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!isAuthorized) return null;
@@ -82,20 +95,29 @@ const CreateRole: React.FC = () => {
             <h1 className="text-3xl font-semibold text-foreground tracking-tight">Criar Novo Cargo</h1>
             <p className="text-muted-foreground text-sm mt-1">Preencha os detalhes abaixo para cadastrar uma nova função no sistema.</p>
           </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => navigate('/roles')}
-              className="px-4 py-2 text-sm font-semibold text-foreground bg-background border border-border rounded-xl hover:bg-accent transition-all duration-200 ease-in-out active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleSubmit}
-              className="flex items-center gap-2 bg-primary text-primary-foreground border border-border/40 px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ease-in-out hover:bg-primary/90 active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <Icon icon="material-symbols:save" className="h-5 w-5" aria-hidden="true" />
-              Criar Cargo
-            </button>
+          <div className="flex flex-col items-end gap-2">
+            {saveError && (
+              <p className="text-sm text-destructive">{saveError}</p>
+            )}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/roles')}
+                disabled={isSaving}
+                className="px-4 py-2 text-sm font-semibold text-foreground bg-background border border-border rounded-xl hover:bg-accent transition-all duration-200 ease-in-out active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSaving}
+                className="flex items-center gap-2 bg-primary text-primary-foreground border border-border/40 px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ease-in-out hover:bg-primary/90 active:translate-y-[1px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <Icon icon={isSaving ? "material-symbols:progress-activity" : "material-symbols:save"} className={`h-5 w-5 ${isSaving ? 'animate-spin' : ''}`} aria-hidden="true" />
+                {isSaving ? 'Salvando...' : 'Criar Cargo'}
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -172,7 +194,7 @@ const CreateRole: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-4">
-                    <label className="text-sm font-semibold text-foreground">Requisitos Comportamentais</label>
+                    <label className="text-sm font-semibold text-foreground">Competências Comportamentais e Habilidades</label>
                     <DynamicListInput
                       label=""
                       placeholder="Ex: Liderança, Comunicação..."
@@ -210,13 +232,11 @@ const CreateRole: React.FC = () => {
                   <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <Icon icon="material-symbols:description" className="text-sm h-5 w-5" aria-hidden="true" />
                   </span>
-                  <h3 className="text-lg font-semibold text-foreground">Escopo do Cargo</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Missão do Cargo</h3>
                 </div>
                 <div className="space-y-6">
                   <div className="space-y-4">
-                    <label className="text-sm font-semibold text-foreground uppercase tracking-wider text-[11px]" htmlFor="mission">
-                      Missão <span className="text-destructive">*</span>
-                    </label>
+
                     <textarea
                       className="block w-full h-24 rounded-md border border-border bg-background text-foreground font-medium transition-all duration-200 ease-in-out outline-none hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 p-3.5 text-sm resize-none placeholder:text-muted-foreground"
                       id="mission" name="mission" placeholder="Descreva o propósito principal deste cargo..."

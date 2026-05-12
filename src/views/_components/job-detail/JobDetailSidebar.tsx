@@ -31,7 +31,7 @@ const JobDetailSidebar: React.FC<JobDetailSidebarProps> = ({ job, manager, canVi
                 </div>
                 <div className="p-8 space-y-8">
                     <div className="space-y-1">
-                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest pl-0.5">Departamento</p>
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest pl-0.5">Departamento/Setor</p>
                         <div className="bg-muted/40 p-3 rounded-lg border border-border/60">
                             <p className="text-sm font-semibold text-foreground">{job.department}</p>
                         </div>

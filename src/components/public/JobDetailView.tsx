@@ -75,7 +75,7 @@ const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onApply }) => {
                 <div className="bg-card border border-border rounded-2xl p-4 md:p-5">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-5">
                         {([
-                            { label: 'Departamento',       val: (job.area && job.area !== 'Geral') ? job.area : 'Área não informada', icon: 'material-symbols:corporate-fare' },
+                            { label: 'Departamento/Setor',       val: (job.area && job.area !== 'Geral') ? job.area : 'Área não informada', icon: 'material-symbols:corporate-fare' },
                             { label: 'Localização',        val: job.location,      icon: 'material-symbols:location-on' },
                             { label: 'Modelo',             val: job.model,         icon: 'material-symbols:home-work' },
                             { label: 'Contrato',           val: job.contract,      icon: 'material-symbols:description' },
@@ -165,11 +165,11 @@ const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onApply }) => {
                     </section>
                 )}
 
-                {/* Requisitos Comportamentais */}
+                {/* Competências Comportamentais e Habilidades */}
                 {job.requirementsBehavioral?.length > 0 && (
                     <section className="space-y-4">
                         <div className="flex items-center gap-4">
-                            <h3 className="text-[15px] font-semibold text-foreground tracking-tight">Requisitos Comportamentais</h3>
+                            <h3 className="text-[15px] font-semibold text-foreground tracking-tight">Competências Comportamentais e Habilidades</h3>
                             <div className="h-px flex-1 bg-border/60" />
                         </div>
                         <div className="flex flex-wrap gap-2">

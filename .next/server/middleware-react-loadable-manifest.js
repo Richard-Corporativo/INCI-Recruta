@@ -1,1 +1,0 @@
-self.__REACT_LOADABLE_MANIFEST='{"components/admin/QuickViewDrawer.tsx -> @src/services/candidate.service":{"id":9647,"files":["static/chunks/9647-dff2888cbbe862bb.js"]}}';

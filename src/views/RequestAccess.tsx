@@ -67,7 +67,7 @@ const RequestAccess: React.FC = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Departamento</label>
+                                    <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Departamento/Setor</label>
                                     <div className="relative">
                                         <select
                                             className="w-full h-12 pl-4 pr-10 bg-input border border-border rounded-md text-sm font-medium text-foreground focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer appearance-none"

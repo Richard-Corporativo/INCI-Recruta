@@ -28,16 +28,44 @@ export async function getCurrentCompanyId(): Promise<string | null> {
     if (inFlight) return inFlight;
 
     inFlight = (async () => {
-        const { data: member } = await supabase
-            .from('company_members')
-            .select('company_id')
-            .eq('user_id', user.id)
-            .eq('status', 'active')
-            .maybeSingle();
+        const timeout = new Promise<null>((_, reject) =>
+            setTimeout(() => reject(new Error('TENANT_TIMEOUT')), 6000)
+        );
 
-        cachedUserId = user.id;
-        cachedCompanyId = member?.company_id ?? null;
-        return cachedCompanyId;
+        try {
+            // Tenta primeiro com status=active
+            const { data: member } = await Promise.race([
+                supabase
+                    .from('company_members')
+                    .select('company_id')
+                    .eq('user_id', user.id)
+                    .eq('status', 'active')
+                    .maybeSingle(),
+                timeout
+            ]) as any;
+
+            let companyId = member?.company_id ?? null;
+
+            // Fallback sem filtro de status (ex: registro existe mas status não é 'active')
+            if (!companyId) {
+                const { data: anyMember } = await Promise.race([
+                    supabase
+                        .from('company_members')
+                        .select('company_id')
+                        .eq('user_id', user.id)
+                        .maybeSingle(),
+                    timeout
+                ]) as any;
+                companyId = anyMember?.company_id ?? null;
+            }
+
+            cachedUserId = user.id;
+            cachedCompanyId = companyId;
+            return cachedCompanyId;
+        } catch (e: any) {
+            console.warn('[tenant] getCurrentCompanyId timeout ou erro:', e.message);
+            return null;
+        }
     })();
 
     try {
@@ -45,6 +73,12 @@ export async function getCurrentCompanyId(): Promise<string | null> {
     } finally {
         inFlight = null;
     }
+}
+
+/** Pré-popula o cache a partir do AuthContext, evitando re-query ao salvar registros. */
+export function primeTenantCache(userId: string, companyId: string | null) {
+    cachedUserId = userId;
+    cachedCompanyId = companyId;
 }
 
 export function clearTenantCache() {

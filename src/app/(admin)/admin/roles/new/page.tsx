@@ -6,10 +6,13 @@ import { useRouter } from 'next/navigation';
 import Breadcrumbs from '@src/components/shared/Breadcrumbs';
 import { useRoles } from '@src/hooks/useRoles';
 import DynamicListInput from '@src/components/shared/DynamicListInput';
+import { useToast } from '@src/components/ui/Toast';
 
 const CreateRolePage: React.FC = () => {
   const router = useRouter();
   const { addRole } = useRoles();
+  const { success: toastSuccess, error: toastError } = useToast();
+  const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -33,18 +36,31 @@ const CreateRolePage: React.FC = () => {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
-    await addRole({
-      ...formData,
-      status: formData.status as 'Ativo' | 'Inativo',
-      requirements_technical: formData.requirements_technical.join('\n'),
-      requirements_behavioral: formData.requirements_behavioral.join('\n'),
-      kpis: formData.kpis.join('\n'),
-      competencies: formData.competencies.join('\n'),
-      open_positions: 0
-    });
-    router.push('/admin/roles');
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      const ok = await addRole({
+        ...formData,
+        status: formData.status as 'Ativo' | 'Inativo',
+        requirements_technical: formData.requirements_technical.join('\n'),
+        requirements_behavioral: formData.requirements_behavioral.join('\n'),
+        kpis: formData.kpis.join('\n'),
+        competencies: formData.competencies.join('\n'),
+        open_positions: 0
+      });
+      if (ok) {
+        toastSuccess('Cargo criado com sucesso!');
+        router.push('/admin/roles');
+      } else {
+        toastError('Não foi possível salvar o cargo. Verifique se sua conta está vinculada a uma empresa.');
+      }
+    } catch {
+      toastError('Erro inesperado ao salvar o cargo.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -71,10 +87,14 @@ const CreateRolePage: React.FC = () => {
             </button>
             <button
               onClick={handleSubmit}
-              className="flex items-center gap-2 bg-primary text-primary-foreground border border-border/40 px-5 py-2 rounded-2xl text-sm font-semibold  transition-all duration-200 ease-in-out hover:bg-primary/90 active:translate-y-[1px]"
+              disabled={isSaving}
+              className="flex items-center gap-2 bg-primary text-primary-foreground border border-border/40 px-5 py-2 rounded-2xl text-sm font-semibold transition-all duration-200 ease-in-out hover:bg-primary/90 active:translate-y-[1px] disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Icon icon="material-symbols:save" className="text-[20px]" width="20" height="20" />
-              Criar Cargo
+              {isSaving
+                ? <Icon icon="svg-spinners:ring-resize" className="text-[20px]" width="20" height="20" />
+                : <Icon icon="material-symbols:save" className="text-[20px]" width="20" height="20" />
+              }
+              {isSaving ? 'Salvando...' : 'Criar Cargo'}
             </button>
           </div>
         </div>
@@ -118,7 +138,7 @@ const CreateRolePage: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-foreground" htmlFor="department">
-                      Departamento <span className="text-destructive">*</span>
+                      Departamento/Setor <span className="text-destructive">*</span>
                     </label>
                     <input
                       className="block w-full rounded-2xl border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
@@ -152,7 +172,7 @@ const CreateRolePage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-4">
-                    <label className="text-sm font-semibold text-foreground">Requisitos Técnicos</label>
+                    <label className="text-sm font-semibold text-foreground">Requisitos Necessários</label>
                     <DynamicListInput
                       label=""
                       placeholder="Ex: React, SQL, Inglês..."
@@ -162,13 +182,23 @@ const CreateRolePage: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-4">
-                    <label className="text-sm font-semibold text-foreground">Requisitos Comportamentais</label>
+                    <label className="text-sm font-semibold text-foreground">Competências Obrigatórias</label>
                     <DynamicListInput
                       label=""
                       placeholder="Ex: Liderança, Comunicação..."
                       items={formData.requirements_behavioral}
                       onChange={(items) => setFormData(prev => ({ ...prev, requirements_behavioral: items }))}
                       icon="psychology"
+                    />
+                  </div>
+                  <div className="space-y-4">
+                    <label className="text-sm font-semibold text-foreground">Requisitos Desejáveis</label>
+                    <DynamicListInput
+                      label=""
+                      placeholder="Ex: Resolução de conflitos..."
+                      items={formData.competencies}
+                      onChange={(items) => setFormData(prev => ({ ...prev, competencies: items }))}
+                      icon="stars"
                     />
                   </div>
                   <div className="space-y-4">
@@ -181,16 +211,6 @@ const CreateRolePage: React.FC = () => {
                       icon="insights"
                     />
                   </div>
-                  <div className="space-y-4">
-                    <label className="text-sm font-semibold text-foreground">Competências Obrigatórias</label>
-                    <DynamicListInput
-                      label=""
-                      placeholder="Ex: Resolução de conflitos..."
-                      items={formData.competencies}
-                      onChange={(items) => setFormData(prev => ({ ...prev, competencies: items }))}
-                      icon="stars"
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -200,13 +220,11 @@ const CreateRolePage: React.FC = () => {
                   <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                     <Icon icon="material-symbols:description" className="text-sm" width="20" height="20" />
                   </span>
-                  <h3 className="text-lg font-semibold text-foreground">Escopo do Cargo</h3>
+                  <h3 className="text-lg font-semibold text-foreground">Missão do Cargo</h3>
                 </div>
                 <div className="space-y-6">
                   <div className="space-y-4">
-                    <label className="text-sm font-semibold text-foreground uppercase tracking-wider text-[11px]" htmlFor="mission">
-                      Missão <span className="text-destructive">*</span>
-                    </label>
+
                     <textarea
                       className="block w-full h-24 rounded-2xl border border-border bg-background text-foreground font-medium transition-all duration-200 ease-in-out outline-none hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 p-3.5 text-sm resize-none placeholder:text-muted-foreground"
                       id="mission" name="mission" placeholder="Descreva o propósito principal deste cargo..."

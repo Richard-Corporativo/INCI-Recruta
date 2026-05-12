@@ -8,6 +8,8 @@ import JobForm from '@src/components/admin/JobForm';
 import { Icon } from '@iconify/react';
 import { useToast } from '@src/components/ui/Toast';
 import { parseDate } from '@src/lib/formatters';
+import { JobService } from '@src/services/job.service';
+import { Job } from '@src/types';
 
 const toStringArray = (value: unknown): string[] => {
     if (Array.isArray(value)) return value.filter((item): item is string => typeof item === 'string');
@@ -26,12 +28,13 @@ const toStringArray = (value: unknown): string[] => {
 const EditJob: React.FC = () => {
     const router = useRouter();
     const params = useParams();
-    const { jobs, updateJob, isLoading } = useJobs();
+    const id = params?.id as string;
+    const { updateJob } = useJobs();
     const { success: toastSuccess, error: toastError } = useToast();
+
+    const [job, setJob] = useState<Job | null>(null);
+    const [isLoadingJob, setIsLoadingJob] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-
-
-    const job = jobs.find(j => String(j.id) === String(params?.id));
 
     const [formData, setFormData] = useState({
         title: '',
@@ -58,32 +61,38 @@ const EditJob: React.FC = () => {
     });
 
     useEffect(() => {
-        if (job) {
-            setFormData({
-                title: job.title || '',
-                department: job.department || '',
-                model: job.model || 'Híbrido',
-                contract: job.contract || 'CLT',
-                positionsCount: job.positions_count || 1,
-                workSchedule: job.work_schedule || '',
-                registrationDeadline: parseDate(job.registration_deadline)?.toISOString().split('T')[0] || '',
-                location: job.location || 'Barbalha - CE',
-                urgency: job.urgency || 'Média',
-                salaryMin: job.salary_min?.toString() || '',
-                salaryMax: job.salary_max?.toString() || '',
-                context: job.context || '',
-                responsibilities: job.responsibilities || '',
-                reports_to: job.reports_to || '',
-                requirements: toStringArray(job.requirements),
-                benefits: toStringArray(job.benefits),
-                slaSettings: (job.sla_settings as any) || {
-                    'Triagem': { days: 2 },
-                    'Entrevista': { days: 3 },
-                    'Aprovação': { days: 1 }
-                }
-            });
-        }
-    }, [job]);
+        if (!id) return;
+        setIsLoadingJob(true);
+        JobService.getJobById(id).then((data) => {
+            if (data) {
+                setJob(data);
+                setFormData({
+                    title: data.title || '',
+                    department: data.department || '',
+                    model: data.model || 'Híbrido',
+                    contract: data.contract || 'CLT',
+                    positionsCount: data.positions_count || 1,
+                    workSchedule: data.work_schedule || '',
+                    registrationDeadline: parseDate(data.registration_deadline)?.toISOString().split('T')[0] || '',
+                    location: data.location || 'Barbalha - CE',
+                    urgency: data.urgency || 'Média',
+                    salaryMin: data.salary_min?.toString() || '',
+                    salaryMax: data.salary_max?.toString() || '',
+                    context: data.context || '',
+                    responsibilities: data.responsibilities || '',
+                    reports_to: data.reports_to || '',
+                    requirements: toStringArray(data.requirements),
+                    benefits: toStringArray(data.benefits),
+                    slaSettings: (data.sla_settings as any) || {
+                        'Triagem': { days: 2 },
+                        'Entrevista': { days: 3 },
+                        'Aprovação': { days: 1 }
+                    }
+                });
+            }
+            setIsLoadingJob(false);
+        });
+    }, [id]);
 
     const handleInputChange = (e: any) => {
         const { name, value } = e.target;
@@ -94,10 +103,9 @@ const EditJob: React.FC = () => {
         setFormData(prev => ({ ...prev, ...updates }));
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!job) return;
-
 
         setIsSaving(true);
         try {
@@ -125,19 +133,47 @@ const EditJob: React.FC = () => {
         } catch (err) {
             console.error(err);
             toastError('Erro ao salvar alterações. Tente novamente.');
-        } finally {
             setIsSaving(false);
         }
     };
 
-    if (isLoading && !job) return <div className="p-8">Carregando...</div>;
-    if (!job) return <div className="p-8 text-destructive font-bold">Vaga não encontrada</div>;
+    if (isLoadingJob) {
+        return (
+            <div className="flex flex-col h-full bg-background overflow-hidden">
+                <header className="bg-card border-b border-border pt-8 pb-4 px-8 z-20 shrink-0 transition-colors">
+                    <div className="mb-3">
+                        <Breadcrumbs items={[{ label: 'Vagas', to: '/admin/jobs' }, { label: 'Editar Vaga' }]} />
+                    </div>
+                    <h1 className="text-3xl font-semibold text-foreground tracking-tight">Editar Vaga</h1>
+                    <p className="text-sm text-muted-foreground mt-1">Carregando dados da vaga...</p>
+                </header>
+                <main className="flex-1 overflow-y-auto p-8 flex items-center justify-center">
+                    <Icon icon="material-symbols:progress-activity" className="text-[32px] text-muted-foreground animate-spin" width="32" height="32" />
+                </main>
+            </div>
+        );
+    }
+
+    if (!job) {
+        return (
+            <div className="flex flex-col h-full bg-background overflow-hidden">
+                <header className="bg-card border-b border-border pt-8 pb-4 px-8 z-20 shrink-0 transition-colors">
+                    <div className="mb-3">
+                        <Breadcrumbs items={[{ label: 'Vagas', to: '/admin/jobs' }, { label: 'Editar Vaga' }]} />
+                    </div>
+                </header>
+                <main className="flex-1 overflow-y-auto p-8">
+                    <p className="text-destructive font-bold">Vaga não encontrada.</p>
+                </main>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden">
             <header className="bg-card border-b border-border pt-8 pb-4 px-8 z-20 shadow-sm shrink-0 transition-colors">
                 <div className="mb-3">
-                    <Breadcrumbs items={[{ label: 'Vagas', to: '/jobs' }, { label: job.title, to: `/jobs/${job.id}` }, { label: 'Editar' }]} />
+                    <Breadcrumbs items={[{ label: 'Vagas', to: '/admin/jobs' }, { label: job.title, to: `/admin/jobs/${job.id}` }, { label: 'Editar' }]} />
                 </div>
                 <div className="flex justify-between items-center mb-6">
                     <div className="flex flex-col">
@@ -148,45 +184,43 @@ const EditJob: React.FC = () => {
             </header>
 
             <main className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="bg-card border border-border shadow-sm rounded-xl p-8 space-y-8">
-                        {/* Essential Info */}
+                <form id="edit-job-form" onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="bg-card border border-border rounded-2xl p-8 space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="flex flex-col gap-2">
-                                <label className="text-[11px] font-semibold text-muted-foreground transition-colors uppercase tracking-wider">Título da Vaga <span className="text-destructive">*</span></label>
+                                <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Título da Vaga <span className="text-destructive">*</span></label>
                                 <input
                                     name="title"
                                     value={formData.title}
                                     onChange={handleInputChange}
-                                    className="w-full h-12 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all font-medium"
+                                    className="block w-full h-11 rounded-2xl border border-border bg-background text-foreground font-medium transition-all duration-200 ease-in-out outline-none hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 px-3.5 text-sm"
                                     required
                                 />
                             </div>
                             <div className="flex flex-col gap-2">
-                                <label className="text-[11px] font-semibold text-muted-foreground transition-colors uppercase tracking-wider">Departamento <span className="text-destructive">*</span></label>
+                                <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Departamento/Setor <span className="text-destructive">*</span></label>
                                 <input
                                     name="department"
                                     value={formData.department}
                                     onChange={handleInputChange}
-                                    className="w-full h-12 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all font-medium"
+                                    className="block w-full h-11 rounded-2xl border border-border bg-background text-foreground font-medium transition-all duration-200 ease-in-out outline-none hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 px-3.5 text-sm"
                                     required
                                 />
                             </div>
                             <div className="flex flex-col gap-2">
-                                <label className="text-[11px] font-semibold text-muted-foreground transition-colors uppercase tracking-wider">Gestor(a) <span className="text-destructive">*</span></label>
+                                <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Gestor(a)</label>
                                 <input
                                     name="reports_to"
                                     value={formData.reports_to}
                                     onChange={handleInputChange}
-                                    className="w-full h-12 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all font-medium"
-                                    required
+                                    className="block w-full h-11 rounded-2xl border border-border bg-background text-foreground font-medium transition-all duration-200 ease-in-out outline-none hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 px-3.5 text-sm"
                                 />
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-semibold text-foreground uppercase tracking-widest">
-                                Responsabilidades <span className="text-muted-foreground font-normal normal-case tracking-normal">(opcional — aparece na página da vaga)</span>
+                            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                Responsabilidades <span className="text-muted-foreground font-normal normal-case tracking-normal">(opcional)</span>
                             </label>
                             <textarea
                                 name="responsibilities"
@@ -194,7 +228,7 @@ const EditJob: React.FC = () => {
                                 onChange={handleInputChange}
                                 rows={4}
                                 placeholder="Descreva as principais atividades e responsabilidades do cargo, uma por linha..."
-                                className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none text-sm font-semibold text-foreground focus:border-primary transition-all placeholder:text-muted-foreground/40 resize-none"
+                                className="block w-full rounded-2xl border border-border bg-background text-foreground font-medium transition-all duration-200 ease-in-out outline-none hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 p-3.5 text-sm resize-none placeholder:text-muted-foreground"
                             />
                         </div>
 
@@ -209,21 +243,18 @@ const EditJob: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => router.back()}
-                            className="px-6 h-12 rounded-md text-sm font-semibold text-muted-foreground hover:bg-muted transition-colors"
+                            className="h-10 px-6 text-sm font-semibold text-foreground bg-background border border-border rounded-2xl hover:bg-accent transition-all duration-200 ease-in-out active:scale-95 outline-none"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
+                            form="edit-job-form"
                             disabled={isSaving}
-                            className="flex items-center gap-2 bg-primary text-primary-foreground px-8 h-12 rounded-md text-sm font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+                            className="flex items-center gap-2.5 h-10 px-6 bg-primary text-primary-foreground border border-border/40 rounded-2xl text-sm font-semibold transition-all duration-200 ease-in-out hover:bg-primary/90 active:scale-95 disabled:opacity-50"
                         >
-                            {isSaving ? (
-                                <Icon icon="line-md:loading-twotone-loop" className="w-5 h-5" />
-                            ) : (
-                                <Icon icon="material-symbols:save" className="w-5 h-5" />
-                            )}
-                            Salvar Alterações
+                            <Icon icon={isSaving ? "material-symbols:progress-activity" : "material-symbols:save"} className={`text-[20px]${isSaving ? ' animate-spin' : ''}`} width="20" height="20" />
+                            {isSaving ? 'Salvando...' : 'Salvar Alterações'}
                         </button>
                     </div>
                 </form>

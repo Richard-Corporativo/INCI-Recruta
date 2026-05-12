@@ -88,7 +88,7 @@ export default function SuperAdminRoles() {
                                 <tr className="border-b border-border bg-accent/30">
                                     <th className="text-left px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Cargo</th>
                                     <th className="text-left px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest hidden md:table-cell">Empresa</th>
-                                    <th className="text-left px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest hidden lg:table-cell">Departamento</th>
+                                    <th className="text-left px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest hidden lg:table-cell">Departamento/Setor</th>
                                     <th className="text-left px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Status</th>
                                     <th className="text-center px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest hidden lg:table-cell">Vagas</th>
                                 </tr>

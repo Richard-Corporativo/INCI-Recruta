@@ -210,7 +210,7 @@ const EditRole: React.FC = () => {
                                         />
                                     </div>
                                     <div className="space-y-4">
-                                        <label className="text-sm font-semibold text-foreground">Requisitos Comportamentais</label>
+                                        <label className="text-sm font-semibold text-foreground">Competências Comportamentais e Habilidades</label>
                                         <DynamicListInput
                                             label=""
                                             placeholder="Ex: Liderança, Comunicação..."
@@ -248,13 +248,11 @@ const EditRole: React.FC = () => {
                                     <div className="size-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center /20 transition-all">
                                         <Icon icon="material-symbols:description" className="h-5 w-5" aria-hidden="true" />
                                     </div>
-                                    <h3 className="text-xl font-semibold text-foreground transition-colors uppercase tracking-tight">Escopo do Cargo</h3>
+                                    <h3 className="text-xl font-semibold text-foreground transition-colors uppercase tracking-tight">Missão do Cargo</h3>
                                 </div>
                                 <div className="space-y-8">
                                     <div className="space-y-4">
-                                        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider transition-colors" htmlFor="mission">
-                                            Missão <span className="text-destructive">*</span>
-                                        </label>
+
                                         <textarea
                                             className="block w-full h-24 rounded-md border border-border bg-background text-foreground font-medium transition-all duration-200 ease-in-out outline-none hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 p-3.5 text-sm resize-none placeholder:text-muted-foreground"
                                             id="mission" name="mission" placeholder="Descreva o propósito principal deste cargo..."

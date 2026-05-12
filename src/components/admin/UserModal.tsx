@@ -115,7 +115,7 @@ const UserModal: React.FC<UserModalProps> = ({ isOpen, onClose, onSuccess }) => 
                     </div>
 
                     <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider transition-colors">Departamento</label>
+                        <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider transition-colors">Departamento/Setor</label>
                         <input
                             className="w-full h-10 px-3.5 bg-background border border-border rounded-2xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all duration-200 ease-in-out hover:border-ring"
                             placeholder="Ex: TI, RH..."

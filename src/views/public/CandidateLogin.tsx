@@ -22,7 +22,7 @@ const CandidateLogin: React.FC = () => {
         isCompanyView ? '/admin/dashboard' : '/candidate/dashboard'
     );
     
-    const { login } = useAuth();
+    const { refreshProfile } = useAuth();
     const { error: toastError, info } = useToast();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -86,13 +86,11 @@ const CandidateLogin: React.FC = () => {
                 info('Sua conta é corporativa. Redirecionando para o portal da empresa...');
             }
 
-            // 4. Carrega perfil completo no contexto e navega
-            const success = await login(email, password, false);
-            if (success) {
-                if (isSuperAdmin) navigate('/super-admin/dashboard');
-                else if (isUserCompany) navigate('/admin/dashboard');
-                else navigate(nextPath);
-            }
+            // 4. Recarrega perfil no contexto (sem autenticar novamente) e navega
+            await refreshProfile();
+            if (isSuperAdmin) navigate('/super-admin/dashboard');
+            else if (isUserCompany) navigate('/admin/dashboard');
+            else navigate(nextPath);
         } catch (err: any) {
             toastError('Senha incorreta ou erro na autenticação.');
             setIsLoading(false);

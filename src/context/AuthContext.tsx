@@ -14,7 +14,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { User, Company } from '@src/types';
 import { supabase } from '@src/lib/supabase';
-import { clearTenantCache } from '@src/lib/tenant';
+import { clearTenantCache, primeTenantCache } from '@src/lib/tenant';
 
 interface AuthContextType {
     user: User | null;
@@ -38,7 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const loadCompany = useCallback(async (userId: string, metadata?: any): Promise<Company | null> => {
         try {
-            const { data: member } = await supabase
+            let { data: member } = await supabase
                 .from('company_members')
                 .select('company_id, role, status')
                 .eq('user_id', userId)
@@ -56,25 +56,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     p_cnpj: metadata.cnpj || null
                 });
 
-                if (rpcError) {
-                    console.error('[AuthContext] Falha ao criar empresa no bootstrap:', rpcError);
-                    return null;
-                }
-
-                // Limpa a flag de metadata para não tentar novamente
+                // Limpa a flag independente do resultado para não tentar novamente
                 await supabase.auth.updateUser({
                     data: { ...metadata, pending_company_creation: false }
                 });
 
-                return (newCompany as Company) ?? null;
+                if (rpcError) {
+                    if (rpcError.code !== 'P0001') {
+                        console.error('[AuthContext] Falha ao criar empresa no bootstrap:', rpcError);
+                        return null;
+                    }
+                    // P0001 = usuário já vinculado — busca empresa existente abaixo
+                } else {
+                    return (newCompany as Company) ?? null;
+                }
             }
 
-            if (!member?.company_id) return null;
+            if (!member?.company_id) {
+                // Tenta buscar membro sem filtro de status (pode estar pending/inactive)
+                const { data: anyMember } = await supabase
+                    .from('company_members')
+                    .select('company_id, role, status')
+                    .eq('user_id', userId)
+                    .maybeSingle();
+                if (!anyMember?.company_id) return null;
+                member = anyMember;
+            }
 
             const { data: comp } = await supabase
                 .from('companies')
                 .select('*')
-                .eq('id', member.company_id)
+                .eq('id', member!.company_id)
                 .maybeSingle();
 
             return (comp as Company) ?? null;
@@ -120,6 +132,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (profileData) {
                 return {
                     ...profileData,
+                    // Garante que name e role nunca ficam nulos — usa metadata como fallback
+                    name: profileData.name || metadata?.full_name || metadata?.name || 'Usuário',
+                    role: profileData.role || (metadata?.role as User['role']) || 'candidate',
                     terms_accepted: profileData.terms_accepted ?? metadata?.terms_accepted,
                     terms_accepted_at: profileData.terms_accepted_at ?? metadata?.terms_accepted_at
                 } as User;
@@ -169,6 +184,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (session?.user && mounted) {
                     const profile = await fetchProfile(session.user.id, session.user.user_metadata);
                     const comp = await loadCompany(session.user.id, session.user.user_metadata);
+                    primeTenantCache(session.user.id, comp?.id ?? null);
                     if (mounted) {
                         setUser(profile);
                         setCompany(comp);
@@ -202,6 +218,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 console.log('[AuthContext] Buscando perfil para sessão ativa...');
                 const profile = await fetchProfile(session.user.id, session.user.user_metadata);
                 const comp = await loadCompany(session.user.id);
+                primeTenantCache(session.user.id, comp?.id ?? null);
                 if (mounted) {
                     setUser(profile);
                     setCompany(comp);
@@ -232,6 +249,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (data.user) {
                 const profile = await fetchProfile(data.user.id, data.user.user_metadata);
                 const comp = await loadCompany(data.user.id, data.user.user_metadata);
+                primeTenantCache(data.user.id, comp?.id ?? null);
                 setUser(profile);
                 setCompany(comp);
             }
@@ -258,6 +276,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (authUser) {
             const profile = await fetchProfile(authUser.id, authUser.user_metadata);
             const comp = await loadCompany(authUser.id, authUser.user_metadata);
+            primeTenantCache(authUser.id, comp?.id ?? null);
             setUser(profile);
             setCompany(comp);
         }

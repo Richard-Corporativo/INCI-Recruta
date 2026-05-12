@@ -6,7 +6,6 @@
 
 import { supabase } from '@src/lib/supabase';
 import { Role } from '@src/types';
-import { getCurrentCompanyId } from '@src/lib/tenant';
 
 const createFallbackRoleCode = () => `#WEB-${Date.now().toString(36).toUpperCase()}`;
 
@@ -25,13 +24,22 @@ export const RoleService = {
         return data as Role[];
     },
 
-    async addRole(role: Omit<Role, 'id' | 'updated_at' | 'code'> & Partial<Pick<Role, 'code'>>): Promise<Role | null> {
-        const companyId = await getCurrentCompanyId();
-        if (!companyId) {
-            console.error('[RoleService] Usuário sem empresa vinculada não pode criar cargos.');
+    async getRoleById(id: string): Promise<Role | null> {
+        const { data, error } = await supabase
+            .from('roles')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) {
+            console.error('Error fetching role:', error);
             return null;
         }
 
+        return data as Role;
+    },
+
+    async addRole(role: Omit<Role, 'id' | 'updated_at' | 'code'> & Partial<Pick<Role, 'code'>>, companyId: string): Promise<Role | null> {
         const { data, error } = await supabase
             .from('roles')
             .insert([{

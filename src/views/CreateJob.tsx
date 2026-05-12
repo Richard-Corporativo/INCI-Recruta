@@ -338,7 +338,7 @@ const CreateJob: React.FC = () => {
                                 </label>
                                 <label className="flex flex-col gap-1.5">
                                     <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-                                        Área / Departamento<span className="text-error ml-0.5">*</span>
+                                        Área / Departamento/Setor<span className="text-error ml-0.5">*</span>
                                     </span>
                                     <input
                                         type="text"

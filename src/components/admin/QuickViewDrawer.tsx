@@ -186,7 +186,7 @@ const UserView = ({ user }: { user: User }) => (
 
         <div className="space-y-2">
             <InfoRow icon="mail" label="E-mail" value={user.email} />
-            <InfoRow icon="domain" label="Departamento" value={user.department} />
+            <InfoRow icon="domain" label="Departamento/Setor" value={user.department} />
             <InfoRow icon="schedule" label="Último Acesso" value={formatDateTime(user.lastAccess, undefined, 'Nunca')} />
             <InfoRow icon="verified_user" label="Status" value={user.status === 'active' ? 'Ativo' : 'Suspenso'} />
         </div>
@@ -195,7 +195,7 @@ const UserView = ({ user }: { user: User }) => (
             <div className="bg-muted/30 p-4 rounded-2xl border border-border/50">
                 <h4 className="text-sm font-semibold text-foreground mb-2">Escopo de Gestão</h4>
                 <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-4">
-                    <li>Visualização: <span className="font-medium text-foreground">{user.scope.vacancy_view_type === 'direct' ? 'Apenas próprias' : 'Departamento'}</span></li>
+                    <li>Visualização: <span className="font-medium text-foreground">{user.scope.vacancy_view_type === 'direct' ? 'Apenas próprias' : 'Departamento/Setor'}</span></li>
                     {user.scope.allowed_departments && user.scope.allowed_departments.length > 0 && (
                         <li>Deptos: {user.scope.allowed_departments.join(', ')}</li>
                     )}

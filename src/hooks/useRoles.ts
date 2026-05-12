@@ -1,34 +1,47 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@src/context/AuthContext';
 import { RoleService } from '@src/services/role.service';
 import { Role } from '@src/types';
 
 export const useRoles = () => {
+    const { company } = useAuth();
     const [roles, setRoles] = useState<Role[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     const loadRoles = useCallback(async () => {
         setIsLoading(true);
-        const data = await RoleService.getRoles();
-        setRoles(data);
-        setIsLoading(false);
+        try {
+            const data = await RoleService.getRoles();
+            setRoles(data);
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
 
     useEffect(() => {
         loadRoles();
     }, [loadRoles]);
 
-    const addRole = useCallback(async (role: Omit<Role, 'id' | 'updated_at' | 'code'> & Partial<Pick<Role, 'code'>>) => {
-        const result = await RoleService.addRole(role);
+    const addRole = useCallback(async (role: Omit<Role, 'id' | 'updated_at' | 'code'> & Partial<Pick<Role, 'code'>>): Promise<boolean> => {
+        if (!company?.id) {
+            console.error('[useRoles] company não carregado no contexto — não é possível criar cargo.');
+            return false;
+        }
+        const result = await RoleService.addRole(role, company.id);
         if (result) {
             await loadRoles();
+            return true;
         }
-    }, [loadRoles]);
+        return false;
+    }, [loadRoles, company?.id]);
 
-    const updateRole = useCallback(async (id: string, roleData: Partial<Role>) => {
+    const updateRole = useCallback(async (id: string, roleData: Partial<Role>): Promise<boolean> => {
         const result = await RoleService.updateRole(id, roleData);
         if (result) {
             await loadRoles();
+            return true;
         }
+        return false;
     }, [loadRoles]);
 
     const deleteRole = useCallback(async (id: string) => {

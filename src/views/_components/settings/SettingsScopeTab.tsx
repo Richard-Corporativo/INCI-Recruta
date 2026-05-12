@@ -162,7 +162,7 @@ export default function SettingsScopeTab({
                                             }}
                                             className="w-full h-12 pl-12 pr-10 bg-background border-2 border-border rounded-xl text-xs text-foreground font-black uppercase tracking-widest focus:border-primary outline-none transition-all appearance-none cursor-pointer"
                                         >
-                                            <option value="">Adicionar Área / Departamento...</option>
+                                            <option value="">Adicionar Área / Departamento/Setor...</option>
                                             {departments.filter(d => !(selectedManager?.scope?.allowed_departments || []).includes(d)).map(dept => (
                                                 <option key={dept} value={dept}>{dept}</option>
                                             ))}

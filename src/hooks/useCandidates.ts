@@ -12,25 +12,31 @@ export const useCandidates = (jobId?: string | number) => {
 
     const loadCandidates = useCallback(async () => {
         setIsLoading(true);
-        let data: Candidate[] = [];
-        if (jobId) {
-            data = await CandidateService.getCandidatesByJob(String(jobId));
-        } else {
-            data = await CandidateService.getCandidatesApplicants();
-        }
-        const candidatesWithAvatars = await Promise.all((data || []).map(async (c) => {
-            if (c.has_avatar) {
-                try {
-                    const avatarUrl = await CandidateService.getAvatarUrl(c.id);
-                    if (avatarUrl) return { ...c, avatar: avatarUrl };
-                } catch (err) {
-                    console.warn(`Failed to fetch avatar for candidate ${c.id}:`, err);
-                }
+        try {
+            let data: Candidate[] = [];
+            if (jobId) {
+                data = await CandidateService.getCandidatesByJob(String(jobId));
+            } else {
+                data = await CandidateService.getCandidatesApplicants();
             }
-            return c;
-        }));
-        setCandidates(candidatesWithAvatars);
-        setIsLoading(false);
+            const candidatesWithAvatars = await Promise.all((data || []).map(async (c) => {
+                if (c.has_avatar) {
+                    try {
+                        const avatarUrl = await Promise.race([
+                            CandidateService.getAvatarUrl(c.id),
+                            new Promise<null>(res => setTimeout(() => res(null), 3000))
+                        ]);
+                        if (avatarUrl) return { ...c, avatar: avatarUrl };
+                    } catch (err) {
+                        console.warn(`Failed to fetch avatar for candidate ${c.id}:`, err);
+                    }
+                }
+                return c;
+            }));
+            setCandidates(candidatesWithAvatars);
+        } finally {
+            setIsLoading(false);
+        }
     }, [jobId]);
 
     const loadMetadata = useCallback(async () => {

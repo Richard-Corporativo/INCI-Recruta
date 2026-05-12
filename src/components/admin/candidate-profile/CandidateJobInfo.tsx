@@ -23,7 +23,7 @@ const CandidateJobInfo: React.FC<CandidateJobInfoProps> = ({ candidate, job }) =
           <p className="text-sm font-semibold text-foreground transition-colors">{job?.title || 'Não vinculada'}</p>
         </div>
         <div>
-          <p className="text-[11px] font-semibold text-muted-foreground mb-1 transition-colors">Departamento</p>
+          <p className="text-[11px] font-semibold text-muted-foreground mb-1 transition-colors">Departamento/Setor</p>
           <p className="text-sm font-semibold text-foreground transition-colors">{job?.department || '-'}</p>
         </div>
         <div>

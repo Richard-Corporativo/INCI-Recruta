@@ -68,7 +68,7 @@ export async function middleware(request: NextRequest) {
             .from('users')
             .select('role, status, profile_status')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
         dbUser = data;
 
         // Fallback: usa metadata do Auth (definido no cadastro) se banco falhar

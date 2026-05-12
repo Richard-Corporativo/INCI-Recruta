@@ -1,28 +1,13 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
 # Dependencies
-node_modules
-dist
-dist-ssr
-*.local
+node_modules/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Next.js
+.next/
+out/
+
+# Build output (legacy Vite)
+dist/
+dist-ssr/
 
 # Environment variables
 .env
@@ -30,6 +15,41 @@ dist-ssr
 .env.production.local
 .env.development.local
 .env.test.local
+*.local
+
+# AI tools cache
+.claude/
+.kilo/
+.trae/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
 
 # Vercel
-.vercel
+.vercel/
+
+# Supabase local
+supabase/.temp/
+
+# TypeScript build info
+tsconfig.tsbuildinfo

@@ -8,9 +8,12 @@ export function useCompanyJobAnalytics() {
 
   const fetchStats = useCallback(async () => {
     setIsLoading(true);
-    const stats = await analyticsService.getCompanyJobFunnelData();
-    setData(stats);
-    setIsLoading(false);
+    try {
+      const stats = await analyticsService.getCompanyJobFunnelData();
+      setData(stats);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
