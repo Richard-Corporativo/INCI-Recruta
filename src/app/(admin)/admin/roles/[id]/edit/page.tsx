@@ -74,7 +74,9 @@ const EditRolePage: React.FC = () => {
 
                 await JobService.syncJobsByRole(id, {
                     title: formData.title,
-                    department: formData.department
+                    department: formData.area || formData.department,
+                    reports_to: formData.reports_to,
+                    mission: formData.mission
                 });
 
                 router.push('/admin/roles');
@@ -153,7 +155,7 @@ const EditRolePage: React.FC = () => {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider transition-colors" htmlFor="area">
-                                            Área <span className="text-destructive">*</span>
+                                            Área de Atuação <span className="text-destructive">*</span>
                                         </label>
                                         <input
                                             className="block w-full h-11 rounded-2xl border border-border bg-background text-foreground font-medium transition-all duration-200 ease-in-out outline-none hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 px-3.5 text-sm"
@@ -162,7 +164,7 @@ const EditRolePage: React.FC = () => {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider transition-colors" htmlFor="reports_to">
-                                            Reporta a <span className="text-destructive">*</span>
+                                            Gestor(a) <span className="text-destructive">*</span>
                                         </label>
                                         <input
                                             className="block w-full h-11 rounded-2xl border border-border bg-background text-foreground font-medium transition-all duration-200 ease-in-out outline-none hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 px-3.5 text-sm"

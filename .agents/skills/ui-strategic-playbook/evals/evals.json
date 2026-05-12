@@ -1,0 +1,23 @@
+{
+  "skill_name": "ui-strategic-playbook",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Preciso criar um design system para minha aplicação SaaS de gestão financeira. Quero que siga os princípios de 2026 com personalidade adulta, confiança e conversão alta. O sistema deve ter tokens semânticos, componentes pill-shape para CTAs, e suporte a dark mode. Pode帮我 criar a estrutura básica com CSS variables e alguns componentes exemplo?",
+      "expected_output": "Design system completo com: 1) Tokens semânticos CSS 2026 com variáveis para cores, tipografia e espaçamento; 2) Componentes exemplo incluindo cards com tintas contextuais e botões pill-shape; 3) Suporte a dark mode via prefers-color-scheme; 4) Estrutura de navegação limitada a 4 itens principais; 5) Micro-interações com feedback visual para ações; 6) Documentação dos princípios de conversão e neuromarketing aplicados",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Analise esta interface de e-commerce que desenvolvi. Quero verificar se está seguindo os princípios de checkout invisível e conversão de 2026. Preciso de feedback sobre: 1) Se o fluxo de pagamento é sem atrito, 2) Se está usando Pix Automático corretamente, 3) Se as micro-interactions estão adequadas, 4) Se a acessibilidade está dentro do padrão 44px mínimo, 5) Se o design está alinhado com os princípios de neuromarketing para confiança",
+      "expected_output": "Análise detalhada da interface com: 1) Pontos fortes identificados; 2) Oportunidades de melhoria específicas; 3) Verificação de hit areas mínimas de 44px; 4) Recomendações para implementar checkout invisível; 5) Sugestões para micro-interactions de confiança tátil; 6) Verificação de alinhamento com princípios de conversão 2026",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Quero usar os comandos de Virtual Phronesis para auditar meu design system atual. Pode me ajudar a aplicar /challenge para verificar consistência de design, /drift para alinhamento estratégico, e /emerge para identificar padrões emergentes entre meus componentes?",
+      "expected_output": "Aplicação prática dos comandos phronesis para design: 1) Análise /challenge verificando consistência entre componentes; 2) Auditoria /drift comparando implementação com princípios declarados; 3) Síntese /emerge identificando padrões de design recorrentes; 4) Recomendações específicas para cada comando; 5) Template para relatório phronesis de design; 6) Próximos passos para melhoria contínua",
+      "files": []
+    }
+  ]
+}

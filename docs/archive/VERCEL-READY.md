@@ -1,43 +1,34 @@
-# ✅ Projeto Pronto para Vercel!
+# ✅ Projeto Pronto para Vercel (Next.js 15)
 
-Seu projeto está 100% configurado e pronto para deploy.
+Seu projeto está 100% configurado para o ecossistema Next.js e pronto para deploy na Vercel.
 
-### 📋 Checklist Final Confirmado:
+### 📋 Checklist de Deploy:
 
-1.  **Configuração de Build (`vercel.json`)**:
-    *   Comando: `npm run build`
-    *   Output: `dist`
-    *   SPA Rewrites: Configurado ✅ (Evita erro 404 ao atualizar página)
+1.  **Configurações na Vercel:**
+    *   **Framework Preset**: `Next.js` ✅ (A Vercel detectará automaticamente)
+    *   **Build Command**: `npm run build`
+    *   **Output Directory**: `.next`
+    *   **Root Directory**: `./`
 
-2.  **Otimização (`vite.config.ts`)**:
-    *   Code Splitting: Ativado ✅ (Reduz tamanho inicial)
-    *   Chunks Otimizados: Separados em vendors (React, Supabase, UI)
+2.  **Variáveis de Ambiente (Essenciais):**
+    Certifique-se de adicionar estas chaves no painel da Vercel:
+    *   `NEXT_PUBLIC_SUPABASE_URL`: Sua URL do projeto Supabase
+    *   `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Sua Anon Key do Supabase
 
-3.  **Dependências (`package.json`)**:
-    *   Node Version: `>=20.0.0` ✅
-    *   Scripts de Build: Corretos ✅
+3.  **Segurança e Privacidade:**
+    *   O RLS (Row Level Security) já está ativo no banco de dados.
+    *   Os buckets `avatars` e `resumes` estão configurados como **Privados**.
+
+4.  **Otimizações Ativas:**
+    *   **App Router**: Usando a arquitetura moderna do Next.js 15.
+    *   **Middleware**: Proteção de rotas e RBAC (Role-Based Access Control) configurados.
+    *   **Icons**: Substituídos por SVGs nativos para maior performance.
 
 ---
 
-### 🚀 Como fazer o Deploy AGORA:
+### 🚀 Como fazer o Deploy:
+1. Conecte seu repositório GitHub à Vercel.
+2. Adicione as Variáveis de Ambiente citadas acima.
+3. Clique em **Deploy**.
 
-#### Opção 1: Via Linha de Comando (Recomendado)
-Se você tem o Vercel CLI instalado:
-```bash
-npx vercel
-```
-Apenas siga as instruções na tela (Yes para tudo).
-
-#### Opção 2: Via GitHub + Painel Vercel
-1.  Faça commit e push de tudo:
-    ```bash
-    git add .
-    git commit -m "chore: prepare for vercel deployment"
-    git push origin main
-    ```
-2.  Vá no site da Vercel -> New Project -> Import from Git.
-3.  **IMPORTANTE**: Adicione as variáveis de ambiente:
-    *   `VITE_SUPABASE_URL`
-    *   `VITE_SUPABASE_ANON_KEY`
-
-Seu projeto deve estar no ar em menos de 2 minutos! 🌐
+**Status Atual:** 🟢 Estável (Build verificado localmente)

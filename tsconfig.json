@@ -11,20 +11,64 @@
     ],
     "skipLibCheck": true,
     "types": [
-      "node",
-      "vite/client"
+      "node"
     ],
     "moduleResolution": "bundler",
     "isolatedModules": true,
     "moduleDetection": "force",
     "allowJs": true,
-    "jsx": "react-jsx",
+    "jsx": "preserve",
     "paths": {
       "@/*": [
-        "./*"
+        "./src/*"
+      ],
+      "@src/*": [
+        "./src/*"
+      ],
+      "@src/components/*": [
+        "./src/components/*"
+      ],
+      "@src/hooks/*": [
+        "./src/hooks/*"
+      ],
+      "@src/services/*": [
+        "./src/services/*"
+      ],
+      "@src/lib/*": [
+        "./src/lib/*"
+      ],
+      "@src/types": [
+        "./src/types/index.ts"
+      ],
+      "@src/constants": [
+        "./src/constants/index.ts"
+      ],
+      "@src/context/*": [
+        "./src/context/*"
       ]
     },
     "allowImportingTsExtensions": true,
-    "noEmit": true
-  }
+    "noEmit": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "strict": false,
+    "incremental": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "strictNullChecks": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "supabase/functions/**/*"
+  ]
 }

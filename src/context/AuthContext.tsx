@@ -12,24 +12,77 @@
 // @calls supabase.ts — cliente Supabase
 // @references types/index.ts — User
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { User } from '@src/types';
+import { User, Company } from '@src/types';
 import { supabase } from '@src/lib/supabase';
+import { clearTenantCache } from '@src/lib/tenant';
 
 interface AuthContextType {
     user: User | null;
+    company: Company | null;
     login: (email: string, password: string, remember: boolean) => Promise<boolean>;
     logout: () => void;
     refreshProfile: () => Promise<void>;
     isAuthenticated: boolean;
     isEmailConfirmed: boolean;
     isLoading: boolean;
+    isSuperAdmin: boolean;
+    isOwner: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
+    const [company, setCompany] = useState<Company | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
+
+    const loadCompany = useCallback(async (userId: string, metadata?: any): Promise<Company | null> => {
+        try {
+            const { data: member } = await supabase
+                .from('company_members')
+                .select('company_id, role, status')
+                .eq('user_id', userId)
+                .eq('status', 'active')
+                .maybeSingle();
+
+            // Self-service: usuário acabou de confirmar email e empresa ainda não foi criada
+            // super_admin não tem empresa própria — pula o bootstrap
+            if (metadata?.role === 'super_admin') return null;
+
+            if (!member?.company_id && metadata?.pending_company_creation && metadata?.company_name) {
+                console.log('[AuthContext] Bootstrap de empresa pendente — chamando create_company_with_owner');
+                const { data: newCompany, error: rpcError } = await supabase.rpc('create_company_with_owner', {
+                    p_name: metadata.company_name,
+                    p_cnpj: metadata.cnpj || null
+                });
+
+                if (rpcError) {
+                    console.error('[AuthContext] Falha ao criar empresa no bootstrap:', rpcError);
+                    return null;
+                }
+
+                // Limpa a flag de metadata para não tentar novamente
+                await supabase.auth.updateUser({
+                    data: { ...metadata, pending_company_creation: false }
+                });
+
+                return (newCompany as Company) ?? null;
+            }
+
+            if (!member?.company_id) return null;
+
+            const { data: comp } = await supabase
+                .from('companies')
+                .select('*')
+                .eq('id', member.company_id)
+                .maybeSingle();
+
+            return (comp as Company) ?? null;
+        } catch (e) {
+            console.warn('[AuthContext] loadCompany falhou:', e);
+            return null;
+        }
+    }, []);
 
     const fetchProfile = useCallback(async (userId: string, authUserMetadata?: any): Promise<User | null> => {
         try {
@@ -81,7 +134,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 full_name: metadata?.full_name,
                 company_name: metadata?.company_name,
                 email: metadata?.email || '',
-                role: 'candidate',
+                // Usa o role do metadata (definido no signup) como fallback — nunca 'candidate' fixo
+                role: (metadata?.role as User['role']) || 'candidate',
                 status: metadata?.status || 'pending_approval',
                 lastAccess: new Date().toISOString(),
                 terms_accepted: metadata?.terms_accepted || false,
@@ -114,7 +168,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 if (session?.user && mounted) {
                     const profile = await fetchProfile(session.user.id, session.user.user_metadata);
-                    if (mounted) setUser(profile);
+                    const comp = await loadCompany(session.user.id, session.user.user_metadata);
+                    if (mounted) {
+                        setUser(profile);
+                        setCompany(comp);
+                    }
                 }
             } catch (err) {
                 console.error('[AuthContext] Erro na inicialização:', err);
@@ -131,6 +189,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             if (event === 'SIGNED_OUT') {
                 setUser(null);
+                setCompany(null);
                 setIsLoading(false);
             } else if (session?.user) {
                 // Se já temos o usuário e o ID é o mesmo, apenas desliga o loading
@@ -142,8 +201,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 console.log('[AuthContext] Buscando perfil para sessão ativa...');
                 const profile = await fetchProfile(session.user.id, session.user.user_metadata);
+                const comp = await loadCompany(session.user.id);
                 if (mounted) {
                     setUser(profile);
+                    setCompany(comp);
                     setIsLoading(false);
                 }
             } else {
@@ -159,7 +220,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             mounted = false;
             subscription.unsubscribe();
         };
-    }, [fetchProfile]);
+    }, [fetchProfile, loadCompany]);
 
     const login = useCallback(async (email: string, password: string): Promise<boolean> => {
         // Não setamos isLoading total aqui para não travar a tela de login inteira, 
@@ -170,17 +231,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             if (data.user) {
                 const profile = await fetchProfile(data.user.id, data.user.user_metadata);
+                const comp = await loadCompany(data.user.id, data.user.user_metadata);
                 setUser(profile);
+                setCompany(comp);
             }
             return !!data.user;
         } catch (error) {
             throw error;
         }
-    }, [fetchProfile]);
+    }, [fetchProfile, loadCompany]);
 
     const logout = useCallback(async () => {
         setIsLoading(true);
         setUser(null);
+        setCompany(null);
+        clearTenantCache();
         try {
             await supabase.auth.signOut();
         } finally {
@@ -192,19 +257,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (authUser) {
             const profile = await fetchProfile(authUser.id, authUser.user_metadata);
+            const comp = await loadCompany(authUser.id, authUser.user_metadata);
             setUser(profile);
+            setCompany(comp);
         }
-    }, [fetchProfile]);
+    }, [fetchProfile, loadCompany]);
 
     const value = useMemo(() => ({
         user,
+        company,
         login,
         logout,
         refreshProfile,
         isAuthenticated: !!user,
         isEmailConfirmed: true,
-        isLoading
-    }), [user, login, logout, refreshProfile, isLoading]);
+        isLoading,
+        isSuperAdmin: user?.role === 'super_admin',
+        isOwner: user?.role === 'owner'
+    }), [user, company, login, logout, refreshProfile, isLoading]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

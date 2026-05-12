@@ -62,6 +62,8 @@ export interface Job {
   reports_to?: string;
   sla_settings?: Record<string, { days: number; owner_id?: string; owner?: 'Qualidade' | 'Gestor' }>;
   revision?: number;
+  company_id?: string;
+  company_slug?: string;
 }
 
 // ─── Candidate ───────────────────────────────────────────────────────────────
@@ -188,6 +190,66 @@ export interface Role {
   reports_to?: string;
 }
 
+// ─── Company (multi-tenant) ───────────────────────────────────────────────────
+
+export interface TalentPoolSettings {
+  who_can_access: ('admin' | 'recruiter' | 'manager')[];
+  visible_areas: string[];
+  retention_days: number;
+  allow_reuse: boolean;
+}
+
+export type RolePermissionKey = 'create_job' | 'approve_job' | 'move_candidate' | 'view_salaries' | 'export_data' | 'access_tests';
+
+export interface RolePermissionsMatrix {
+  [role: string]: Record<RolePermissionKey, boolean>;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  slug: string;
+  cnpj?: string | null;
+  logo_url?: string | null;
+  primary_color?: string | null;
+  status: 'active' | 'suspended' | 'trial' | 'pending';
+  maintenance_mode: boolean;
+  maintenance_message?: string | null;
+  created_at: string;
+  updated_at: string;
+  // Perfil institucional
+  website?: string | null;
+  linkedin_url?: string | null;
+  segment?: string | null;
+  headcount?: string | null;
+  company_type?: string | null;
+  // Localização
+  cep?: string | null;
+  state_code?: string | null;
+  city?: string | null;
+  address?: string | null;
+  work_model?: 'presencial' | 'hibrido' | 'remoto' | 'outro' | null;
+  work_model_custom?: string | null;
+  // Estrutura interna
+  internal_roles?: string[];
+  // Configurações avançadas
+  talent_pool_settings?: TalentPoolSettings;
+  role_permissions?: RolePermissionsMatrix;
+}
+
+export interface CompanyMember {
+  id: string;
+  company_id: string;
+  user_id: string;
+  role: 'owner' | 'admin' | 'recruiter' | 'manager';
+  status: 'active' | 'suspended' | 'invited';
+  invited_email?: string | null;
+  invited_at?: string | null;
+  joined_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ─── User ─────────────────────────────────────────────────────────────────────
 
 export interface User {
@@ -196,8 +258,9 @@ export interface User {
   full_name?: string;
   company_name?: string;
   email: string;
-  role: 'admin' | 'manager' | 'recruiter' | 'quality' | 'dp' | 'candidate';
+  role: 'super_admin' | 'owner' | 'admin' | 'manager' | 'recruiter' | 'quality' | 'dp' | 'candidate';
   status: 'active' | 'suspended' | 'pending_approval';
+  company_id?: string | null;
   lastAccess?: string;
   password?: string;
   avatar?: string;
@@ -217,7 +280,7 @@ export interface User {
   terms_accepted?: boolean;
   terms_accepted_at?: string;
   scope?: {
-    vacancy_view_type: 'direct' | 'department';
+    vacancy_view_type: 'direct' | 'department' | 'selected_departments';
     allowed_departments: string[];
     allowed_role_codes?: string[];
   };
@@ -227,6 +290,17 @@ export interface User {
     register_feedback?: boolean;
     view_salaries?: boolean;
     return_candidate_stage?: boolean;
+    view_candidates?: boolean;
+    view_resume?: boolean;
+    view_contact?: boolean;
+    schedule_interview?: boolean;
+    move_candidate_stage?: boolean;
+    reject_candidate?: boolean;
+    mark_finalist?: boolean;
+    request_behavioral_test?: boolean;
+    view_behavioral_test_result?: boolean;
+    export_candidate_data?: boolean;
+    archive_job?: boolean;
   };
 }
 

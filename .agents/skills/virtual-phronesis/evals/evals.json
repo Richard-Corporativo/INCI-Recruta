@@ -1,0 +1,77 @@
+{
+  "skill_name": "virtual-phronesis",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Planeje meu dia usando o protocolo /today",
+      "expected_output": "Plano com prioridades baseadas em menções REAIS do usuário (com datas e trechos), compromissos do calendário real, alertas sobre tarefas evitadas. Sem placeholders genéricos.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Analise minhas contradições sobre automação com /challenge",
+      "expected_output": "Contradições encontradas em notas REAIS (com trechos citados e datas), índice de consistência calculado, perguntas baseadas em contradições específicas. Não inventar contradições.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Use /ghost para responder como eu responderia sobre ética de IA",
+      "expected_output": "Perfil de voz baseado em análise REAL da escrita do usuário (citar notas), resposta no estilo identificado usando vocabulário e metáforas que o usuário realmente usa.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Que padrões emergem entre minhas notas de trabalho e estudos filosóficos? Use /emerge",
+      "expected_output": "Clusters de ideias com notas ESPECÍFICAS listadas (com datas), trechos citados que revelam padrões, fios temáticos documentados, ação recomendada concreta.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Audite se estou alinhado com meus objetivos com /drift",
+      "expected_output": "Temas recorrentes com notas ESPECÍFICAS onde aparecem, comparação intenção vs comportamento com evidências reais, trabalho evitado com datas, racionalizações com trechos citados.",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "Rastreie como minha visão sobre produtividade evoluiu com /trace",
+      "expected_output": "Genealogia com primeira menção real (data, arquivo, trecho), fases de evolução com trechos de CADA fase, momentos pivotais documentados, estado atual baseado em notas recentes.",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "Encerre o dia com reflexão usando /close-day",
+      "expected_output": "Conquistas baseadas em commits/notas REAIS de hoje, insights com horários e fontes, itens pendentes com referência a promessas anteriores, reflexão ética conectando ações com virtudes.",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "Carregue o contexto do meu repositório de conhecimento com /context",
+      "expected_output": "Projetos ativos com status REAL das notas, prioridades dos últimos 7 dias com datas, reflexões com trechos citados. Não inventar projetos ou prioridades.",
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "Encontre conexões entre meus estudos de filosofia tomista e projetos de código com /connect",
+      "expected_output": "Notas que conectam os dois domínios (listadas com datas e trechos), links indiretos documentados, padrões identificados com evidência real. Não forçar conexões inexistentes.",
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "Gere ideias baseadas nos padrões do meu repositório com /ideas",
+      "expected_output": "Ideias com nota de suporte REAL para cada uma, trechos que revelam interesses, conexões com projetos existentes. Não sugerir ideias genéricas sem base no repositório.",
+      "files": []
+    },
+    {
+      "id": 11,
+      "prompt": "Gradue ideias das minhas notas diárias dos últimos 14 dias com /graduate",
+      "expected_output": "Ideias com trecho EXATO da nota original, data e hora de criação, conexões reais com outras notas, potencial avaliado. Não inventar ideias que não estão nas notas.",
+      "files": []
+    },
+    {
+      "id": 12,
+      "prompt": "Sugira um cronograma semanal baseado nas minhas prioridades com /schedule",
+      "expected_output": "Alocação de tempo com justificativa baseada em notas REAIS do usuário, conflitos identificados com evidências de comportamento real, sugestões contextualizadas. Não sugerir horários genéricos.",
+      "files": []
+    }
+  ]
+}

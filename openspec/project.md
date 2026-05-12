@@ -1,37 +1,63 @@
 # Project Context
 
 ## Purpose
-A modern Internal Recruitment System (ATS) designed for managers and HR professionals. It manages jobs, candidate pipelines (Kanban), and interview auditing with a focus on data persistence in the browser.
+Sistema interno de recrutamento (ATS) para gestores e RH. Gerencia vagas, pipeline de candidatos (Kanban) e auditoria de entrevistas.
 
 ## Tech Stack
-- React 18
-- TypeScript
-- Tailwind CSS
-- React Router 6
-- **Supabase (Auth & Database)**
-- **PostgreSQL** (Managed by Supabase)
+- **Framework**: Next.js 15 (App Router — em migração de `pages/` para `src/app/`)
+- **Runtime**: React 19
+- **Language**: TypeScript 5.8 (strict: false)
+- **Styling**: Tailwind CSS 4 (tokens semânticos via CSS custom properties)
+- **Database**: SQLite (via Prisma ORM)
+- **Auth**: Sessão gerenciada por Next.js API routes + cookies
+- **Icons**: Material Symbols via `@iconify/react`
+
+## Estrutura de Diretórios (canônica — ver `ARCHITECTURE.md`)
+```
+src/
+  types/          ← fonte única de tipagem (index.ts)
+  lib/            ← utilitários, prisma client, helpers
+  services/       ← I/O puro (Prisma, API calls) — sem estado
+  hooks/          ← estado + efeitos — consome services
+  components/     ← UI pura — consome hooks ou props
+  context/        ← providers globais (auth, quickview)
+  app/            ← Next.js App Router (rotas nativas)
+project/          ← LEGACY — em processo de migração para src/
+```
 
 ## Project Conventions
 
 ### Code Style
-- Component-based architecture with hooks for logic.
-- Atomic styles using Tailwind.
-- Lucid styling with Material Symbols for icons.
+- Componentes standalone com OnPush via React (sem NgModule).
+- Hooks de domínio (`useJobs`, `useCandidates`) isolam lógica assíncrona dos componentes.
+- Services são puramente I/O — sem JSX, sem estado React.
+- Path alias canônico: `@src/*` → `./src/*` (legacy: `@/*` → `./project/*`).
 
-### Architecture Patterns
-- **Services Layer**: Domain-specific services (`src/services/`) interacting with Supabase.
-- **Data Hooks**: Direct access to entities via `useJobs`, `useCandidates`, etc. (Async).
-- **Authentication**: Native Supabase Auth (`auth.users`).
-- **Design System (INCI v2.0.0)**:
-  - **Tokens**: Use exclusively CSS tokens (`bg-background`, `bg-card`, `bg-primary`, `bg-sidebar`, etc.).
-  - **Radius**: Buttons (`rounded-base`), Inputs (`rounded-md`), Cards (`rounded-lg`).
-  - **Standard**: HEX/RGB/HSL values and inline styles are strictly prohibited.
-  - **Animations**: Mandatory `duration-200 ease-in-out` for all transitions.
+### Design System — Balha v9.1.0
+- **Mood**: Flat, data-dense, corporate SaaS.
+- **Typeface**: Rethink Sans (tabular-nums para todos os dados).
+- **Icons**: Material Symbols via Iconify.
+- **Densidade**: High density, bento grid compacto.
+- **Subtração Radical**: Zero shadows, zero gradients, zero backdrop-blur.
+- **Tokens**: Exclusivamente CSS tokens (`bg-background`, `bg-card`, `bg-primary`, `bg-sidebar`).
+- **Radius**: Cards (`rounded-2xl`), Dropdowns/Buttons (`rounded-xl`), Inputs (`rounded-lg`).
+- **Proibido**: Valores HEX/RGB/HSL hardcoded, estilos inline, classes Tailwind não-tokenizadas.
+- **Animações**: `duration-200 ease-in-out` obrigatório em todas as transições.
+
+## Layer Contract (regras hard)
+```
+App (route) → Components → Hooks → Services → Prisma/API
+                              ↓
+                          Context (auth, ui state)
+                              ↓
+                          Lib (utils, prisma, storage)
+```
+- `services/` não importa de `components/` nem de `hooks/`.
+- `hooks/` não importa de `components/`.
+- `components/` não chama Prisma diretamente.
+- Server Components (`page.tsx`) podem chamar `services/` diretamente via `async`.
 
 ## Important Constraints
-- **Performance**: Prioritize async data fetching with loading states.
-- **Security**: Rely on RLS (Row Level Security) for data access control.
-
-## External Dependencies
-- Google Fonts (Inter, Outfit)
-- Material Symbols (Icons)
+- Performance: fetch assíncrono com loading states obrigatório.
+- Security: validação no server-side (API routes / Server Actions).
+- Sem `any` sem justificativa documentada em comentário.

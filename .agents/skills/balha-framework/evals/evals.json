@@ -1,0 +1,74 @@
+{
+  "skill_name": "balha-framework",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I want to build a task management app with Next.js, Supabase, and Tailwind. Users should be able to create projects, add tasks, assign them, and track progress. Can you help me plan this out?",
+      "expected_output": "A complete SPEC document following the template with all 5 sections: Overview, Pages, Components, Behaviors, and Data Model. The spec should cover the task management domain thoroughly.",
+      "files": [],
+      "expectations": [
+        "The output includes a SPEC document with all required sections",
+        "The spec defines the technical stack (Next.js, Supabase, Tailwind)",
+        "The spec includes at least 3 pages (e.g., dashboard, project detail, tasks)",
+        "The spec includes a data model with tables for projects, tasks, and users",
+        "The spec defines RLS policies for the tables",
+        "The spec includes user flows for core behaviors",
+        "The spec covers error scenarios, not just happy paths"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I have this spec for a blog platform. Break it into issues: The blog has posts with title, content, slug, and published_at. Users can register, login, create posts, edit their own posts, and admins can delete any post. Stack is Next.js + Prisma + PostgreSQL.",
+      "expected_output": "A set of issues organized by layers (Foundation, Visual, Features, Polish) with clear scope, file paths, dependencies, and acceptance criteria.",
+      "files": [],
+      "expectations": [
+        "Issues follow the template format with Context, Objective, Scope DO/DON'T, Files, Acceptance Criteria, Dependencies",
+        "Issues are organized by layers: Foundation first, then Visual, Features, Polish",
+        "Each issue modifies at most 5-7 files",
+        "Issues include negative scope (what NOT to do)",
+        "Issues list exact file paths",
+        "Dependencies between issues are clearly defined",
+        "Database schema issue comes before feature issues"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I need to execute ISSUE-3 which is about implementing user authentication with email/password using Supabase Auth. The stack is Next.js 14 with App Router. Create the server actions, auth hooks, and login/register components.",
+      "expected_output": "Implementation following the agent execution order: model (if needed), action (server actions for auth), component (login/register forms), hook (useAuth). Each piece follows the framework rules.",
+      "files": [],
+      "expectations": [
+        "Server actions follow the { success, data, error } return pattern",
+        "Input validation is present (Zod or similar)",
+        "Components handle loading, empty, error, success states",
+        "API keys are not exposed in frontend code",
+        "Business logic stays on the server",
+        "Auth checks are implemented in server actions"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I'm starting a new e-commerce project. Give me the execution plan for the 'Setup project and database schema' issue. The project uses Next.js 14, Stripe for payments, Supabase for database and auth.",
+      "expected_output": "A detailed execution plan with internal research, external research, technical decisions, file-by-file implementation detail, and test scenarios.",
+      "files": [],
+      "expectations": [
+        "Plan includes internal research section checking for existing code",
+        "Plan includes external research for Next.js and Supabase documentation",
+        "Plan details technical decisions with alternatives considered",
+        "Each file to be created/modified is listed with action, description, exports, imports",
+        "Test scenarios are defined for the setup issue"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Help me understand when to use each of the 7 specialized agents. I'm building a social media dashboard with React and I'm confused about the execution order.",
+      "expected_output": "Clear explanation of each agent's role (model-writer through test-writer), when to use each, and why the order matters. Should reference the framework's agent system.",
+      "files": [],
+      "expectations": [
+        "All 7 agents are explained: model-writer, action-writer, route-writer, component-writer, hook-writer, integration-writer, test-writer",
+        "The execution order is explained: model → action → route → component → hook → integration → test",
+        "The reasoning behind the order is clear (dependencies flow in that direction)",
+        "Examples are given relevant to a social media dashboard"
+      ]
+    }
+  ]
+}

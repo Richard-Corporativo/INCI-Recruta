@@ -105,13 +105,7 @@ ON candidates FOR INSERT
 TO authenticated
 WITH CHECK (auth.uid() = user_id);
 
--- Policy 2: Anonymous users can apply (for non-logged-in candidates)
-CREATE POLICY "candidates_insert_anon"
-ON candidates FOR INSERT
-TO anon
-WITH CHECK (true);
-
--- Policy 3: Users can view only their own applications
+-- Policy 2: Users can view only their own applications
 CREATE POLICY "candidates_select_own"
 ON candidates FOR SELECT
 TO authenticated

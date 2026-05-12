@@ -1,0 +1,14 @@
+# Mudança: melhorias-ux-balha
+
+## Descrição
+Implementar melhorias de UX para alinhar o projeto ao Sistema Balha v5.0.0, corrigindo inconsistências de componentes, adicionando componentes ausentes e garantindo acessibilidade completa.
+
+## Motivação
+A análise do código base revealed several deviations from the Balha Design System:
+- Componentes com propriedades incorretas (border radius, variantes de botão)
+- Componentes essenciais ausentes (avatar, estados vazios/erro padronizados)
+- Lacunas de acessibilidade (focus rings, ARIA labels)
+- Uso inconsistente de tokens de design
+- Problemas de tipografia e hierarquia de headings
+
+Este change aborda essas questões para garantir consistência visual, usabilidade e conformidade com o padrão estabelecido.

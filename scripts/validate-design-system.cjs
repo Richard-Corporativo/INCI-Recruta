@@ -2,7 +2,7 @@
 
 /**
  * INCI Design System Validation Script
- * Detects violations of INCI Design System v2.0.0 in candidate portal files
+ * 0 in candidate portal files
  */
 
 const fs = require('fs');
@@ -10,9 +10,9 @@ const path = require('path');
 
 // Directories to scan
 const SCAN_DIRS = [
-    'components',
-    'pages',
-    'layouts'
+    'src/components',
+    'src/pages',
+    'src/app'
 ];
 
 // Patterns to detect
@@ -21,9 +21,9 @@ const PATTERNS = {
     rgbColors: /rgb\([^)]+\)/g,
     hslColors: /hsl\([^)]+\)/g,
     inlineStyles: /style=\{\{/g,
-    wrongButtonRadius: /className="[^"]*\b(button|Button)[^"]*\b(rounded-xl|rounded-2xl|rounded-3xl)\b[^"]*"/g,
-    wrongInputRadius: /className="[^"]*\b(input|Input|textarea)[^"]*\b(rounded-base|rounded-lg|rounded-xl)\b[^"]*"/g,
-    wrongCardRadius: /className="[^"]*\b(card|Card)[^"]*\b(rounded-base|rounded-md|rounded-xl|rounded-2xl)\b[^"]*"/g,
+    wrongButtonRadius: /className="[^"]*\b(button|Button)[^"]*\b(rounded-base|rounded-md|rounded-lg|rounded-2xl|rounded-3xl)\b[^"]*"/g,
+    wrongInputRadius: /className="[^"]*\b(input|Input|textarea)[^"]*\b(rounded-base|rounded-sm|rounded-md|rounded-xl|rounded-2xl)\b[^"]*"/g,
+    wrongCardRadius: /className="[^"]*\b(card|Card)[^"]*\b(rounded-base|rounded-sm|rounded-md|rounded-lg|rounded-xl|rounded-3xl)\b[^"]*"/g,
 };
 
 let totalViolations = 0;
@@ -96,7 +96,7 @@ function scanFile(filePath) {
                 line: lineNumber,
                 type: 'Wrong Button Radius',
                 violation: buttonRadiusMatch[0],
-                message: 'Buttons must use rounded-base'
+                message: 'Buttons must use rounded-xl'
             });
         }
 
@@ -107,7 +107,7 @@ function scanFile(filePath) {
                 line: lineNumber,
                 type: 'Wrong Input Radius',
                 violation: inputRadiusMatch[0],
-                message: 'Inputs must use rounded-md'
+                message: 'Inputs must use rounded-lg'
             });
         }
 
@@ -118,7 +118,7 @@ function scanFile(filePath) {
                 line: lineNumber,
                 type: 'Wrong Card Radius',
                 violation: cardRadiusMatch[0],
-                message: 'Cards must use rounded-lg'
+                message: 'Cards must use rounded-2xl'
             });
         }
     });

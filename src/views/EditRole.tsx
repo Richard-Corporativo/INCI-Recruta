@@ -89,7 +89,9 @@ const EditRole: React.FC = () => {
                 // Sync with Jobs using role_id
                 await JobService.syncJobsByRole(id, {
                     title: formData.title,
-                    department: formData.department
+                    department: formData.area || formData.department,
+                    reports_to: formData.reports_to,
+                    mission: formData.mission
                 });
 
                 navigate('/roles');
@@ -147,14 +149,11 @@ const EditRole: React.FC = () => {
                         <form className="divide-y divide-border" onSubmit={handleSubmit}>
                             {/* Section 1: Dados Cadastrais */}
                             <div className="p-6 md:p-8 transition-colors">
-                                <div className="flex items-center justify-between gap-3 mb-8">
-                                    <div className="flex items-center gap-3">
-                                        <div className="size-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center /20 transition-all">
-                                            <Icon icon="material-symbols:badge" className="h-5 w-5" aria-hidden="true" />
-                                        </div>
-                                        <h3 className="text-xl font-semibold text-foreground transition-colors uppercase tracking-tight">Dados Cadastrais</h3>
+                                <div className="flex items-center gap-3 mb-8">
+                                    <div className="size-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center /20 transition-all">
+                                        <Icon icon="material-symbols:badge" className="h-5 w-5" aria-hidden="true" />
                                     </div>
-                                    <span className="text-[10px] text-muted-foreground/60 font-mono tracking-wide">Código auto-gerado</span>
+                                    <h3 className="text-xl font-semibold text-foreground transition-colors uppercase tracking-tight">Dados Cadastrais</h3>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
@@ -177,14 +176,15 @@ const EditRole: React.FC = () => {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider transition-colors" htmlFor="reports_to">
-                                            Reporta a <span className="text-destructive">*</span>
+                                            Gestor(a) <span className="text-destructive">*</span>
                                         </label>
                                         <input
                                             className="block w-full h-11 rounded-md border border-border bg-background text-foreground font-medium transition-all duration-200 ease-in-out outline-none hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 px-3.5 text-sm"
                                             id="reports_to" name="reports_to" type="text" value={formData.reports_to} onChange={handleInputChange} required
                                         />
                                     </div>
-                                    
+
+
                                 </div>
                             </div>
 

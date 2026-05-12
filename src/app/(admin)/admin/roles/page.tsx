@@ -80,51 +80,59 @@ const RolesPage: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" role="list">
-          {filteredRoles.map(role => (
-            <div key={role.id} role="listitem" className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-3 hover:bg-muted transition-colors group">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-foreground truncate">{role.title}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] font-mono font-semibold text-muted-foreground px-1.5 py-0.5 bg-muted rounded border border-border/50 tracking-wider">{role.code}</span>
+          {filteredRoles.map((role) => {
+            const roleArea = role.area || role.department;
+
+            return (
+              <div key={role.id} role="listitem" className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-3 hover:bg-muted transition-colors group">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-foreground truncate">{role.title}</h3>
+                    {role.code && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] font-mono font-semibold text-muted-foreground px-1.5 py-0.5 bg-muted rounded border border-border/50 tracking-wider">{role.code}</span>
+                      </div>
+                    )}
                   </div>
+                  <span className={`shrink-0 h-5 px-2 rounded text-[10px] font-semibold flex items-center gap-1 ${
+                    role.status === 'Ativo' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-200' : 'bg-muted text-muted-foreground border border-border'
+                  }`}>
+                    <span className={`size-1.5 rounded-full ${role.status === 'Ativo' ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
+                    {role.status === 'Ativo' ? 'Ativo' : 'Inativo'}
+                  </span>
                 </div>
-                <span className={`shrink-0 h-5 px-2 rounded text-[10px] font-semibold flex items-center gap-1 ${
-                  role.status === 'Ativo' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-200' : 'bg-muted text-muted-foreground border border-border'
-                }`}>
-                  <span className={`size-1.5 rounded-full ${role.status === 'Ativo' ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
-                  {role.status === 'Ativo' ? 'Ativo' : 'Inativo'}
-                </span>
-              </div>
 
-              <p className="text-xs text-muted-foreground">
-                <span className="inline-flex items-center px-2 py-0.5 rounded bg-muted/60 border border-border/50 text-xs font-semibold">{role.department}</span>
-              </p>
-
-              <p className="text-xs text-muted-foreground">
-                <span className="tabular-nums font-semibold text-foreground">{role.activeJobsCount}</span> vagas ativas vinculadas
-              </p>
-
-              <div className="flex items-center gap-1 pt-2 border-t border-border mt-auto">
-                <button onClick={() => openQuickView('role', role)}
-                  className="size-8 flex items-center justify-center rounded-2xl text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Visualizar">
-                  <Icon icon="material-symbols:visibility" className="size-4" />
-                </button>
-                {canManageRoles && (
-                  <>
-                    <Link href={`/admin/roles/${role.id}/edit`}
-                      className="size-8 flex items-center justify-center rounded-2xl text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Editar">
-                      <Icon icon="material-symbols:edit" className="size-4" />
-                    </Link>
-                    <button onClick={() => setDeleteConfirm({ id: role.id, title: role.title })}
-                      className="size-8 flex items-center justify-center rounded-2xl text-muted-foreground hover:text-error hover:bg-error/10 transition-colors ml-auto" title="Excluir">
-                      <Icon icon="material-symbols:delete" className="size-4" />
-                    </button>
-                  </>
+                {roleArea && (
+                  <p className="text-xs text-muted-foreground">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded bg-muted/60 border border-border/50 text-xs font-semibold">{roleArea}</span>
+                  </p>
                 )}
+
+                <p className="text-xs text-muted-foreground">
+                  <span className="tabular-nums font-semibold text-foreground">{role.activeJobsCount}</span> vagas ativas vinculadas
+                </p>
+
+                <div className="flex items-center gap-1 pt-2 border-t border-border mt-auto">
+                  <button onClick={() => openQuickView('role', role)}
+                    className="size-8 flex items-center justify-center rounded-2xl text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Visualizar">
+                    <Icon icon="material-symbols:visibility" className="size-4" />
+                  </button>
+                  {canManageRoles && (
+                    <>
+                      <Link href={`/admin/roles/${role.id}/edit`}
+                        className="size-8 flex items-center justify-center rounded-2xl text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Editar">
+                        <Icon icon="material-symbols:edit" className="size-4" />
+                      </Link>
+                      <button onClick={() => setDeleteConfirm({ id: role.id, title: role.title })}
+                        className="size-8 flex items-center justify-center rounded-2xl text-muted-foreground hover:text-error hover:bg-error/10 transition-colors ml-auto" title="Excluir">
+                        <Icon icon="material-symbols:delete" className="size-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

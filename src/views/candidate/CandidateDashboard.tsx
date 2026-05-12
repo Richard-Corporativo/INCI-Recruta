@@ -13,7 +13,9 @@ import { Skeleton } from '@src/components/atoms/Skeleton/Skeleton';
 import { Icon } from "@iconify/react";
 import RecommendedJobsBlock from '@src/components/candidate/RecommendedJobsBlock';
 import { CandidateService } from '@src/services/candidate.service';
+import { JobService } from '@src/services/job.service';
 import { useToast } from '@src/components/ui/Toast';
+import { formatDate } from '@src/lib/formatters';
 
 const COMPLETENESS_FIELD_LABELS: Record<string, string> = {
     name: 'Nome completo',
@@ -27,6 +29,16 @@ const COMPLETENESS_FIELD_LABELS: Record<string, string> = {
     avatar: 'Foto de perfil',
 };
 
+const COMPLETENESS_FIELD_ICONS: Record<string, string> = {
+    phone: 'material-symbols:call',
+    summary: 'material-symbols:description',
+    linkedin: 'mdi:linkedin',
+    github: 'mdi:github',
+    portfolio: 'material-symbols:language',
+    has_resume: 'material-symbols:picture-as-pdf',
+    avatar: 'material-symbols:account-circle',
+};
+
 interface ProfileModalProps {
     completeness: number;
     missingFields: string[];
@@ -38,15 +50,12 @@ const ProfileCompletenessModal: React.FC<ProfileModalProps> = ({ completeness, m
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in duration-200">
         <div className="w-full max-w-md bg-card border border-border rounded-2xl p-6 flex flex-col gap-5 animate-in zoom-in-95 duration-200">
             {/* Header: ícone + título + fechar na mesma linha */}
-            <div className="flex items-start gap-3">
-                <div className="size-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                    <Icon icon="material-symbols:person-check" className="size-6 text-primary" />
-                </div>
+            <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                    <h2 className="text-base font-bold text-foreground leading-tight">Complete seu perfil</h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">Candidatos com perfil completo têm mais chances de serem encontrados por recrutadores.</p>
+                    <h2 className="text-xl font-bold text-foreground leading-tight tracking-tight">Complete seu perfil</h2>
+                    <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">Candidatos com perfil completo têm mais chances de serem encontrados por recrutadores.</p>
                 </div>
-                <button onClick={onDismiss} className="text-muted-foreground hover:text-foreground transition-colors shrink-0 mt-0.5">
+                <button onClick={onDismiss} className="size-8 flex items-center justify-center rounded-full bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-all shrink-0">
                     <Icon icon="material-symbols:close" className="size-5" />
                 </button>
             </div>
@@ -67,14 +76,23 @@ const ProfileCompletenessModal: React.FC<ProfileModalProps> = ({ completeness, m
 
             {/* Campos faltando com scroll */}
             {missingFields.length > 0 && (
-                <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Faltando</p>
-                    <div className="max-h-32 overflow-y-auto">
-                        <div className="flex flex-wrap gap-1.5">
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                        <span className="size-1.5 rounded-full bg-primary" />
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Campos Pendentes</p>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                        <div className="flex flex-wrap gap-2">
                             {missingFields.map(f => (
-                                <span key={f} className="h-6 px-2.5 rounded-full bg-muted border border-border text-[10px] font-semibold text-foreground">
+                                <div 
+                                    key={f} 
+                                    className="h-8 px-3 rounded-lg bg-muted/40 border border-border/60 text-xs font-medium text-foreground/80 flex items-center gap-2 transition-all hover:bg-muted hover:border-border"
+                                >
+                                    {COMPLETENESS_FIELD_ICONS[f] && (
+                                        <Icon icon={COMPLETENESS_FIELD_ICONS[f]} className="size-3.5 text-primary/70" />
+                                    )}
                                     {COMPLETENESS_FIELD_LABELS[f] ?? f}
-                                </span>
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -167,7 +185,7 @@ const CandidateDashboard: React.FC = () => {
                 github: currentCandidate.github || '',
                 portfolio: currentCandidate.portfolio || '',
                 resumeName: currentCandidate.resumeName || 'Nenhum currículo anexado',
-                lastUpdate: currentCandidate.applied_at || 'Recente',
+                lastUpdate: formatDate(currentCandidate.applied_at, undefined, 'Sem atualização registrada'),
                 pretension_min: currentCandidate.pretension_min,
                 pretension_max: currentCandidate.pretension_max,
                 availability: currentCandidate.availability
@@ -210,9 +228,9 @@ const CandidateDashboard: React.FC = () => {
     );
 
     const links = [
-        { name: 'LinkedIn', icon: 'mdi:linkedin', value: formData.linkedin },
-        { name: 'GitHub', icon: 'mdi:github', value: formData.github },
-        { name: 'Portfólio', icon: 'material-symbols:language', value: formData.portfolio }
+        { name: 'LinkedIn', icon: 'mdi:linkedin', value: formData?.linkedin },
+        { name: 'GitHub', icon: 'mdi:github', value: formData?.github },
+        { name: 'Portfólio', icon: 'material-symbols:language', value: formData?.portfolio }
     ].filter(l => l.value);
 
     const missingFields = (['name', 'phone', 'location', 'summary', 'linkedin', 'github', 'portfolio', 'has_resume', 'avatar'] as const)
@@ -287,18 +305,18 @@ const CandidateDashboard: React.FC = () => {
                 <div className="bg-card border border-border rounded-lg p-6 flex flex-col gap-4 md:col-span-2">
                     <div className="flex items-center gap-4">
                         <div className="size-14 rounded-md bg-primary text-primary-foreground flex items-center justify-center text-lg font-semibold shrink-0">
-                            {(formData.name || formData.email || 'C').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+                            {(formData?.name || formData?.email || 'C').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
                         </div>
                         <div className="min-w-0 space-y-1">
-                            <h2 className="text-xl font-semibold text-foreground truncate">{formData.name || formData.email || 'Candidato'}</h2>
+                            <h2 className="text-xl font-semibold text-foreground truncate">{formData?.name || formData?.email || 'Candidato'}</h2>
                             <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                                <span>{formData.role}</span>
-                                {formData.location && (
+                                <span>{formData?.role}</span>
+                                {formData?.location && (
                                     <>
                                         <span className="size-1 rounded-full bg-border" />
                                         <span className="flex items-center gap-1">
                                             <Icon icon="material-symbols:location-on" className="size-3.5" />
-                                            {formData.location}
+                                            {formData?.location}
                                         </span>
                                     </>
                                 )}
@@ -307,10 +325,10 @@ const CandidateDashboard: React.FC = () => {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {[
-                            { label: 'E-mail', val: formData.email, icon: 'mail' },
-                            { label: 'Telefone', val: formData.phone, icon: 'call' },
-                            { label: 'Pretensão Salarial', val: formData.pretension_min ? `R$ ${formData.pretension_min.toLocaleString()}${formData.pretension_max ? ` — R$ ${formData.pretension_max.toLocaleString()}` : ''}` : 'Não informada', icon: 'payments' },
-                            { label: 'Disponibilidade', val: formData.availability || 'Imediata', icon: 'event-available' },
+                            { label: 'E-mail', val: formData?.email, icon: 'mail' },
+                            { label: 'Telefone', val: formData?.phone, icon: 'call' },
+                            { label: 'Pretensão Salarial', val: formData?.pretension_min ? `R$ ${formData.pretension_min.toLocaleString()}${formData.pretension_max ? ` — R$ ${formData.pretension_max.toLocaleString()}` : ''}` : 'Não informada', icon: 'payments' },
+                            { label: 'Disponibilidade', val: formData?.availability || 'Imediata', icon: 'event-available' },
                         ].map((item, i) => (
                             <div key={i} className="flex items-start gap-3">
                                 <div className="size-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
@@ -343,7 +361,7 @@ const CandidateDashboard: React.FC = () => {
                     {showSummary && (
                         <div className="px-6 pb-6 border-t border-border pt-4">
                             <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
-                                {formData.summary || 'Nenhuma biografia preenchida. Atualize seu perfil para aumentar a visibilidade com recrutadores.'}
+                                {formData?.summary || 'Nenhuma biografia preenchida. Atualize seu perfil para aumentar a visibilidade com recrutadores.'}
                             </p>
                         </div>
                     )}
@@ -362,7 +380,7 @@ const CandidateDashboard: React.FC = () => {
                                 <Icon icon="material-symbols:picture-as-pdf" className="size-4" />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-sm font-semibold text-foreground truncate">{formData.resumeName}</p>
+                                <p className="text-sm font-semibold text-foreground truncate">{formData?.resumeName}</p>
                                 <p className="text-[10px] text-muted-foreground">PDF</p>
                             </div>
                         </div>
@@ -394,7 +412,10 @@ const CandidateDashboard: React.FC = () => {
                 recommendations={recommendations}
                 isLoading={isLoadingRecs}
                 isAuthenticated={isAuthenticated}
-                onJobClick={(jobId) => navigate(`/vagas/${jobId}`)}
+                onJobClick={async (jobId) => {
+                    const slug = await JobService.getCompanySlugForJob(jobId);
+                    navigate(slug ? `/vagas/${slug}/${jobId}` : '/vagas');
+                }}
             />
 
             {/* Horizontal scroll: Ações rápidas */}

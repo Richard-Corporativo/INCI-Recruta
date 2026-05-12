@@ -1,0 +1,352 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/admin/jobs/[id]",
+      "regex": "^/admin/jobs/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/admin/jobs/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/admin/jobs/[id]/edit",
+      "regex": "^/admin/jobs/([^/]+?)/edit(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/admin/jobs/(?<nxtPid>[^/]+?)/edit(?:/)?$"
+    },
+    {
+      "page": "/admin/jobs/[id]/kanban",
+      "regex": "^/admin/jobs/([^/]+?)/kanban(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/admin/jobs/(?<nxtPid>[^/]+?)/kanban(?:/)?$"
+    },
+    {
+      "page": "/admin/roles/[id]/edit",
+      "regex": "^/admin/roles/([^/]+?)/edit(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/admin/roles/(?<nxtPid>[^/]+?)/edit(?:/)?$"
+    },
+    {
+      "page": "/admin/settings/users/[id]/edit",
+      "regex": "^/admin/settings/users/([^/]+?)/edit(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/admin/settings/users/(?<nxtPid>[^/]+?)/edit(?:/)?$"
+    },
+    {
+      "page": "/candidate/applications/[id]",
+      "regex": "^/candidate/applications/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/candidate/applications/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/super-admin/companies/[id]",
+      "regex": "^/super\\-admin/companies/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/super\\-admin/companies/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/vagas/[slug]",
+      "regex": "^/vagas/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/vagas/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/vagas/[slug]/[id]",
+      "regex": "^/vagas/([^/]+?)/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug",
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/vagas/(?<nxtPslug>[^/]+?)/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/vagas/[slug]/[id]/candidatar",
+      "regex": "^/vagas/([^/]+?)/([^/]+?)/candidatar(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug",
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/vagas/(?<nxtPslug>[^/]+?)/(?<nxtPid>[^/]+?)/candidatar(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/2fa",
+      "regex": "^/2fa(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/2fa(?:/)?$"
+    },
+    {
+      "page": "/admin/audit",
+      "regex": "^/admin/audit(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/audit(?:/)?$"
+    },
+    {
+      "page": "/admin/dashboard",
+      "regex": "^/admin/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/dashboard(?:/)?$"
+    },
+    {
+      "page": "/admin/jobs",
+      "regex": "^/admin/jobs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/jobs(?:/)?$"
+    },
+    {
+      "page": "/admin/jobs/new",
+      "regex": "^/admin/jobs/new(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/jobs/new(?:/)?$"
+    },
+    {
+      "page": "/admin/login",
+      "regex": "^/admin/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/login(?:/)?$"
+    },
+    {
+      "page": "/admin/roles",
+      "regex": "^/admin/roles(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/roles(?:/)?$"
+    },
+    {
+      "page": "/admin/roles/new",
+      "regex": "^/admin/roles/new(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/roles/new(?:/)?$"
+    },
+    {
+      "page": "/admin/settings",
+      "regex": "^/admin/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/settings(?:/)?$"
+    },
+    {
+      "page": "/admin/talent-bank",
+      "regex": "^/admin/talent\\-bank(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/talent\\-bank(?:/)?$"
+    },
+    {
+      "page": "/cadastro",
+      "regex": "^/cadastro(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/cadastro(?:/)?$"
+    },
+    {
+      "page": "/cadastro/candidato",
+      "regex": "^/cadastro/candidato(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/cadastro/candidato(?:/)?$"
+    },
+    {
+      "page": "/cadastro/empresa",
+      "regex": "^/cadastro/empresa(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/cadastro/empresa(?:/)?$"
+    },
+    {
+      "page": "/candidate/applications",
+      "regex": "^/candidate/applications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/candidate/applications(?:/)?$"
+    },
+    {
+      "page": "/candidate/dashboard",
+      "regex": "^/candidate/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/candidate/dashboard(?:/)?$"
+    },
+    {
+      "page": "/candidate/saved-jobs",
+      "regex": "^/candidate/saved\\-jobs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/candidate/saved\\-jobs(?:/)?$"
+    },
+    {
+      "page": "/candidate/settings",
+      "regex": "^/candidate/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/candidate/settings(?:/)?$"
+    },
+    {
+      "page": "/debug",
+      "regex": "^/debug(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/debug(?:/)?$"
+    },
+    {
+      "page": "/forgot-password",
+      "regex": "^/forgot\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/forgot\\-password(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/perfil/completar",
+      "regex": "^/perfil/completar(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/perfil/completar(?:/)?$"
+    },
+    {
+      "page": "/privacidade",
+      "regex": "^/privacidade(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/privacidade(?:/)?$"
+    },
+    {
+      "page": "/recuperar-senha",
+      "regex": "^/recuperar\\-senha(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/recuperar\\-senha(?:/)?$"
+    },
+    {
+      "page": "/redefinir-senha",
+      "regex": "^/redefinir\\-senha(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/redefinir\\-senha(?:/)?$"
+    },
+    {
+      "page": "/request-access",
+      "regex": "^/request\\-access(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/request\\-access(?:/)?$"
+    },
+    {
+      "page": "/reset-password",
+      "regex": "^/reset\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reset\\-password(?:/)?$"
+    },
+    {
+      "page": "/super-admin/audit",
+      "regex": "^/super\\-admin/audit(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/super\\-admin/audit(?:/)?$"
+    },
+    {
+      "page": "/super-admin/dashboard",
+      "regex": "^/super\\-admin/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/super\\-admin/dashboard(?:/)?$"
+    },
+    {
+      "page": "/super-admin/jobs",
+      "regex": "^/super\\-admin/jobs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/super\\-admin/jobs(?:/)?$"
+    },
+    {
+      "page": "/super-admin/overview",
+      "regex": "^/super\\-admin/overview(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/super\\-admin/overview(?:/)?$"
+    },
+    {
+      "page": "/super-admin/roles",
+      "regex": "^/super\\-admin/roles(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/super\\-admin/roles(?:/)?$"
+    },
+    {
+      "page": "/super-admin/settings",
+      "regex": "^/super\\-admin/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/super\\-admin/settings(?:/)?$"
+    },
+    {
+      "page": "/super-admin/talent-bank",
+      "regex": "^/super\\-admin/talent\\-bank(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/super\\-admin/talent\\-bank(?:/)?$"
+    },
+    {
+      "page": "/termos",
+      "regex": "^/termos(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/termos(?:/)?$"
+    },
+    {
+      "page": "/vagas",
+      "regex": "^/vagas(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/vagas(?:/)?$"
+    },
+    {
+      "page": "/verificar-email",
+      "regex": "^/verificar\\-email(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/verificar\\-email(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

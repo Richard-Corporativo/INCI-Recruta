@@ -5,33 +5,40 @@
 // @calls useJobs — fetch public, useNavigate — detail/apply
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from '@src/lib/router-compat';
+import { useNavigate, useParams } from '@src/lib/router-compat';
 
 import JobFilterConsole from '@src/components/public/JobFilterConsole';
 import JobCardCompact from '@src/components/public/JobCardCompact';
 import JobDetailView from '@src/components/public/JobDetailView';
 
 import { JobService } from '@src/services/job.service';
+import { CompanyService } from '@src/services/company.service';
 import { CandidateService } from '@src/services/candidate.service';
-import { Job } from '@src/types';
+import { Job, Company } from '@src/types';
 import { PublicJob } from '@src/components/public/JobCardPublic';
 import { mapJobToDetail } from '@src/lib/job-helpers';
 import { Icon } from "@iconify/react";
 import { useAuth } from '@src/context/AuthContext';
 import { useRecommendedJobs } from '@src/hooks/useRecommendedJobs';
 import { analyticsService } from '@src/services/analytics.service';
+import { parseDate } from '@src/lib/formatters';
 
 const mapJobToPublic = (job: Job): PublicJob => {
-    // Cálculo de 'isNew' (vagas criadas nos últimos 7 dias)
-    // No servidor, usamos uma data fixa ou ignoramos para evitar mismatch
-    const isNew = job.created_at 
-        ? new Date(job.created_at).getTime() > Date.now() - (7 * 24 * 60 * 60 * 1000)
+    const isNew = job.created_at
+        ? (parseDate(job.created_at)?.getTime() ?? 0) > Date.now() - (7 * 24 * 60 * 60 * 1000)
         : false;
+    const department = (job.department?.trim() && job.department !== 'Geral') 
+        ? job.department 
+        : 'Área não informada';
+
+    const requirements = Array.isArray(job.requirements)
+        ? job.requirements
+        : job.requirements ? [job.requirements] : undefined;
 
     return {
         id: job.id.toString(),
         title: job.title,
-        department: job.department,
+        department,
         location: job.location,
         model: job.model,
         contract: job.contract,
@@ -44,6 +51,12 @@ const mapJobToPublic = (job: Job): PublicJob => {
         createdAt: job.created_at,
         deadline: job.registration_deadline,
         status: job.status,
+        salaryMin: job.salary_min,
+        salaryMax: job.salary_max,
+        positionsCount: job.positions_count || (job as any).positions || 1,
+        requirements: requirements,
+        experienceMin: job.experience_min,
+        reportsTo: job.reports_to,
         rank: (job as any).rank
     };
 };
@@ -52,19 +65,18 @@ const JOBS_PER_PAGE = 20;
 
 const JobsList: React.FC = () => {
     const navigate = useNavigate();
-    const { user, isAuthenticated } = useAuth();
+    const { user: _user, isAuthenticated } = useAuth();
+    const { slug } = useParams() as { slug?: string };
 
     // State
+    const [company, setCompany] = useState<Company | null>(null);
+    const [companyNotFound, setCompanyNotFound] = useState(false);
     const [allJobs, setAllJobs] = useState<PublicJob[]>([]);
     const [rawJobs, setRawJobs] = useState<Job[]>([]);
     const [filteredJobs, setFilteredJobs] = useState<PublicJob[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDetailLoading, setIsDetailLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
 
     // Selection
     const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
@@ -74,6 +86,7 @@ const JobsList: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [locationFilter, setLocationFilter] = useState('');
+    const [otherAreaQuery, setOtherAreaQuery] = useState('');
     const [sortOption, setSortOption] = useState<'recent' | 'deadline' | 'urgency'>('recent');
     const [sidebarFilters, setSidebarFilters] = useState<{
         areas: string[];
@@ -91,13 +104,15 @@ const JobsList: React.FC = () => {
         pcd: []
     });
 
-    // Áreas únicas extraídas das vagas ativas — atualiza automaticamente quando novas vagas chegam
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     const availableAreas = useMemo(() => {
         const areas = allJobs.map(j => j.department).filter(Boolean);
         return [...new Set(areas)].sort();
     }, [allJobs]);
 
-    // Debounce: aplica a busca com 300ms de atraso para não filtrar a cada tecla
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearch(searchQuery);
@@ -108,40 +123,45 @@ const JobsList: React.FC = () => {
         return () => clearTimeout(timer);
     }, [searchQuery, filteredJobs.length]);
 
-    // Initial Fetch
     useEffect(() => {
         const fetchJobs = async () => {
             setIsLoading(true);
             try {
-                // Performance: busca apenas vagas ativas com colunas reduzidas
-                const data = await JobService.getPublicJobs();
+                let data: Job[];
+                if (slug) {
+                    const comp = await CompanyService.getPublicCompanyBySlug(slug);
+                    if (!comp) {
+                        setCompanyNotFound(true);
+                        setIsLoading(false);
+                        return;
+                    }
+                    setCompany(comp);
+                    data = await JobService.getPublicJobsByCompanySlug(slug);
+                } else {
+                    data = await JobService.getPublicJobs();
+                }
+
                 const publicJobs = data.map(mapJobToPublic);
 
                 setRawJobs(data);
                 setAllJobs(publicJobs);
                 setFilteredJobs(publicJobs);
 
-                // Auto-select first job
                 if (publicJobs.length > 0) {
                     setSelectedJobId(publicJobs[0].id);
                 }
 
-                // Track Landing View
                 analyticsService.trackLandingView();
             } catch (error) {
-
                 console.error("Error fetching jobs:", error);
             } finally {
                 setIsLoading(false);
             }
         };
         fetchJobs();
-    }, []);
+    }, [slug]);
 
-    // Recomendações personalizadas (só para autenticados)
-    const { recommendations } = useRecommendedJobs({
-        limit: 3,
-    });
+    const { recommendations } = useRecommendedJobs({ limit: 3 });
 
     const handleSelectJob = (jobId: string) => {
         const found = allJobs.find(job => job.id === jobId);
@@ -149,7 +169,6 @@ const JobsList: React.FC = () => {
         if (found) analyticsService.trackJobClick(jobId, found.title);
     };
 
-    // Fetch Details when Selection changes
     useEffect(() => {
         const fetchDetails = async () => {
             if (!selectedJobId) {
@@ -158,7 +177,9 @@ const JobsList: React.FC = () => {
             }
             setIsDetailLoading(true);
             try {
-                const found = await JobService.getJobById(selectedJobId);
+                const found = slug
+                    ? await JobService.getPublicJobByIdInCompany(slug, selectedJobId)
+                    : await JobService.getJobById(selectedJobId);
                 if (found) {
                     setSelectedJobData(mapJobToDetail(found));
                 }
@@ -169,13 +190,11 @@ const JobsList: React.FC = () => {
             }
         };
         fetchDetails();
-    }, [selectedJobId]);
+    }, [selectedJobId, slug]);
 
-    // Filter Logic
     const applyFilters = useCallback(() => {
         let results = [...allJobs];
 
-        // Text Search (usa debouncedSearch para não filtrar a cada tecla)
         if (debouncedSearch) {
             const query = debouncedSearch.toLowerCase();
             results = results.filter(j =>
@@ -184,14 +203,20 @@ const JobsList: React.FC = () => {
             );
         }
 
-        // Location Filter
         if (locationFilter) {
             results = results.filter(j => j.location.toLowerCase().includes(locationFilter.toLowerCase()));
         }
 
-        // Sidebar Filters
         if (sidebarFilters.areas.length > 0) {
-            results = results.filter(j => sidebarFilters.areas.includes(j.department));
+            results = results.filter(j => {
+                if (sidebarFilters.areas.includes('Outro') && otherAreaQuery) {
+                    const isOtherMatch = j.department.toLowerCase().includes(otherAreaQuery.toLowerCase());
+                    if (sidebarFilters.areas.length === 1) return isOtherMatch;
+                    const fixedAreas = sidebarFilters.areas.filter(a => a !== 'Outro');
+                    return fixedAreas.includes(j.department) || isOtherMatch;
+                }
+                return sidebarFilters.areas.includes(j.department);
+            });
         }
         if (sidebarFilters.levels.length > 0) {
             results = results.filter(j => sidebarFilters.levels.includes(j.seniority));
@@ -208,19 +233,14 @@ const JobsList: React.FC = () => {
         if (sidebarFilters.pcd.length > 0) {
             const showOnlyPcd = sidebarFilters.pcd.includes('Sim');
             const showOnlyNonPcd = sidebarFilters.pcd.includes('Não');
-            
-            if (showOnlyPcd && !showOnlyNonPcd) {
-                results = results.filter(j => j.isPcd);
-            } else if (!showOnlyPcd && showOnlyNonPcd) {
-                results = results.filter(j => !j.isPcd);
-            }
+            if (showOnlyPcd && !showOnlyNonPcd) results = results.filter(j => j.isPcd);
+            else if (!showOnlyPcd && showOnlyNonPcd) results = results.filter(j => !j.isPcd);
         }
 
-        // Sorting
         results.sort((a, b) => {
             if (sortOption === 'deadline') {
-                const dateA = a.deadline ? new Date(a.deadline).getTime() : Infinity;
-                const dateB = b.deadline ? new Date(b.deadline).getTime() : Infinity;
+                const dateA = parseDate(a.deadline)?.getTime() ?? Infinity;
+                const dateB = parseDate(b.deadline)?.getTime() ?? Infinity;
                 return dateA - dateB;
             }
             if (sortOption === 'urgency') {
@@ -228,32 +248,24 @@ const JobsList: React.FC = () => {
                 return (urgencyWeight[b.urgencyLevel as keyof typeof urgencyWeight] || 0) -
                        (urgencyWeight[a.urgencyLevel as keyof typeof urgencyWeight] || 0);
             }
-            // Default: Recent
-            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            const dateA = parseDate(a.createdAt)?.getTime() ?? 0;
+            const dateB = parseDate(b.createdAt)?.getTime() ?? 0;
             return dateB - dateA;
         });
 
-        // Merge Recommendations at the top if available
         if (isAuthenticated && recommendations.length > 0) {
             const recommendedIds = new Set(recommendations.map(r => r.job_id));
             const baseResults = results.filter(j => !recommendedIds.has(j.id));
-
             const mappedRecs = recommendations.map((r, idx) => {
                 const originalJob = rawJobs.find(rj => rj.id === r.job_id);
                 if (!originalJob) return null;
-                return {
-                    ...mapJobToPublic(originalJob),
-                    rank: idx + 1
-                };
+                return { ...mapJobToPublic(originalJob), rank: idx + 1 };
             }).filter(Boolean) as PublicJob[];
-
             results = [...mappedRecs, ...baseResults];
         }
 
         setFilteredJobs(results);
 
-        // Update selection if current selection is no longer in filtered results
         if (results.length > 0) {
             if (!selectedJobId || !results.some(j => j.id === selectedJobId)) {
                 setSelectedJobId(results[0].id);
@@ -261,14 +273,14 @@ const JobsList: React.FC = () => {
         } else {
             setSelectedJobId(null);
         }
-    }, [allJobs, rawJobs, recommendations, isAuthenticated, debouncedSearch, locationFilter, sidebarFilters, sortOption]);
+    }, [allJobs, rawJobs, recommendations, isAuthenticated, debouncedSearch, locationFilter, sidebarFilters, otherAreaQuery, sortOption, selectedJobId]);
 
     useEffect(() => { applyFilters(); }, [applyFilters]);
 
-    // Handlers
     const handleClearFilters = () => {
         setSearchQuery('');
         setLocationFilter('');
+        setOtherAreaQuery('');
         setSidebarFilters({ areas: [], levels: [], models: [], contracts: [], urgencies: [], pcd: [] });
     };
 
@@ -282,13 +294,34 @@ const JobsList: React.FC = () => {
 
     const handleApply = (id: string) => {
         analyticsService.trackApplicationStart(id);
-        navigate(`/vagas/${id}/candidatar`);
+        if (slug) {
+            navigate(`/vagas/${slug}/${id}/candidatar`);
+            return;
+        }
+        const job = rawJobs.find(j => j.id.toString() === id);
+        if (job?.company_slug) {
+            navigate(`/vagas/${job.company_slug}/${id}/candidatar`);
+        } else {
+            console.warn('[JobsList] Vaga sem slug de empresa — não é possível candidatar.');
+        }
     };
+
+    if (companyNotFound) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-background px-4">
+                <h2 className="text-3xl font-semibold tracking-tight uppercase text-foreground text-center">Empresa não encontrada</h2>
+                <p className="text-sm text-muted-foreground text-center max-w-md">A página que você tentou acessar não existe ou a empresa está temporariamente indisponível.</p>
+                <button onClick={() => navigate('/vagas')} className="h-12 px-8 bg-primary text-primary-foreground font-semibold text-[10px] uppercase tracking-widest rounded-xl">
+                    Ver todas as vagas
+                </button>
+            </div>
+        );
+    }
 
     if (!mounted) {
         return (
             <div className="flex flex-col w-full bg-background min-h-screen">
-                <section className="w-full bg-[#3857EF] py-12 md:py-16 text-white border-b border-white/5">
+                <section className="w-full bg-primary py-12 md:py-16 text-primary-foreground border-b border-primary-foreground/5">
                     <div className="w-full max-w-7xl mx-auto px-4 md:px-6 h-32 animate-pulse" />
                 </section>
                 <div className="max-w-7xl mx-auto w-full px-4 md:px-6 -mt-8 pb-16">
@@ -306,20 +339,33 @@ const JobsList: React.FC = () => {
 
     return (
         <div className="flex flex-col w-full bg-background antialiased font-sans">
-            {/* Hero Section */}
-            <section className="w-full bg-primary py-12 md:py-16 text-primary-foreground border-b border-primary-foreground/5">
+            <section
+                className="w-full bg-primary py-12 md:py-16 text-primary-foreground border-b border-primary-foreground/5"
+                style={company?.primary_color ? { backgroundColor: company.primary_color } : undefined}
+            >
                 <div className="w-full max-w-7xl mx-auto px-4 md:px-6">
                     <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8 lg:gap-12">
                         <div className="w-full lg:max-w-[65%] space-y-4 md:space-y-6">
+                            {company && (
+                                <div className="flex items-center gap-4 mb-2">
+                                    {company.logo_url && (
+                                        <img src={company.logo_url} alt={company.name} className="size-12 rounded-xl bg-white/10 object-contain p-2" />
+                                    )}
+                                    <span className="text-[10px] font-semibold uppercase tracking-widest text-primary-foreground/70">
+                                        Vagas em {company.name}
+                                    </span>
+                                </div>
+                            )}
                             <h1 className="text-2xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.15]">
                                 Sua <span className="text-primary-foreground/60 font-normal">Próxima</span>{' '}
                                 <span className="text-primary-foreground font-bold">Oportunidade</span> começa aqui.
                             </h1>
                             <p className="text-sm md:text-lg text-primary-foreground/80 font-normal max-w-[560px] leading-relaxed">
-                                Explore o ecossistema do INCI Recruta e descubra o próximo passo da sua jornada profissional.
+                                {company
+                                    ? `Conheça as oportunidades abertas na ${company.name}.`
+                                    : 'Explore o ecossistema do INCI Recruta e descubra o próximo passo da sua jornada profissional.'}
                             </p>
                         </div>
-
                         <div className="w-full lg:w-auto flex flex-col gap-2 pt-12 lg:pt-0 border-t lg:border-t-0 border-primary-foreground/5">
                             <div className="flex items-center gap-4">
                                 <div className="size-1.5 bg-primary-foreground/40 rounded-full" />
@@ -338,10 +384,7 @@ const JobsList: React.FC = () => {
                 </div>
             </section>
 
-
             <div className="max-w-7xl mx-auto w-full px-4 md:px-6 -mt-8 pb-16">
-
-                {/* Filter Console */}
                 <div id="jobs-list-content" className="mb-6 md:mb-8 relative z-20">
                     <JobFilterConsole
                         filters={sidebarFilters}
@@ -352,17 +395,17 @@ const JobsList: React.FC = () => {
                         onSearchChange={setSearchQuery}
                         locationFilter={locationFilter}
                         onLocationChange={setLocationFilter}
+                        otherAreaQuery={otherAreaQuery}
+                        onOtherAreaQueryChange={setOtherAreaQuery}
                     />
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
-                    {/* Master: Job List Sidebar */}
                     <aside className="w-full lg:w-[340px] shrink-0 space-y-4 lg:sticky lg:top-8 max-h-[calc(100vh-4rem)] overflow-y-auto pr-1 custom-scrollbar">
                         <div className="flex items-center justify-between pb-4 border-b border-border">
                             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                 {filteredJobs.length} Oportunidades
                             </span>
-
                             <div className="flex items-center gap-2">
                                 <Icon icon="material-symbols:sort" className="size-4 text-muted-foreground" />
                                 <select
@@ -399,7 +442,6 @@ const JobsList: React.FC = () => {
                         </div>
                     </aside>
 
-                    {/* Detail: Job Details Main */}
                     <main className="flex-1 min-w-0">
                         {isDetailLoading ? (
                             <div className="space-y-12 animate-pulse">
@@ -415,8 +457,6 @@ const JobsList: React.FC = () => {
                     </main>
                 </div>
             </div>
-
-
         </div>
     );
 };

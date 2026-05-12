@@ -108,7 +108,7 @@ const CreateRolePage: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-foreground" htmlFor="area">
-                      Área <span className="text-destructive">*</span>
+                      Área de Atuação <span className="text-destructive">*</span>
                     </label>
                     <input
                       className="block w-full rounded-2xl border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
@@ -117,8 +117,18 @@ const CreateRolePage: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-2">
+                    <label className="text-sm font-semibold text-foreground" htmlFor="department">
+                      Departamento <span className="text-destructive">*</span>
+                    </label>
+                    <input
+                      className="block w-full rounded-2xl border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
+                      id="department" name="department" type="text" value={formData.department} onChange={handleInputChange} required
+                      placeholder="Ex: Desenvolvimento"
+                    />
+                  </div>
+                  <div className="space-y-2">
                     <label className="text-sm font-semibold text-foreground" htmlFor="reports_to">
-                      Reporta a <span className="text-destructive">*</span>
+                      Gestor(a) <span className="text-destructive">*</span>
                     </label>
                     <input
                       className="block w-full rounded-2xl border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"

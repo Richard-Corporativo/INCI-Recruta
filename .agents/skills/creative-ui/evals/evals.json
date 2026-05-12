@@ -1,0 +1,17 @@
+{
+  "skill_name": "creative-ui",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Create a 'Services' section inspired by the 'Jasper Blueprint' mood. Use a subtle grid background, pastel-toned cards (green, pink, blue), and a mix of Serif/Sans-serif typography. Organise as a Widgets component and ensure A11Y labels for icons.",
+      "expected_output": "A clean, high-white-space section with grid backgrounds, pastel cards, and strictly following Balha v5.0.0 tokens.",
+      "files": [".opencode/Balha System.md", ".opencode/Componentes.md"]
+    },
+    {
+      "id": 2,
+      "prompt": "Design a 'Hero' section with the 'High-Contrast Vibrant' mood (Slay Studio style). Use a bold background block (e.g., primary or secondary token), extra-large typography, and overlapping images with negative margins. Focus on a premium, creative feel while keeping font-weight <= 600.",
+      "expected_output": "A visually striking hero section with bold colors and layered elements, but maintaining technical alignment with Balha tokens.",
+      "files": [".opencode/Balha System.md", ".opencode/Componentes.md"]
+    }
+  ]
+}

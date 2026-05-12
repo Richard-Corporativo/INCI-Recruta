@@ -1,3 +1,4 @@
+/// <reference path="../deno.d.ts" />
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
@@ -14,7 +15,7 @@ interface Candidate {
     id: string;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
     // CORS handling
     if (req.method === "OPTIONS") {
         return new Response("ok", {
@@ -27,13 +28,39 @@ Deno.serve(async (req) => {
     }
 
     try {
-        const { candidate }: { candidate: Candidate } = await req.json();
+        const payload = await req.json();
+        const candidateId = payload?.candidate?.id;
+        const candidateEmail = payload?.candidate?.email;
+
+        if (!candidateId || !candidateEmail) {
+            throw new Error("Missing candidate identification in payload");
+        }
 
         if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
             throw new Error("Supabase internal config missing");
         }
 
         const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+        // 0. Verify Candidate Integrity (Don't trust client payload)
+        const { data: dbCandidate, error: dbError } = await supabase
+            .from('candidates')
+            .select('id, name, email, location, created_at')
+            .eq('id', candidateId)
+            .single();
+
+        if (dbError || !dbCandidate || dbCandidate.email !== candidateEmail) {
+            console.error(`Security Warning: Invalid candidate data provided for ID ${candidateId}`);
+            return new Response(JSON.stringify({ error: "Invalid integrity check" }), { status: 403 });
+        }
+
+        const candidate: Candidate = {
+            id: dbCandidate.id,
+            name: dbCandidate.name,
+            email: dbCandidate.email,
+            location: dbCandidate.location,
+            applied_at: dbCandidate.created_at
+        };
 
         // 1. Spam Protection (Debounce: 10 minutes)
         const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
@@ -136,7 +163,8 @@ Deno.serve(async (req) => {
 
     } catch (error) {
         console.error("Error in Edge Function:", error);
-        return new Response(JSON.stringify({ error: error.message }), {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        return new Response(JSON.stringify({ error: message }), {
             headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
             status: 400,
         });

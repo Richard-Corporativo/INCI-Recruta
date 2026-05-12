@@ -8,6 +8,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from '@src/lib/router-compat';
 import { useCandidateData } from '@src/hooks/useCandidateData';
 import { Icon } from "@iconify/react";
+import { formatDate } from '@src/lib/formatters';
 
 // Mapeamento interno do kanban → etiqueta amigável para o candidato
 // SEM expor lógica interna (nomes de colunas do admin)
@@ -200,7 +201,7 @@ const MyApplications: React.FC = () => {
 
                             {app.applied_at && (
                                 <p className="text-[10px] text-muted-foreground/60 -mt-2">
-                                    Candidatado em {app.applied_at}
+                                    Candidatado em {formatDate(app.applied_at)}
                                 </p>
                             )}
                         </div>
