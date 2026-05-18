@@ -2,23 +2,23 @@
 import { Icon } from "@iconify/react";
 
 import React, { useState } from 'react';
-import { useAudit } from '@src/hooks/useAudit';
-import { useAuth } from '@src/context/AuthContext';
-import { useCandidates } from '@src/hooks/useCandidates';
+import { InterviewService } from '@src/services/interview.service';
 import BaseModal from '@src/components/ui/BaseModal';
+import { useToast } from '@src/components/ui/Toast';
 
 interface ScheduleInterviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   candidateName: string;
   candidateId?: string;
+  jobId?: string;
+  targetStage?: string;
   onSuccess?: (data?: any) => void;
 }
 
-const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen, onClose, candidateName, candidateId, onSuccess }) => {
-  const { addLog } = useAudit();
-  const { user } = useAuth();
-  const { updateCandidate } = useCandidates();
+const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen, onClose, candidateName, candidateId, jobId, targetStage, onSuccess }) => {
+  const { error: toastError } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     type: 'Entrevista RH',
     status: 'Agendada',
@@ -26,32 +26,44 @@ const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen,
     time: '',
     interviewer: '',
     location: '',
+    address: '',
     notes: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
-    if (candidateId) {
-      updateCandidate(candidateId, {
-        nextInterview: {
+    try {
+      if (candidateId) {
+        const startTime = new Date(`${formData.date}T${formData.time}:00`).toISOString();
+        const endDate = new Date(new Date(startTime).getTime() + 60 * 60 * 1000);
+
+        await InterviewService.addInterview({
+          candidate_id: candidateId,
+          job_id: jobId,
+          title: `${formData.type}: ${candidateName}`,
+          description: formData.notes,
+          starts_at: startTime,
+          ends_at: endDate.toISOString(),
+          location: formData.location,
+          address: formData.address,
           type: formData.type,
-          date: formData.date,
-          time: formData.time
-        }
-      });
+          status: formData.status === 'Agendada' ? 'scheduled' : 'completed',
+          notes: formData.notes,
+          interviewer_names: formData.interviewer,
+          stage: targetStage
+        });
+      }
+
+      onSuccess?.(formData);
+      onClose();
+    } catch (err: any) {
+      console.error('[ScheduleInterviewModal] Erro ao agendar:', err);
+      toastError(err?.message || 'Erro ao salvar entrevista. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    addLog({
-      action: 'Agendamento de Entrevista',
-      details: `${formData.type} agendada em ${formData.date} às ${formData.time}. Entrevistador: ${formData.interviewer}. Local: ${formData.location}`,
-      user_name: user?.name || 'Sistema',
-      entity_type: 'candidate',
-      entity_id: candidateId || candidateName
-    });
-
-    onSuccess?.(formData);
-    onClose();
   };
 
   return (
@@ -145,16 +157,29 @@ const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen,
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Local ou Link da Videochamada</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Link da Videochamada</label>
               <div className="relative">
                 <Icon icon="material-symbols:videocam" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[20px]" width="20" height="20" />
                 <input
-                  required
                   className="w-full h-11 pl-11 pr-4 rounded-2xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all hover:border-ring"
-                  placeholder="Cole o link do Google Meet, Zoom ou sala física..."
+                  placeholder="Ex: https://meet.google.com/..."
                   type="text"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Endereço Físico</label>
+              <div className="relative">
+                <Icon icon="material-symbols:location-on-outline" className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-[20px]" width="20" height="20" />
+                <input
+                  className="w-full h-11 pl-11 pr-4 rounded-2xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all hover:border-ring"
+                  placeholder="Ex: Rua das Flores, 123, Sala 10"
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 />
               </div>
             </div>
@@ -182,10 +207,11 @@ const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen,
           <button
             type="submit"
             form="schedule-form"
-            className="h-11 px-8 text-sm font-semibold text-primary-foreground bg-primary rounded-2xl  hover:bg-primary/90 transition-all flex items-center gap-2 active:scale-95"
+            disabled={isSubmitting}
+            className="h-11 px-8 text-sm font-semibold text-primary-foreground bg-primary rounded-2xl hover:bg-primary/90 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Icon icon="material-symbols:event-available" className="text-[18px]" width="18" height="18" />
-            Confirmar Agendamento
+            <Icon icon={isSubmitting ? 'material-symbols:hourglass-empty' : 'material-symbols:event-available'} className="text-[18px]" width="18" height="18" />
+            {isSubmitting ? 'Salvando...' : 'Confirmar Agendamento'}
           </button>
         </div>
       </div>

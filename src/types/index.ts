@@ -64,6 +64,12 @@ export interface Job {
   revision?: number;
   company_id?: string;
   company_slug?: string;
+  company_name?: string;
+  requirements_technical?: string | string[];
+  requirements_behavioral?: string | string[];
+  kpis?: string | string[];
+  competencies?: string | string[];
+  role_code?: string;
 }
 
 // ─── Candidate ───────────────────────────────────────────────────────────────
@@ -169,6 +175,7 @@ export interface Role {
   id: string;
   code: string;
   title: string;
+  company_id?: string;
   area: string;
   department: string;
   open_positions: number;
@@ -181,13 +188,13 @@ export interface Role {
   activeJobsCount?: number;
   salary_min?: number;
   salary_max?: number;
-  requirements_technical?: string;
-  requirements_behavioral?: string;
-  kpis?: string;
-  competencies?: string;
-  level?: number;
   experience_min?: string;
   reports_to?: string;
+  requirements_technical?: string | string[];
+  requirements_behavioral?: string | string[];
+  kpis?: string | string[];
+  competencies?: string | string[];
+  level?: number;
 }
 
 // ─── Company (multi-tenant) ───────────────────────────────────────────────────
@@ -241,7 +248,7 @@ export interface CompanyMember {
   id: string;
   company_id: string;
   user_id: string;
-  role: 'owner' | 'admin' | 'recruiter' | 'manager';
+  role: 'owner' | 'admin' | 'recruiter' | 'manager' | 'quality' | 'dp';
   status: 'active' | 'suspended' | 'invited';
   invited_email?: string | null;
   invited_at?: string | null;
@@ -322,7 +329,9 @@ export type AuditLogCategory =
   | 'user_management'
   | 'system'
   | 'candidate_movement'
-  | 'job_management';
+  | 'job_management'
+  | 'interview_scheduled'
+  | 'feedback_added';
 
 export interface AuditLog {
   id: string;
@@ -336,6 +345,7 @@ export interface AuditLog {
   entity_id?: string;
   resource_type?: string;
   resource_id?: string;
+  job_id?: string;
   affected_user_id?: string;
   affected_user_name?: string;
   reason?: string;
@@ -356,4 +366,30 @@ export interface StageHistory {
   entry_time: string;
   exit_time?: string;
   duration_seconds?: number;
+}
+
+// ─── Interview (Agenda) ──────────────────────────────────────────────────────
+
+export interface Interview {
+  id: string;
+  company_id: string;
+  candidate_id: string;
+  job_id?: string | number;
+  interviewer_id?: string;
+  interviewer_names?: string;
+  stage?: string;
+  title: string;
+  description?: string;
+  starts_at: string;
+  ends_at: string;
+  location?: string;
+  address?: string;
+  type?: string;
+  status?: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+  candidate_name?: string; // Virtual/Joined field
+  job_title?: string;      // Virtual/Joined field
+  interviewer_name?: string; // Virtual/Joined field
 }
