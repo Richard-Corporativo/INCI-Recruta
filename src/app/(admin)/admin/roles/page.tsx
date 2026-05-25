@@ -11,7 +11,7 @@ import { useQuickView } from '@src/context/QuickViewContext';
 import { useAuth } from '@src/context/AuthContext';
 
 const RolesPage: React.FC = () => {
-  const { roles, deleteRole } = useRoles();
+  const { roles, deleteRole, error: rolesError } = useRoles();
   const { jobs } = useJobs();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,7 +19,8 @@ const RolesPage: React.FC = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
   const { openQuickView } = useQuickView();
 
-  const canManageRoles = !!user && user.role !== 'candidate';
+  const canManageRoles = !!user && (user.role === 'admin' || user.role === 'manager' || user.role === 'owner' || user.role === 'super_admin');
+  const canDeleteRoles = !!user && (user.role === 'admin' || user.role === 'owner' || user.role === 'super_admin');
 
   const filteredRoles = roles
     .map(role => ({ ...role, activeJobsCount: jobs.filter(j => j.role_id === role.id && j.status === 'Ativa').length }))
@@ -36,6 +37,13 @@ const RolesPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-6">
       <Breadcrumbs items={[{ label: 'Cargos' }]} />
+
+      {rolesError && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-error/10 border border-error/20 text-sm text-error">
+          <Icon icon="material-symbols:error-outline" className="size-4 shrink-0" />
+          {rolesError}
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -118,16 +126,23 @@ const RolesPage: React.FC = () => {
                     <Icon icon="material-symbols:visibility" className="size-4" />
                   </button>
                   {canManageRoles && (
-                    <>
-                      <Link href={`/admin/roles/${role.id}/edit`}
-                        className="size-8 flex items-center justify-center rounded-2xl text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Editar">
-                        <Icon icon="material-symbols:edit" className="size-4" />
-                      </Link>
-                      <button onClick={() => setDeleteConfirm({ id: role.id, title: role.title })}
-                        className="size-8 flex items-center justify-center rounded-2xl text-muted-foreground hover:text-error hover:bg-error/10 transition-colors ml-auto" title="Excluir">
-                        <Icon icon="material-symbols:delete" className="size-4" />
-                      </button>
-                    </>
+                    <Link href={`/admin/roles/${role.id}/edit`}
+                      className="size-8 flex items-center justify-center rounded-2xl text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Editar">
+                      <Icon icon="material-symbols:edit" className="size-4" />
+                    </Link>
+                  )}
+                  {canDeleteRoles && (
+                    <button
+                      onClick={() => role.activeJobsCount === 0 && setDeleteConfirm({ id: role.id, title: role.title })}
+                      disabled={role.activeJobsCount > 0}
+                      title={role.activeJobsCount > 0 ? `Cargo possui ${role.activeJobsCount} vaga(s) ativa(s) — não pode ser excluído` : 'Excluir'}
+                      className={`size-8 flex items-center justify-center rounded-2xl transition-colors ml-auto ${
+                        role.activeJobsCount > 0
+                          ? 'text-muted-foreground/30 cursor-not-allowed'
+                          : 'text-muted-foreground hover:text-error hover:bg-error/10'
+                      }`}>
+                      <Icon icon="material-symbols:delete" className="size-4" />
+                    </button>
                   )}
                 </div>
               </div>
@@ -139,7 +154,7 @@ const RolesPage: React.FC = () => {
       <ConfirmationModal
         isOpen={deleteConfirm !== null}
         onClose={() => setDeleteConfirm(null)}
-        onConfirm={() => { if (deleteConfirm) { deleteRole(deleteConfirm.id); setDeleteConfirm(null); } }}
+        onConfirm={async () => { if (deleteConfirm) { await deleteRole(deleteConfirm.id); setDeleteConfirm(null); } }}
         title="Excluir Cargo"
         message={`Tem certeza que deseja excluir o cargo "${deleteConfirm?.title}"?`}
         confirmLabel="Excluir"
