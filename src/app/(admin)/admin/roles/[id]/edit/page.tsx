@@ -9,12 +9,22 @@ import DynamicListInput from '@src/components/shared/DynamicListInput';
 import { JobService } from '@src/services/job.service';
 import { Role } from '@src/types';
 import { Icon } from "@iconify/react";
+import { useAuth } from '@src/context/AuthContext';
+import { useToast } from '@src/components/ui/Toast';
 
 const EditRolePage: React.FC = () => {
     const params = useParams();
     const id = params?.id as string;
     const router = useRouter();
     const { updateRole } = useRoles();
+    const { user } = useAuth();
+    const { success: toastSuccess, error: toastError } = useToast();
+
+    useEffect(() => {
+        if (user && !['admin', 'manager', 'owner', 'super_admin'].includes(user.role)) {
+            router.replace('/admin/roles');
+        }
+    }, [user, router]);
 
     const [role, setRole] = useState<Role | null>(null);
     const [isLoadingRole, setIsLoadingRole] = useState(true);
@@ -22,7 +32,7 @@ const EditRolePage: React.FC = () => {
         title: '',
         department: '',
         area: '',
-        level: 1,
+        level: '1', // banco é text
         mission: '',
         requirements_technical: [] as string[],
         requirements_behavioral: [] as string[],
@@ -43,10 +53,18 @@ const EditRolePage: React.FC = () => {
                     title: data.title || '',
                     department: data.department || '',
                     area: data.area || '',
-                    level: data.level || 1,
+                    level: String(data.level || '1'), // banco é text
                     mission: data.mission || '',
-                    requirements_technical: typeof data.requirements_technical === 'string' ? data.requirements_technical.split('\n').filter(Boolean) : (Array.isArray(data.requirements_technical) ? data.requirements_technical : []),
-                    requirements_behavioral: typeof data.requirements_behavioral === 'string' ? data.requirements_behavioral.split('\n').filter(Boolean) : (Array.isArray(data.requirements_behavioral) ? data.requirements_behavioral : []),
+                    requirements_technical: Array.isArray(data.requirements_technical)
+                        ? data.requirements_technical
+                        : (typeof data.requirements_technical === 'string'
+                            ? data.requirements_technical.split('\n').filter(Boolean)
+                            : []),
+                    requirements_behavioral: Array.isArray(data.requirements_behavioral)
+                        ? data.requirements_behavioral
+                        : (typeof data.requirements_behavioral === 'string'
+                            ? data.requirements_behavioral.split('\n').filter(Boolean)
+                            : []),
                     kpis: typeof data.kpis === 'string' ? data.kpis.split('\n').filter(Boolean) : (Array.isArray(data.kpis) ? data.kpis : []),
                     competencies: typeof data.competencies === 'string' ? data.competencies.split('\n').filter(Boolean) : (Array.isArray(data.competencies) ? data.competencies : []),
                     status: data.status || 'Ativo',
@@ -61,7 +79,7 @@ const EditRolePage: React.FC = () => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: name === 'level' ? parseInt(value) : value
+            [name]: value // level é text no banco — sem parseInt
         }));
     };
 
@@ -72,15 +90,20 @@ const EditRolePage: React.FC = () => {
         try {
             const success = await updateRole(id, {
                 ...formData,
+                level: parseInt(formData.level) || 1,
                 status: formData.status as 'Ativo' | 'Inativo',
-                requirements_technical: formData.requirements_technical.join('\n'),
-                requirements_behavioral: formData.requirements_behavioral.join('\n'),
+                // requirements_technical e requirements_behavioral são JSONB no banco — enviar como array
+                requirements_technical: formData.requirements_technical,
+                requirements_behavioral: formData.requirements_behavioral,
+                // kpis e competencies são text — mantém join
                 kpis: formData.kpis.join('\n'),
                 competencies: formData.competencies.join('\n')
             });
 
             if (!success) {
-                throw new Error('Falha ao atualizar cargo no banco de dados.');
+                toastError('Não foi possível salvar o cargo. Tente novamente.');
+                setIsSaving(false);
+                return;
             }
 
             await JobService.syncJobsByRole(id, {
@@ -90,10 +113,11 @@ const EditRolePage: React.FC = () => {
                 mission: formData.mission
             });
 
+            toastSuccess('Cargo atualizado com sucesso!');
             router.push('/admin/roles');
         } catch (error) {
             console.error('Error updating role:', error);
-            alert('Erro ao atualizar cargo. Tente novamente.');
+            toastError('Erro ao atualizar cargo. Tente novamente.');
             setIsSaving(false);
         }
     };
@@ -211,15 +235,9 @@ const EditRolePage: React.FC = () => {
                             </div>
 
                             <div className="p-6 md:p-8 transition-colors">
-                                <div className="flex items-center gap-3 mb-8">
-                                    <div className="size-10 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center transition-all">
-                                        <Icon icon="material-symbols:clinical-notes" className="text-[20px]" width="20" height="20" />
-                                    </div>
-                                    <h3 className="text-xl font-semibold text-foreground transition-colors uppercase tracking-tight">Requisitos e Competências</h3>
-                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="space-y-4">
-                                        <label className="text-sm font-semibold text-foreground">Requisitos Necessários</label>
+                                        <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Requisitos Técnicos</label>
                                         <DynamicListInput
                                             label=""
                                             placeholder="Ex: React, SQL, Inglês..."
@@ -229,7 +247,7 @@ const EditRolePage: React.FC = () => {
                                         />
                                     </div>
                                     <div className="space-y-4">
-                                        <label className="text-sm font-semibold text-foreground">Competências Obrigatórias</label>
+                                        <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Requisitos Comportamentais</label>
                                         <DynamicListInput
                                             label=""
                                             placeholder="Ex: Liderança, Comunicação..."
@@ -239,7 +257,7 @@ const EditRolePage: React.FC = () => {
                                         />
                                     </div>
                                     <div className="space-y-4">
-                                        <label className="text-sm font-semibold text-foreground">Requisitos Desejáveis</label>
+                                        <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Competências</label>
                                         <DynamicListInput
                                             label=""
                                             placeholder="Ex: Resolução de conflitos..."
@@ -249,7 +267,7 @@ const EditRolePage: React.FC = () => {
                                         />
                                     </div>
                                     <div className="space-y-4">
-                                        <label className="text-sm font-semibold text-foreground">KPIs (Indicadores de Desempenho)</label>
+                                        <label className="text-sm font-semibold text-foreground uppercase tracking-wider">KPIs</label>
                                         <DynamicListInput
                                             label=""
                                             placeholder="Ex: Tempo de resposta, Satisfação..."

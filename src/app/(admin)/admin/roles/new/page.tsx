@@ -1,16 +1,24 @@
 'use client';
 import { Icon } from "@iconify/react";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Breadcrumbs from '@src/components/shared/Breadcrumbs';
 import { useRoles } from '@src/hooks/useRoles';
 import DynamicListInput from '@src/components/shared/DynamicListInput';
 import { useToast } from '@src/components/ui/Toast';
+import { useAuth } from '@src/context/AuthContext';
 
 const CreateRolePage: React.FC = () => {
   const router = useRouter();
   const { addRole } = useRoles();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user && !['admin', 'manager', 'owner', 'super_admin'].includes(user.role)) {
+      router.replace('/admin/roles');
+    }
+  }, [user, router]);
   const { success: toastSuccess, error: toastError } = useToast();
   const [isSaving, setIsSaving] = useState(false);
 
@@ -18,7 +26,7 @@ const CreateRolePage: React.FC = () => {
     title: '',
     department: '',
     area: '',
-    level: 1,
+    level: '1', // banco é text
     mission: '',
     requirements_technical: [] as string[],
     requirements_behavioral: [] as string[],
@@ -32,7 +40,7 @@ const CreateRolePage: React.FC = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'level' ? parseInt(value) : value
+      [name]: value // level é text no banco — sem parseInt
     }));
   };
 
@@ -43,9 +51,12 @@ const CreateRolePage: React.FC = () => {
     try {
       const ok = await addRole({
         ...formData,
+        level: parseInt(formData.level) || 1,
         status: formData.status as 'Ativo' | 'Inativo',
-        requirements_technical: formData.requirements_technical.join('\n'),
-        requirements_behavioral: formData.requirements_behavioral.join('\n'),
+        // requirements_technical e requirements_behavioral são JSONB no banco — enviar como array
+        requirements_technical: formData.requirements_technical,
+        requirements_behavioral: formData.requirements_behavioral,
+        // kpis e competencies são text — mantém join
         kpis: formData.kpis.join('\n'),
         competencies: formData.competencies.join('\n'),
         open_positions: 0
@@ -126,6 +137,7 @@ const CreateRolePage: React.FC = () => {
                       placeholder="Ex: Desenvolvedor Full Stack"
                     />
                   </div>
+                  <br />
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-foreground" htmlFor="area">
                       Área de Atuação <span className="text-destructive">*</span>
@@ -136,16 +148,7 @@ const CreateRolePage: React.FC = () => {
                       placeholder="Ex: Engenharia"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground" htmlFor="department">
-                      Departamento/Setor <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      className="block w-full rounded-2xl border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
-                      id="department" name="department" type="text" value={formData.department} onChange={handleInputChange} required
-                      placeholder="Ex: Desenvolvimento"
-                    />
-                  </div>
+
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-foreground" htmlFor="reports_to">
                       Gestor(a) <span className="text-destructive">*</span>
@@ -154,61 +157,6 @@ const CreateRolePage: React.FC = () => {
                       className="block w-full rounded-2xl border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
                       id="reports_to" name="reports_to" type="text" value={formData.reports_to} onChange={handleInputChange} required
                       placeholder="Ex: Gerente de Operações"
-                    />
-                  </div>
-                  
-                </div>
-              </div>
-
-
-
-              {/* Section 3: Requisitos Detalhados */}
-              <div className="p-6 md:p-8">
-                <div className="flex items-center gap-2 mb-6">
-                  <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Icon icon="material-symbols:clinical-notes" className="text-sm" width="20" height="20" />
-                  </span>
-                  <h3 className="text-lg font-semibold text-foreground">Requisitos e Competências</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-4">
-                    <label className="text-sm font-semibold text-foreground">Requisitos Necessários</label>
-                    <DynamicListInput
-                      label=""
-                      placeholder="Ex: React, SQL, Inglês..."
-                      items={formData.requirements_technical}
-                      onChange={(items) => setFormData(prev => ({ ...prev, requirements_technical: items }))}
-                      icon="engineering"
-                    />
-                  </div>
-                  <div className="space-y-4">
-                    <label className="text-sm font-semibold text-foreground">Competências Obrigatórias</label>
-                    <DynamicListInput
-                      label=""
-                      placeholder="Ex: Liderança, Comunicação..."
-                      items={formData.requirements_behavioral}
-                      onChange={(items) => setFormData(prev => ({ ...prev, requirements_behavioral: items }))}
-                      icon="psychology"
-                    />
-                  </div>
-                  <div className="space-y-4">
-                    <label className="text-sm font-semibold text-foreground">Requisitos Desejáveis</label>
-                    <DynamicListInput
-                      label=""
-                      placeholder="Ex: Resolução de conflitos..."
-                      items={formData.competencies}
-                      onChange={(items) => setFormData(prev => ({ ...prev, competencies: items }))}
-                      icon="stars"
-                    />
-                  </div>
-                  <div className="space-y-4">
-                    <label className="text-sm font-semibold text-foreground">KPIs (Indicadores de Desempenho)</label>
-                    <DynamicListInput
-                      label=""
-                      placeholder="Ex: Tempo de resposta, Satisfação..."
-                      items={formData.kpis}
-                      onChange={(items) => setFormData(prev => ({ ...prev, kpis: items }))}
-                      icon="insights"
                     />
                   </div>
                 </div>
