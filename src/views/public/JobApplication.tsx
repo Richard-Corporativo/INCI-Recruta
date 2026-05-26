@@ -27,6 +27,8 @@ const JobApplication: React.FC = () => {
     const [job, setJob] = useState<Job | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDuplicateCheckPending, setIsDuplicateCheckPending] = useState(true);
+    const [hasDuplicateApplication, setHasDuplicateApplication] = useState(false);
     const isTalentPool = !id || id === 'talentos';
     const applicationPath = id && slug ? `/vagas/${slug}/${id}/candidatar` : '/vagas';
     const loginPath = `/login?next=${encodeURIComponent(applicationPath)}`;
@@ -88,6 +90,32 @@ const JobApplication: React.FC = () => {
         };
         loadJob();
     }, [id, navigate, warning]);
+
+    useEffect(() => {
+        const checkDuplicateApplication = async () => {
+            setIsDuplicateCheckPending(true);
+            setHasDuplicateApplication(false);
+
+            if (!user?.id || !id || isTalentPool) {
+                setIsDuplicateCheckPending(false);
+                return;
+            }
+
+            try {
+                const alreadyApplied = await CandidateService.hasApplied(user.id, id);
+                if (alreadyApplied) {
+                    setHasDuplicateApplication(true);
+                    warning('Você já se candidatou a esta vaga.');
+                    setTimeout(() => navigate(`/vagas/${slug}/${id}`), 500);
+                }
+            } catch (err) {
+                console.error('[JobApplication] Error checking application status:', err);
+            } finally {
+                setIsDuplicateCheckPending(false);
+            }
+        };
+        checkDuplicateApplication();
+    }, [user?.id, id, isTalentPool, slug, navigate, warning]);
 
     useEffect(() => {
         const autofillForm = async () => {
@@ -183,19 +211,32 @@ const JobApplication: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isSubmitting) return;
+        if (isSubmitting || isDuplicateCheckPending || hasDuplicateApplication) return;
         setIsSubmitting(true);
         try {
             if (!isAuthenticated || !user) {
                 warning('Faça login como candidato para enviar sua candidatura.');
                 navigate(loginPath);
+                setIsSubmitting(false);
                 return;
             }
 
             if (user.role !== 'candidate') {
                 warning('Candidaturas são permitidas apenas para contas de candidato.');
                 navigate('/admin/dashboard');
+                setIsSubmitting(false);
                 return;
+            }
+
+            // Double-check antes de submeter
+            if (!isTalentPool && user.id && id) {
+                const alreadyApplied = await CandidateService.hasApplied(user.id, id);
+                if (alreadyApplied) {
+                    error('Você já se candidatou a esta vaga. Redirecionando...');
+                    setTimeout(() => navigate(`/vagas/${slug}/${id}`), 1000);
+                    setIsSubmitting(false);
+                    return;
+                }
             }
 
             const newCandidate: Omit<Candidate, 'id'> = {
@@ -254,6 +295,20 @@ const JobApplication: React.FC = () => {
         );
     }
 
+    if (hasDuplicateApplication) {
+        return (
+            <div className="h-screen flex items-center justify-center bg-[#FAFAFA]">
+                <div className="text-center space-y-4 max-w-md">
+                    <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto">
+                        <Icon icon="material-symbols:warning-outline" className="size-8" />
+                    </div>
+                    <h2 className="text-xl font-bold text-foreground">Candidatura Duplicada</h2>
+                    <p className="text-muted-foreground">Você já se candidatou a esta vaga. Redirecionando...</p>
+                </div>
+            </div>
+        );
+    }
+
     const renderStep1 = () => (
         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
             <div className="space-y-2">
@@ -281,7 +336,13 @@ const JobApplication: React.FC = () => {
                 </div>
             </div>
             <div className="pt-8 flex justify-end border-t border-border">
-                <button onClick={nextStep} className="h-14 px-10 bg-primary text-white font-bold text-[11px] uppercase tracking-widest rounded-xl transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-primary/20">Próximo passo</button>
+                <button
+                    onClick={nextStep}
+                    disabled={isDuplicateCheckPending || hasDuplicateApplication}
+                    className="h-14 px-10 bg-primary text-white font-bold text-[11px] uppercase tracking-widest rounded-xl transition-all hover:opacity-90 active:scale-95 shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {isDuplicateCheckPending ? 'Verificando...' : 'Próximo passo'}
+                </button>
             </div>
         </div>
     );
@@ -597,8 +658,18 @@ const JobApplication: React.FC = () => {
             })()}
 
             <div className="pt-8 flex justify-between items-center border-t border-border">
-                <button onClick={prevStep} className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors">Voltar</button>
-                <button onClick={handleSubmit} disabled={isSubmitting} className="h-16 px-12 bg-primary text-white font-black text-[12px] uppercase tracking-[0.2em] rounded-2xl transition-all hover:opacity-90 active:scale-[0.98] flex items-center gap-3">
+                <button
+                    onClick={prevStep}
+                    disabled={isSubmitting || isDuplicateCheckPending}
+                    className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Voltar
+                </button>
+                <button
+                    onClick={handleSubmit}
+                    disabled={isSubmitting || isDuplicateCheckPending || hasDuplicateApplication}
+                    className="h-16 px-12 bg-primary text-white font-black text-[12px] uppercase tracking-[0.2em] rounded-2xl transition-all hover:opacity-90 active:scale-[0.98] flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                     {isSubmitting ? 'Enviando...' : 'Confirmar Candidatura'}
                     {!isSubmitting && <Icon icon="material-symbols:send" className="size-5" />}
                 </button>
