@@ -762,13 +762,13 @@ export const CandidateService = {
                 .upsert({
                     candidate_id: candidateId,
                     company_id: companyId,
-                    gender: data.gender || 'prefer_not_to_say',
-                    race: data.race || 'prefer_not_to_say',
+                    gender: data.gender,
+                    race: data.race,
                     is_pcd: data.isPcd
                 }, { onConflict: 'candidate_id' });
 
             if (error) {
-                console.error('Error saving diversity data:', error);
+                console.error('Error saving diversity data:', error?.message, error?.code, error?.details, error?.hint);
                 return false;
             }
             return true;
