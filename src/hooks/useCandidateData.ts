@@ -13,11 +13,33 @@ export const useCandidateData = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     const calculateCompleteness = (candidate: Candidate) => {
-        const fields: (keyof Candidate)[] = [
-            'name', 'phone', 'location', 'summary', 'linkedin', 'github', 'portfolio', 'has_resume', 'avatar'
+        const weightedFields = [
+            { field: 'name', weight: 10 },
+            { field: 'phone', weight: 10 },
+            { field: 'location', weight: 10 },
+            { field: 'summary', weight: 15 },
+            { field: 'has_resume', weight: 20 },
+            { field: 'avatar', weight: 5 },
+            { field: 'linkedin', weight: 5 },
+            { field: 'experience', weight: 15 }, // Se tiver pelo menos 1
+            { field: 'education', weight: 10 },   // Se tiver pelo menos 1
         ];
-        const filled = fields.filter(f => !!candidate[f]).length;
-        return Math.round((filled / fields.length) * 100);
+
+        let totalScore = 0;
+        let maxScore = 0;
+
+        weightedFields.forEach(({ field, weight }) => {
+            maxScore += weight;
+            const value = candidate[field as keyof Candidate];
+            
+            if (Array.isArray(value)) {
+                if (value.length > 0) totalScore += weight;
+            } else if (!!value) {
+                totalScore += weight;
+            }
+        });
+
+        return Math.min(100, Math.round((totalScore / maxScore) * 100));
     };
 
     const refreshData = useCallback(async () => {
@@ -79,6 +101,9 @@ export const useCandidateData = () => {
                     email: session.user.email || '',
                     phone: userData?.phone || '',
                     location: userData?.location || '',
+                    linkedin: userData?.linkedin || '',
+                    github: userData?.github || '',
+                    portfolio: userData?.portfolio || '',
                     role: 'Candidato',
                     status: 'Novo',
                     columnId: 'received'
@@ -86,16 +111,29 @@ export const useCandidateData = () => {
                 setCurrentCandidate(fallbackProfile as Candidate);
             }
 
-            setMyApplications((applicationRows || []) as unknown as Candidate[]);
+            const mappedApplications = (applicationRows || []).map(app => ({
+                ...app,
+                jobId: app.job_id,
+                columnId: app.column_id || 'received'
+            }));
 
-            // 3. Fetch vagas ativas (apenas as necessárias para o dashboard e candidaturas)
-            const { data: activeJobs, error: jobsError } = await supabase
-                .from('jobs')
-                .select('id, title, status, department, location, model, contract')
-                .eq('status', 'Ativa');
+            setMyApplications(mappedApplications as unknown as Candidate[]);
 
-            if (!jobsError && activeJobs) {
-                setJobs(activeJobs as unknown as Job[]);
+            // 3. Fetch vagas relacionadas às candidaturas (mesmo que não estejam mais 'Ativas')
+            const jobIds = (applicationRows || []).map(a => a.job_id).filter(Boolean);
+            
+            if (jobIds.length > 0) {
+                const { data: relevantJobs, error: jobsError } = await supabase
+                    .from('jobs')
+                    .select('id, title, status, department, location, model, contract')
+                    .in('id', jobIds);
+
+                if (!jobsError && relevantJobs) {
+                    setJobs(relevantJobs as unknown as Job[]);
+                }
+            } else {
+                // Caso não tenha candidaturas, pode buscar algumas ativas para recomendação futuramente
+                setJobs([]);
             }
         } catch (error) {
             console.error('Error refreshing candidate data:', error);
