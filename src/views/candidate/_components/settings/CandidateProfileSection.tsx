@@ -408,7 +408,7 @@ const CandidateProfileSection: React.FC = () => {
                                         <button
                                             key={opt.id}
                                             type="button"
-                                            onClick={() => setDiversity(prev => ({ ...prev, gender: opt.id }))}
+                                            onClick={() => setDiversity(prev => ({ ...prev, gender: prev.gender === opt.id ? undefined : opt.id }))}
                                             className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 ease-in-out text-left ${
                                                 diversity.gender === opt.id
                                                 ? 'bg-primary/5 border-primary text-primary'
@@ -437,7 +437,7 @@ const CandidateProfileSection: React.FC = () => {
                                         <button
                                             key={opt.id}
                                             type="button"
-                                            onClick={() => setDiversity(prev => ({ ...prev, race: opt.id }))}
+                                            onClick={() => setDiversity(prev => ({ ...prev, race: prev.race === opt.id ? undefined : opt.id }))}
                                             className={`p-3 rounded-xl border-2 transition-all duration-200 ease-in-out text-center ${
                                                 diversity.race === opt.id
                                                 ? 'bg-primary/5 border-primary text-primary'
