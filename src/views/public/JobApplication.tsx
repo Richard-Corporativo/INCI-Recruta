@@ -92,7 +92,7 @@ const JobApplication: React.FC = () => {
     useEffect(() => {
         const autofillForm = async () => {
             if (isAuthenticated && user) {
-                const [{ data: profile }, { data: userProfile }] = await Promise.all([
+                const [{ data: profile }, { data: userProfile }, diversityData] = await Promise.all([
                     supabase
                     .from('candidates')
                     .select('*')
@@ -105,7 +105,8 @@ const JobApplication: React.FC = () => {
                         .from('users')
                         .select('name, email, phone, location, linkedin, portfolio, resume_name')
                         .eq('id', user.id)
-                        .maybeSingle()
+                        .maybeSingle(),
+                    CandidateService.getDiversityData(user.id)
                 ]);
 
                 setFormData(prev => ({
@@ -119,7 +120,10 @@ const JobApplication: React.FC = () => {
                     portfolio: profile?.portfolio || userProfile?.portfolio || '',
                     pretension_min: profile?.pretension_min?.toString() || '',
                     pretension_max: profile?.pretension_max?.toString() || '',
-                    availability: profile?.availability || ''
+                    availability: profile?.availability || '',
+                    gender: diversityData?.gender || '',
+                    race: diversityData?.race || '',
+                    isPcd: diversityData?.isPcd || false
                 }));
             }
         };
