@@ -30,6 +30,7 @@ const CandidateProfileSection: React.FC = () => {
     const [skills, setSkills] = useState<string[]>([]);
     const [languages, setLanguages] = useState<string[]>([]);
     const [links, setLinks] = useState({ linkedin: '', github: '', portfolio: '', resume_name: '' });
+    const [diversity, setDiversity] = useState<{ gender?: string; race?: string; isPcd?: boolean }>({});
 
     useEffect(() => {
         if (currentCandidate) {
@@ -54,6 +55,11 @@ const CandidateProfileSection: React.FC = () => {
                 portfolio: currentCandidate.portfolio || '',
                 resume_name: currentCandidate.resumeName || currentCandidate.resume_name || ''
             });
+            if (currentCandidate.id) {
+                CandidateService.getDiversityData(currentCandidate.id).then(d => {
+                    if (d) setDiversity(d);
+                });
+            }
         }
     }, [currentCandidate]);
 
@@ -369,6 +375,117 @@ const CandidateProfileSection: React.FC = () => {
                                     linkedin: links.linkedin, github: links.github, portfolio: links.portfolio
                                 })} disabled={isSaving === 'links'} className={saveBtn}>
                                     {isSaving === 'links' ? 'Salvando...' : 'Salvar Links'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* 7. Diversidade */}
+                <div role="listitem">
+                    <button type="button" onClick={() => toggleAccordion('diversidade')} className={accordionBtn}>
+                        <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                            <Icon icon="material-symbols:diversity-3" className="size-4 text-muted-foreground" />
+                            Diversidade
+                        </h3>
+                        <Icon icon="material-symbols:chevron-right" className={`size-5 text-muted-foreground transition-transform duration-200 ${openAccordion === 'diversidade' ? 'rotate-90' : ''}`} />
+                    </button>
+                    {openAccordion === 'diversidade' && (
+                        <div className={sectionContent}>
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-6">Inclusão e pertencimento (Opcional)</p>
+
+                            {/* Gênero */}
+                            <div className="space-y-3 mb-6">
+                                <label className={labelClasses}>Identidade de Gênero</label>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    {[
+                                        { id: 'female', label: 'Feminino', icon: 'material-symbols:woman' },
+                                        { id: 'male', label: 'Masculino', icon: 'material-symbols:man' },
+                                        { id: 'non_binary', label: 'Não Binário', icon: 'material-symbols:transgender' },
+                                        { id: 'other', label: 'Outro', icon: 'material-symbols:person-outline' },
+                                        { id: 'prefer_not_to_say', label: 'Não Informar', icon: 'material-symbols:block' }
+                                    ].map((opt) => (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => setDiversity(prev => ({ ...prev, gender: opt.id }))}
+                                            className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 ease-in-out text-left ${
+                                                diversity.gender === opt.id
+                                                ? 'bg-primary/5 border-primary text-primary'
+                                                : 'bg-muted/5 border-border text-muted-foreground hover:border-primary/40 hover:text-primary'
+                                            }`}
+                                        >
+                                            <Icon icon={opt.icon} className="size-4" />
+                                            <span className="text-[10px] font-bold uppercase tracking-tighter">{opt.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Raça */}
+                            <div className="space-y-3 mb-6">
+                                <label className={labelClasses}>Raça / Cor</label>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    {[
+                                        { id: 'white', label: 'Branca' },
+                                        { id: 'black', label: 'Preta' },
+                                        { id: 'brown', label: 'Parda' },
+                                        { id: 'yellow', label: 'Amarela' },
+                                        { id: 'indigenous', label: 'Indígena' },
+                                        { id: 'prefer_not_to_say', label: 'Não Informar' }
+                                    ].map((opt) => (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => setDiversity(prev => ({ ...prev, race: opt.id }))}
+                                            className={`p-3 rounded-xl border-2 transition-all duration-200 ease-in-out text-center ${
+                                                diversity.race === opt.id
+                                                ? 'bg-primary/5 border-primary text-primary'
+                                                : 'bg-muted/5 border-border text-muted-foreground hover:border-primary/40 hover:text-primary'
+                                            }`}
+                                        >
+                                            <span className="text-[10px] font-bold uppercase tracking-tighter">{opt.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* PCD */}
+                            <div className="mb-6">
+                                <label className="flex items-center gap-4 p-4 rounded-2xl border-2 border-border bg-muted/5 cursor-pointer hover:border-primary/30 transition-all duration-200 ease-in-out">
+                                    <div className={`size-6 rounded-lg border-2 flex items-center justify-center transition-all duration-200 ${
+                                        diversity.isPcd ? 'bg-primary border-primary text-primary-foreground' : 'border-border bg-background hover:border-primary/50'
+                                    }`}>
+                                        {diversity.isPcd && <Icon icon="material-symbols:check" className="size-4" />}
+                                    </div>
+                                    <input type="checkbox" className="hidden" checked={!!diversity.isPcd} onChange={() => setDiversity(prev => ({ ...prev, isPcd: !prev.isPcd }))} />
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-bold text-foreground uppercase tracking-widest">Pessoa com Deficiência (PCD)</span>
+                                        <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest">Ações afirmativas e acessibilidade</span>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div className="flex justify-end">
+                                <button
+                                    type="button"
+                                    disabled={isSaving === 'diversidade'}
+                                    onClick={async () => {
+                                        if (!currentCandidate?.id) return;
+                                        setIsSaving('diversidade');
+                                        try {
+                                            await CandidateService.saveDiversityData(currentCandidate.id, diversity);
+                                            success('Salvo com sucesso.');
+                                        } catch (err: any) {
+                                            error(err.message || 'Erro ao salvar.');
+                                        } finally {
+                                            setIsSaving(null);
+                                        }
+                                    }}
+                                    className={saveBtn}
+                                >
+                                    {isSaving === 'diversidade' ? <Icon icon="ph:circle-notch-bold" className="size-4 animate-spin" /> : null}
+                                    Salvar Diversidade
                                 </button>
                             </div>
                         </div>

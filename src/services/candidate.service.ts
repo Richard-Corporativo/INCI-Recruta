@@ -8,19 +8,29 @@
 // @references types/index.ts — Candidate, KanbanColumnId
 
 import { supabase } from '@src/lib/supabase';
-import { Candidate, KanbanColumnId } from '@src/types';
+import { Candidate, CandidateFeedbackInput, CandidateSearchFilters, KanbanColumnId } from '@src/types';
 import { AuditService } from '@src/services/audit.service';
 import { getCurrentCompanyId } from '@src/lib/tenant';
 
 /** Resolve company_id de uma vaga (para candidaturas e logs vinculados). */
 async function getCompanyIdFromJob(jobId: string | number | null | undefined): Promise<string | null> {
-    if (!jobId) return null;
-    const { data } = await supabase
-        .from('jobs')
-        .select('company_id')
-        .eq('id', jobId)
-        .maybeSingle();
-    return (data?.company_id as string) ?? null;
+    if (!jobId || jobId === 'talentos') return null;
+    try {
+        const { data, error } = await supabase
+            .from('jobs')
+            .select('company_id')
+            .eq('id', jobId)
+            .maybeSingle();
+        
+        if (error) {
+            console.warn('[CandidateService] Erro ao buscar company_id da vaga:', error.message);
+            return null;
+        }
+        return (data?.company_id as string) ?? null;
+    } catch (err) {
+        console.error('[CandidateService] Exceção em getCompanyIdFromJob:', err);
+        return null;
+    }
 }
 
 /** Resolve company_id a partir do candidate_id (para uploads/feedbacks/stage_history). */
@@ -42,6 +52,7 @@ const mapDbToCandidate = (dbCandidate: Record<string, unknown>): Candidate => ({
     phone: dbCandidate.phone as string,
     location: dbCandidate.location as string,
     linkedin: dbCandidate.linkedin as string | undefined,
+    github: dbCandidate.github as string | undefined,
     portfolio: dbCandidate.portfolio as string | undefined,
     resumeName: dbCandidate.resume_name as string | undefined,
     has_resume: dbCandidate.has_resume as boolean | undefined,
@@ -65,6 +76,7 @@ const mapDbToCandidate = (dbCandidate: Record<string, unknown>): Candidate => ({
     desired_work_model: dbCandidate.desired_work_model as 'Presencial' | 'Híbrido' | 'Remoto' | undefined,
     competencies: (dbCandidate.competencies as string[]) || [],
     currentStageEntry: (dbCandidate.current_stage_entry as string) || (dbCandidate.applied_at as string),
+    summary: dbCandidate.summary as string | undefined,
     terms_accepted: dbCandidate.terms_accepted as boolean | undefined,
     terms_accepted_at: dbCandidate.terms_accepted_at as string | undefined
 });
@@ -100,17 +112,15 @@ export const CandidateService = {
     },
 
     async getCandidatesByJob(jobId: string): Promise<Candidate[]> {
-        const { data, error } = await supabase.rpc('get_candidates_with_stage_entry', { p_job_id: jobId });
+        const { data, error } = await supabase
+            .from('candidates')
+            .select('*, feedbacks(*)')
+            .eq('job_id', jobId)
+            .order('applied_at', { ascending: false });
 
         if (error) {
             console.error(`Error fetching candidates for job ${jobId}:`, error);
-            const { data: fallbackData } = await supabase
-                .from('candidates')
-                .select('*, feedbacks(*)')
-                .eq('job_id', jobId)
-                .order('applied_at', { ascending: false });
-
-            return (fallbackData || []).map(mapDbToCandidate);
+            return [];
         }
 
         return (data || []).map(mapDbToCandidate);
@@ -350,9 +360,30 @@ export const CandidateService = {
         return !error;
     },
 
-    async addCandidate(candidate: Omit<Candidate, 'id' | 'applied_at'>, resumeFile?: File): Promise<Candidate | null> {
-        // Candidatura: company_id vem da vaga. Banco de talentos: sem company (visível só a super_admin).
-        const companyId = candidate.jobId ? await getCompanyIdFromJob(candidate.jobId) : null;
+    async addCandidate(candidate: Omit<Candidate, 'id'>, resumeFile?: File, companySlug?: string): Promise<Candidate> {
+        console.log('[CandidateService] Iniciando addCandidate...', { name: candidate.name, jobId: candidate.jobId, companySlug });
+        
+        let companyId: string | null = null;
+        try {
+            companyId = candidate.jobId ? await getCompanyIdFromJob(candidate.jobId) : null;
+        } catch (e) {
+            console.error('[CandidateService] Erro ao resolver company_id via job:', e);
+        }
+
+        // Se for banco de talentos (sem jobId), tenta resolver pelo slug da empresa
+        if (!companyId && companySlug) {
+            console.log('[CandidateService] Resolvendo company_id pelo slug:', companySlug);
+            const { data: company } = await supabase
+                .from('companies')
+                .select('id')
+                .eq('slug', companySlug)
+                .maybeSingle();
+            companyId = company?.id || null;
+        }
+
+        if (!companyId) {
+            throw new Error('[CandidateService] Não foi possível determinar o company_id para inserção do candidato.');
+        }
 
         const dbPayload = {
             job_id: candidate.jobId || null,
@@ -362,6 +393,7 @@ export const CandidateService = {
             phone: candidate.phone || null,
             location: candidate.location || null,
             linkedin: candidate.linkedin || null,
+            github: candidate.github || null,
             portfolio: candidate.portfolio || null,
             resume_name: candidate.resumeName || null,
             user_id: candidate.user_id || null,
@@ -405,9 +437,17 @@ export const CandidateService = {
 
         const newCandidate = mapDbToCandidate(data);
 
-        await AuditService.logChange('CANDIDATE', newCandidate.id, `Candidato adicionado: ${newCandidate.name}`, null, newCandidate);
+        try {
+            await AuditService.logChange('CANDIDATE', newCandidate.id, 'Candidato adicionado', null, { id: newCandidate.id }, 'CREATE', String(newCandidate.jobId ?? ''));
+        } catch (e) {
+            console.warn('[CandidateService] Erro ao registrar log de auditoria:', e);
+        }
 
-        await CandidateService.recordStageEntry(newCandidate.id, newCandidate.columnId);
+        try {
+            await CandidateService.recordStageEntry(newCandidate.id, newCandidate.columnId, companyId || undefined);
+        } catch (e) {
+            console.warn('[CandidateService] Erro ao registrar entrada na etapa:', e);
+        }
 
         if (!candidate.jobId) {
             console.log('[CandidateService] Spontaneous registration detected, triggering HR notification...');
@@ -435,6 +475,7 @@ export const CandidateService = {
                     phone: candidate.phone,
                     location: candidate.location,
                     linkedin: candidate.linkedin,
+                    github: candidate.github,
                     portfolio: candidate.portfolio,
                     resume_name: candidate.resumeName,
                 })
@@ -476,14 +517,17 @@ export const CandidateService = {
 
         const { data: currentCandidate } = await supabase
             .from('candidates')
-            .select('column_id')
+            .select('column_id, job_id')
             .eq('id', id)
             .single();
 
         const isStageChanging = updates.columnId && currentCandidate && currentCandidate.column_id !== updates.columnId;
 
-        if (isStageChanging && updates.columnId === 'hired') {
-            dbPayload.hired_at = new Date().toISOString();
+        if (isStageChanging) {
+            dbPayload.current_stage_entry = new Date().toISOString();
+            if (updates.columnId === 'hired') {
+                dbPayload.hired_at = new Date().toISOString();
+            }
         }
 
         const { data, error } = await supabase
@@ -501,57 +545,90 @@ export const CandidateService = {
         const updatedCandidate = mapDbToCandidate(data);
 
         if (isStageChanging) {
-            await AuditService.logChange('CANDIDATE', id, `Candidato movido para etapa: ${updates.columnId}`, { column_id: currentCandidate.column_id }, { column_id: updates.columnId });
+            try {
+                await AuditService.logChange('CANDIDATE', id, `Candidato movido para etapa: ${updates.columnId}`, { column_id: currentCandidate.column_id }, { column_id: updates.columnId }, 'candidate_movement', currentCandidate.job_id);
+            } catch (e) {
+                console.warn('[CandidateService] Erro ao registrar log de transição:', e);
+            }
         } else {
-            await AuditService.logChange('CANDIDATE', id, `Cadastro de candidato atualizado`, null, updates);
+            try {
+                await AuditService.logChange('CANDIDATE', id, 'Cadastro de candidato atualizado', null, { id, fields: Object.keys(updates) }, 'UPDATE', currentCandidate.job_id);
+            } catch (e) {
+                console.warn('[CandidateService] Erro ao registrar log de atualização:', e);
+            }
         }
 
         if (isStageChanging) {
-            await CandidateService.recordStageTransition(id, currentCandidate.column_id, updates.columnId as string);
+            try {
+                await CandidateService.recordStageTransition(id, currentCandidate.column_id, updates.columnId as string);
+            } catch (e) {
+                console.warn('[CandidateService] Erro ao registrar transição de etapa:', e);
+            }
         }
 
         return updatedCandidate;
     },
 
-    async recordStageEntry(candidateId: string, stageId: string) {
-        const companyId = await getCompanyIdFromCandidate(candidateId);
-        await supabase
-            .from('candidate_stage_history')
-            .insert([{
-                candidate_id: candidateId,
-                company_id: companyId,
-                stage_id: stageId,
-                entry_time: new Date().toISOString()
-            }]);
+    async recordStageEntry(candidateId: string, stageId: string, companyId?: string) {
+        try {
+            const resolvedCompanyId = companyId || await getCompanyIdFromCandidate(candidateId);
+            if (!resolvedCompanyId) {
+                console.warn('[CandidateService] Sem company_id para recordStageEntry — operação ignorada.');
+                return;
+            }
+            
+            const { error } = await supabase
+                .from('candidate_stage_history')
+                .insert([{
+                    candidate_id: candidateId,
+                    company_id: resolvedCompanyId,
+                    stage_id: stageId,
+                    entry_time: new Date().toISOString()
+                }]);
+            
+            if (error) {
+                console.error('[CandidateService] Erro ao inserir no histórico:', error.message);
+            }
+        } catch (e) {
+            console.error('[CandidateService] Exceção em recordStageEntry:', e);
+        }
     },
 
     async recordStageTransition(candidateId: string, oldStage: string, newStage: string) {
-        const now = new Date();
+        try {
+            const now = new Date();
+            const companyId = await getCompanyIdFromCandidate(candidateId);
 
-        const { data: lastStage } = await supabase
-            .from('candidate_stage_history')
-            .select('*')
-            .eq('candidate_id', candidateId)
-            .eq('stage_id', oldStage)
-            .is('exit_time', null)
-            .order('entry_time', { ascending: false })
-            .limit(1)
-            .single();
-
-        if (lastStage) {
-            const entryTime = new Date(lastStage.entry_time);
-            const durationSeconds = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
-
-            await supabase
+            const query = supabase
                 .from('candidate_stage_history')
-                .update({
-                    exit_time: now.toISOString(),
-                    duration_seconds: durationSeconds
-                })
-                .eq('id', lastStage.id);
-        }
+                .select('*')
+                .eq('candidate_id', candidateId)
+                .eq('stage_id', oldStage)
+                .is('exit_time', null)
+                .order('entry_time', { ascending: false })
+                .limit(1);
 
-        await CandidateService.recordStageEntry(candidateId, newStage);
+            if (companyId) query.eq('company_id', companyId);
+
+            const { data: lastStage } = await query.maybeSingle();
+
+            if (lastStage) {
+                const entryTime = new Date(lastStage.entry_time);
+                const durationSeconds = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
+
+                await supabase
+                    .from('candidate_stage_history')
+                    .update({
+                        exit_time: now.toISOString(),
+                        duration_seconds: durationSeconds
+                    })
+                    .eq('id', lastStage.id);
+            }
+
+            await CandidateService.recordStageEntry(candidateId, newStage);
+        } catch (e) {
+            console.error('[CandidateService] Erro em recordStageTransition:', e);
+        }
     },
 
     async getStageHistory(candidateId: string) {
@@ -565,9 +642,13 @@ export const CandidateService = {
     },
 
     async getAverageStageDurations() {
+        const companyId = await getCurrentCompanyId();
+        if (!companyId) return {};
+
         const { data, error } = await supabase
             .from('candidate_stage_history')
             .select('stage_id, duration_seconds')
+            .eq('company_id', companyId)
             .not('duration_seconds', 'is', null);
 
         if (error || !data) return {};
@@ -596,7 +677,7 @@ export const CandidateService = {
             .single();
 
         if (data) {
-            await AuditService.logChange('CANDIDATE', id, `Candidato removido do sistema`, data, null);
+            await AuditService.logChange('CANDIDATE', id, 'Candidato removido do sistema', { id }, null, 'candidate_movement');
         }
 
         if (error) {
@@ -612,7 +693,7 @@ export const CandidateService = {
         return true;
     },
 
-    async addFeedback(candidateId: string, feedback: Record<string, unknown>): Promise<boolean> {
+    async addFeedback(candidateId: string, feedback: CandidateFeedbackInput): Promise<boolean> {
         const companyId = await getCompanyIdFromCandidate(candidateId);
         const dbPayload = {
             candidate_id: candidateId,
@@ -635,16 +716,7 @@ export const CandidateService = {
         return true;
     },
 
-    async searchCandidates(filters: {
-        query?: string;
-        skills?: string[];
-        competencies?: string[];
-        minSalary?: number;
-        maxSalary?: number;
-        location?: string;
-        availability?: string;
-        status?: string;
-    }): Promise<Candidate[]> {
+    async searchCandidates(filters: CandidateSearchFilters): Promise<Candidate[]> {
         const { data, error } = await supabase.rpc('search_candidates', {
             p_search_query: filters.query || null,
             p_skills: filters.skills && filters.skills.length > 0 ? filters.skills : null,
@@ -703,6 +775,22 @@ export const CandidateService = {
         } catch (err) {
             console.error('Exception saving diversity data:', err);
             return false;
+        }
+    },
+
+    async getDiversityData(candidateId: string): Promise<{ gender?: string; race?: string; isPcd?: boolean } | null> {
+        try {
+            const { data, error } = await supabase
+                .from('candidate_demographics')
+                .select('gender, race, is_pcd')
+                .eq('candidate_id', candidateId)
+                .maybeSingle();
+
+            if (error || !data) return null;
+            return { gender: data.gender, race: data.race, isPcd: data.is_pcd };
+        } catch (err) {
+            console.error('Exception fetching diversity data:', err);
+            return null;
         }
     }
 };
