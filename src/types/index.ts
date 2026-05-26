@@ -13,7 +13,7 @@ export interface Education {
   institution: string;
   degree: string;
   startDate: string;
-  endDate: string;
+  endDate: string | null;
   description?: string;
 }
 
@@ -22,7 +22,7 @@ export interface Experience {
   company: string;
   role: string;
   startDate: string;
-  endDate: string;
+  endDate: string | null;
   description?: string;
 }
 
@@ -70,6 +70,7 @@ export interface Job {
   kpis?: string | string[];
   competencies?: string | string[];
   role_code?: string;
+  job_number?: number;
 }
 
 // ─── Candidate ───────────────────────────────────────────────────────────────
@@ -392,4 +393,27 @@ export interface Interview {
   candidate_name?: string; // Virtual/Joined field
   job_title?: string;      // Virtual/Joined field
   interviewer_name?: string; // Virtual/Joined field
+}
+
+// ─── Candidate search & feedback ─────────────────────────────────────────────
+
+export interface CandidateSearchFilters {
+  query?: string;
+  skills?: string[];
+  competencies?: string[];
+  minSalary?: number;
+  maxSalary?: number;
+  location?: string;
+  availability?: string;
+  status?: string;
+}
+
+export interface CandidateFeedbackInput {
+  rating?: number;
+  content?: string;
+  strengths?: string;
+  concerns?: string;
+  recommendation?: string;
+  stage?: string;
+  createdBy?: string;
 }

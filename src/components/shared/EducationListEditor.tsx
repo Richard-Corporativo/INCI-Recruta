@@ -23,7 +23,7 @@ const EducationListEditor: React.FC<EducationListEditorProps> = ({ educationList
             institution: '',
             degree: '',
             startDate: '',
-            endDate: '',
+            endDate: null,
             description: ''
         });
         setEditingId(null);
@@ -45,7 +45,7 @@ const EducationListEditor: React.FC<EducationListEditorProps> = ({ educationList
     const handleSave = () => {
         if (!formState.institution || !formState.degree) return;
 
-        const dataToSave = isCurrent ? { ...formState, endDate: '' } : formState;
+        const dataToSave = isCurrent ? { ...formState, endDate: null } : formState;
 
         if (editingId) {
             // Update existing
@@ -146,8 +146,8 @@ const EducationListEditor: React.FC<EducationListEditorProps> = ({ educationList
                                         <label className="text-xs font-semibold text-muted-foreground">Fim</label>
                                         <input
                                             type="month"
-                                            value={formState.endDate}
-                                            onChange={e => setFormState({ ...formState, endDate: e.target.value })}
+                                            value={formState.endDate || ''}
+                                            onChange={e => setFormState({ ...formState, endDate: e.target.value || null })}
                                             className="w-full h-10 px-3 rounded-md border border-border bg-background outline-none focus:ring-2 focus:ring-primary/20 text-sm text-muted-foreground"
                                         />
                                     </div>
@@ -163,7 +163,7 @@ const EducationListEditor: React.FC<EducationListEditorProps> = ({ educationList
                                 </div>
                                 <input type="checkbox" className="hidden" checked={isCurrent} onChange={() => {
                                     setIsCurrent(prev => !prev);
-                                    if (!isCurrent) setFormState(prev => ({ ...prev, endDate: '' }));
+                                    if (!isCurrent) setFormState(prev => ({ ...prev, endDate: null }));
                                 }} />
                                 <span className="text-xs font-semibold text-foreground">Estou cursando</span>
                             </label>
