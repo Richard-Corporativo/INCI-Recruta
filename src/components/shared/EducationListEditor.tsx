@@ -16,6 +16,7 @@ const EducationListEditor: React.FC<EducationListEditorProps> = ({ educationList
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [formState, setFormState] = useState<Partial<Education>>({});
+    const [isCurrent, setIsCurrent] = useState(false);
 
     const handleAddNew = () => {
         setFormState({
@@ -26,12 +27,14 @@ const EducationListEditor: React.FC<EducationListEditorProps> = ({ educationList
             description: ''
         });
         setEditingId(null);
+        setIsCurrent(false);
         setIsAdding(true);
     };
 
     const handleEdit = (edu: Education) => {
         setFormState({ ...edu });
         setEditingId(edu.id);
+        setIsCurrent(!edu.endDate);
         setIsAdding(true);
     };
 
@@ -42,14 +45,16 @@ const EducationListEditor: React.FC<EducationListEditorProps> = ({ educationList
     const handleSave = () => {
         if (!formState.institution || !formState.degree) return;
 
+        const dataToSave = isCurrent ? { ...formState, endDate: '' } : formState;
+
         if (editingId) {
             // Update existing
-            const updated = educationList.map(e => e.id === editingId ? { ...e, ...formState } as Education : e);
+            const updated = educationList.map(e => e.id === editingId ? { ...e, ...dataToSave } as Education : e);
             onChange(updated);
         } else {
             // Add new
             const newEdu: Education = {
-                ...(formState as Education),
+                ...(dataToSave as Education),
                 id: crypto.randomUUID()
             };
             onChange([...educationList, newEdu]);
@@ -136,17 +141,32 @@ const EducationListEditor: React.FC<EducationListEditorProps> = ({ educationList
                                         className="w-full h-10 px-3 rounded-md border border-border bg-background outline-none focus:ring-2 focus:ring-primary/20 text-sm text-muted-foreground"
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-semibold text-muted-foreground">Fim</label>
-                                    <input
-                                        type="month"
-                                        value={formState.endDate}
-                                        onChange={e => setFormState({ ...formState, endDate: e.target.value })}
-                                        className="w-full h-10 px-3 rounded-md border border-border bg-background outline-none focus:ring-2 focus:ring-primary/20 text-sm text-muted-foreground"
-                                    />
-                                    <span className="text-[10px] text-muted-foreground pl-1">Deixe em branco se for atual.</span>
-                                </div>
+                                {!isCurrent && (
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-semibold text-muted-foreground">Fim</label>
+                                        <input
+                                            type="month"
+                                            value={formState.endDate}
+                                            onChange={e => setFormState({ ...formState, endDate: e.target.value })}
+                                            className="w-full h-10 px-3 rounded-md border border-border bg-background outline-none focus:ring-2 focus:ring-primary/20 text-sm text-muted-foreground"
+                                        />
+                                    </div>
+                                )}
                             </div>
+
+                            {/* Estou cursando */}
+                            <label className="flex items-center gap-3 cursor-pointer mt-1">
+                                <div className={`size-5 rounded border-2 flex items-center justify-center transition-all duration-200 ease-in-out shrink-0 ${
+                                    isCurrent ? 'bg-primary border-primary text-primary-foreground' : 'border-border bg-background'
+                                }`}>
+                                    {isCurrent && <Icon icon="material-symbols:check" className="size-3" />}
+                                </div>
+                                <input type="checkbox" className="hidden" checked={isCurrent} onChange={() => {
+                                    setIsCurrent(prev => !prev);
+                                    if (!isCurrent) setFormState(prev => ({ ...prev, endDate: '' }));
+                                }} />
+                                <span className="text-xs font-semibold text-foreground">Estou cursando</span>
+                            </label>
                         </div>
                         <div className="p-4 bg-muted/20 flex justify-end gap-3 border-t border-border">
                             <button onClick={() => setIsAdding(false)} className="px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted rounded-md transition-colors">Cancelar</button>
