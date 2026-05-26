@@ -432,18 +432,19 @@ const CandidateProfileSection: React.FC = () => {
                                         { id: 'brown', label: 'Parda' },
                                         { id: 'yellow', label: 'Amarela' },
                                         { id: 'indigenous', label: 'Indígena' },
-                                        { id: 'prefer_not_to_say', label: 'Não Informar' }
+                                        { id: 'prefer_not_to_say', label: 'Não Informar', icon: 'material-symbols:block' }
                                     ].map((opt) => (
                                         <button
                                             key={opt.id}
                                             type="button"
                                             onClick={() => setDiversity(prev => ({ ...prev, race: prev.race === opt.id ? undefined : opt.id }))}
-                                            className={`p-3 rounded-xl border-2 transition-all duration-200 ease-in-out text-center ${
+                                            className={`flex items-center justify-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 ease-in-out ${
                                                 diversity.race === opt.id
                                                 ? 'bg-primary/5 border-primary text-primary'
                                                 : 'bg-muted/5 border-border text-muted-foreground hover:border-primary/40 hover:text-primary'
-                                            }`}
+                                            } ${opt.icon ? '' : 'text-center'}`}
                                         >
+                                            {opt.icon && <Icon icon={opt.icon} className="size-4" />}
                                             <span className="text-[10px] font-bold uppercase tracking-tighter">{opt.label}</span>
                                         </button>
                                     ))}
