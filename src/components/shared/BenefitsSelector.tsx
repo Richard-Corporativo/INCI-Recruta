@@ -33,15 +33,15 @@ const BENEFIT_ICON_OPTIONS = [
 ];
 
 const BENEFIT_COLOR_OPTIONS = [
-    { id: 'emerald', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
-    { id: 'sky', bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200', dot: 'bg-sky-500' },
-    { id: 'violet', bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', dot: 'bg-violet-500' },
-    { id: 'rose', bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', dot: 'bg-rose-500' },
-    { id: 'amber', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
-    { id: 'cyan', bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200', dot: 'bg-cyan-500' },
-    { id: 'lime', bg: 'bg-lime-50', text: 'text-lime-700', border: 'border-lime-200', dot: 'bg-lime-500' },
-    { id: 'fuchsia', bg: 'bg-fuchsia-50', text: 'text-fuchsia-700', border: 'border-fuchsia-200', dot: 'bg-fuchsia-500' },
-    { id: 'indigo', bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200', dot: 'bg-indigo-500' }
+    { id: 'verde', bg: 'bg-[#008000]/10', text: 'text-[#008000]', border: 'border-[#008000]/20', dot: 'bg-[#008000]' },
+    { id: 'verde-claro', bg: 'bg-[#90EE90]/10', text: 'text-[#006400]', border: 'border-[#90EE90]/20', dot: 'bg-[#90EE90]' },
+    { id: 'azul', bg: 'bg-[#0000FF]/10', text: 'text-[#0000FF]', border: 'border-[#0000FF]/20', dot: 'bg-[#0000FF]' },
+    { id: 'azul-claro', bg: 'bg-[#ADD8E6]/10', text: 'text-[#00008B]', border: 'border-[#ADD8E6]/20', dot: 'bg-[#ADD8E6]' },
+    { id: 'roxo', bg: 'bg-[#800080]/10', text: 'text-[#800080]', border: 'border-[#800080]/20', dot: 'bg-[#800080]' },
+    { id: 'lilas', bg: 'bg-[#C8A2C8]/10', text: 'text-[#4B0082]', border: 'border-[#C8A2C8]/20', dot: 'bg-[#C8A2C8]' },
+    { id: 'vermelho', bg: 'bg-[#FF0000]/10', text: 'text-[#FF0000]', border: 'border-[#FF0000]/20', dot: 'bg-[#FF0000]' },
+    { id: 'vermelho-claro', bg: 'bg-[#FF7F7F]/10', text: 'text-[#8B0000]', border: 'border-[#FF7F7F]/20', dot: 'bg-[#FF7F7F]' },
+    { id: 'laranja', bg: 'bg-[#FFA500]/10', text: 'text-[#FF8C00]', border: 'border-[#FFA500]/20', dot: 'bg-[#FFA500]' }
 ];
 
 interface BenefitsSelectorProps {

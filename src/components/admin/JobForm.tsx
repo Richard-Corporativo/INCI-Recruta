@@ -8,9 +8,9 @@
 import React, { ChangeEvent } from 'react';
 import { Icon } from "@iconify/react";
 import BenefitsSelector from '@src/components/shared/BenefitsSelector';
-import RequirementsSelector from '@src/components/shared/RequirementsSelector';
 import SLAConfig from '@src/components/admin/SLAConfig';
 import JobOptionDropdown from '@src/components/admin/JobOptionDropdown';
+import RequirementsSelector from '@src/components/shared/RequirementsSelector';
 
 export interface JobFormProps {
     formData: {
@@ -24,9 +24,14 @@ export interface JobFormProps {
         salaryMin: string;
         salaryMax: string;
         context: string;
+        mission: string;
         seniority: string;
         experienceMin: string;
         requirements: string[];
+        requirementsTechnical: string[];
+        requirementsBehavioral: string[];
+        kpis: string[];
+        competencies: string[];
         benefits: string[];
         slaSettings: Record<string, { days: number }>;
     };
@@ -34,12 +39,13 @@ export interface JobFormProps {
     updateFormData: (updates: Partial<JobFormProps['formData']>) => void;
     showPositionsAndSchedule?: boolean;
     showCoreFields?: boolean;
-    showRequirements?: boolean;
     showBenefits?: boolean;
     showClassification?: boolean;
     showContext?: boolean;
+    showRequirements?: boolean;
     showUrgency?: boolean;
     showSalary?: boolean;
+    showResponsibilitiesTab?: boolean;
 }
 
 const JobForm: React.FC<JobFormProps> = ({
@@ -48,12 +54,12 @@ const JobForm: React.FC<JobFormProps> = ({
     updateFormData,
     showPositionsAndSchedule = true,
     showCoreFields = true,
-    showRequirements = true,
     showBenefits = true,
     showClassification = true,
     showContext = true,
     showUrgency = true,
-    showSalary = true
+    showSalary = true,
+    showResponsibilitiesTab = false
 }) => {
     return (
         <div className="flex flex-col gap-6">
@@ -244,34 +250,90 @@ const JobForm: React.FC<JobFormProps> = ({
                 </div>
             )}
 
-            {showContext && (
-                <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-semibold text-muted-foreground transition-colors">
-                        Contexto do projeto / motivo da vaga <span className="text-destructive">*</span>
-                    </label>
-                    <textarea name="context" value={formData.context} onChange={handleInputChange} className="w-full h-32 rounded-2xl border border-border bg-background p-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out font-medium resize-none hover:border-ring placeholder:text-muted-foreground" placeholder="Explique por que essa vaga existe agora..."></textarea>
+            {showResponsibilitiesTab && (
+                <div className="space-y-8 animate-in fade-in duration-500">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-3">
+                            <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Requisitos Necessários</label>
+                            <RequirementsSelector
+                                selectedRequirements={formData.requirementsTechnical}
+                                onChange={(items) => updateFormData({ requirementsTechnical: items })}
+                                placeholder="Ex: React, Node.js, SQL..."
+                            />
+                        </div>
+                        <div className="space-y-3">
+                            <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Competências Comportamentais</label>
+                            <RequirementsSelector
+                                selectedRequirements={formData.competencies}
+                                onChange={(items) => updateFormData({ competencies: items })}
+                                placeholder="Ex: Liderança, Proatividade..."
+                            />
+                        </div>
+                        <div className="space-y-3">
+                            <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Requisitos Desejáveis</label>
+                            <RequirementsSelector
+                                selectedRequirements={formData.requirementsBehavioral}
+                                onChange={(items) => updateFormData({ requirementsBehavioral: items })}
+                                placeholder="Ex: Inglês avançado, MBA..."
+                            />
+                        </div>
+                        <div className="space-y-3">
+                            <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Indicadores de Desempenho (KPIs)</label>
+                            <RequirementsSelector
+                                selectedRequirements={formData.kpis}
+                                onChange={(items) => updateFormData({ kpis: items })}
+                                placeholder="Ex: Churn rate, NPS..."
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3 pt-4 border-t border-border/60">
+                        <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                            <Icon icon="material-symbols:list-alt-outline" className="text-primary size-4" />
+                            Principais Atividades e Responsabilidades
+                        </label>
+                        <textarea
+                            name="responsibilities"
+                            value={(formData as any).responsibilities || ''}
+                            onChange={handleInputChange}
+                            className="w-full h-40 rounded-2xl border border-border bg-background p-4 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out font-medium resize-none hover:border-ring placeholder:text-muted-foreground/40"
+                            placeholder="Descreva as tarefas diárias e responsabilidades do cargo... (Dica: Use uma linha para cada atividade)"
+                        />
+                        <p className="text-[10px] text-muted-foreground italic">Dica: Cada linha escrita aqui aparecerá como um item de lista na página da vaga.</p>
+                    </div>
                 </div>
             )}
 
-            {showRequirements && (
-                <div className="flex flex-col gap-2">
-                    <RequirementsSelector
-                        selectedRequirements={formData.requirements}
-                        onChange={(items) => updateFormData({ requirements: items })}
-                    />
+            {showContext && (
+                <div className="space-y-6">
+                    <div className="flex flex-col gap-2">
+                        <label className="text-[11px] font-semibold text-muted-foreground transition-colors">
+                            Missão da Vaga <span className="text-destructive">*</span>
+                        </label>
+                        <textarea
+                            name="mission"
+                            value={(formData as any).mission || ''}
+                            onChange={handleInputChange}
+                            className="w-full h-32 rounded-2xl border border-border bg-background p-3 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all duration-200 ease-in-out font-medium resize-none hover:border-ring placeholder:text-muted-foreground"
+                            placeholder="Qual o objetivo principal desta posição?"
+                        />
+                    </div>
+
                 </div>
             )}
 
             {showBenefits && (
-                <SLAConfig
-                    settings={formData.slaSettings}
-                    onChange={(settings) => updateFormData({ slaSettings: settings })}
-                >
-                    <BenefitsSelector
-                        selectedBenefits={formData.benefits}
-                        onChange={(items) => updateFormData({ benefits: items })}
-                    />
-                </SLAConfig>
+                <div className="space-y-6">
+                    <SLAConfig
+                        settings={formData.slaSettings}
+                        onChange={(settings) => updateFormData({ slaSettings: settings })}
+                    >
+                        <BenefitsSelector
+                            selectedBenefits={formData.benefits}
+                            onChange={(items) => updateFormData({ benefits: items })}
+                        />
+                    </SLAConfig>
+                </div>
             )}
         </div>
     );

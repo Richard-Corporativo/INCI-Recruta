@@ -16,6 +16,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     const [expanded, setExpanded] = useState(true);
 
     const getBreadcrumbLabel = () => {
+        if (pathname.includes('/agenda')) return 'Agenda';
         if (pathname.includes('/jobs')) return 'Vagas';
         if (pathname.includes('/audit')) return 'Auditoria';
         if (pathname.includes('/roles')) return 'Cargos';

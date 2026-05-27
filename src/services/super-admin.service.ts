@@ -1,6 +1,8 @@
 import { supabase } from '@src/lib/supabase';
 import { Company, Job, Role, Candidate, AuditLog } from '@src/types';
 
+type CompanyLookup = { id: string; name: string | null; slug?: string | null };
+
 export interface CompanyWithStats extends Company {
     members_count: number;
     jobs_count: number;
@@ -151,7 +153,10 @@ export async function getCompanyMembers(companyId: string): Promise<MemberWithUs
         .select('id, name, email')
         .in('id', userIds);
 
-    const userMap = new Map((users ?? []).map(u => [u.id, u]));
+    const userMap = new Map(
+        ((users ?? []) as Array<{ id: string; name: string | null; email: string | null }>)
+            .map(u => [u.id, u])
+    );
 
     return members.map(m => {
         const u = userMap.get(m.user_id);
@@ -210,7 +215,7 @@ export async function getAllJobsCrossTenant(): Promise<JobWithCompany[]> {
         .select('id, name, slug')
         .in('id', companyIds);
 
-    const companyMap = new Map((companies ?? []).map((c: any) => [c.id, c]));
+    const companyMap = new Map(((companies ?? []) as CompanyLookup[]).map(c => [c.id, c]));
 
     return data.map((j: any) => {
         const company = companyMap.get(j.company_id);
@@ -239,7 +244,7 @@ export async function getAllRolesCrossTenant(): Promise<RoleWithCompany[]> {
         .select('id, name')
         .in('id', companyIds);
 
-    const companyMap = new Map((companies ?? []).map((c: any) => [c.id, c]));
+    const companyMap = new Map(((companies ?? []) as CompanyLookup[]).map(c => [c.id, c]));
 
     return data.map((r: any) => ({
         ...r,
@@ -264,7 +269,7 @@ export async function getAllCandidatesCrossTenant(): Promise<CandidateWithCompan
         .select('id, name')
         .in('id', companyIds);
 
-    const companyMap = new Map((companies ?? []).map((c: any) => [c.id, c]));
+    const companyMap = new Map(((companies ?? []) as CompanyLookup[]).map(c => [c.id, c]));
 
     return data.map((c: any) => ({
         ...c,
@@ -288,7 +293,7 @@ export async function getAllAuditLogsCrossTenant(): Promise<AuditLogWithCompany[
         .select('id, name')
         .in('id', companyIds);
 
-    const companyMap = new Map((companies ?? []).map((c: any) => [c.id, c]));
+    const companyMap = new Map(((companies ?? []) as CompanyLookup[]).map(c => [c.id, c]));
 
     return data.map((l: any) => ({
         ...l,

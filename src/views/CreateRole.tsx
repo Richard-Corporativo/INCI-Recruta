@@ -34,7 +34,7 @@ const CreateRole: React.FC = () => {
     title: '',
     department: '',
     area: '',
-    level: 1,
+    level: '1', // banco é text
     mission: '',
     requirements_technical: [] as string[],
     requirements_behavioral: [] as string[],
@@ -48,7 +48,7 @@ const CreateRole: React.FC = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'level' ? parseInt(value) : value
+      [name]: value // level é text no banco — sem parseInt
     }));
   };
 
@@ -59,11 +59,12 @@ const CreateRole: React.FC = () => {
     try {
       const success = await addRole({
         ...formData,
+        level: parseInt(formData.level) || 1,
         status: formData.status as Role['status'],
-        requirements_technical: formData.requirements_technical.join('\n'),
-        requirements_behavioral: formData.requirements_behavioral.join('\n'),
-        kpis: formData.kpis.join('\n'),
-        competencies: formData.competencies.join('\n'),
+        requirements_technical: formData.requirements_technical,
+        requirements_behavioral: formData.requirements_behavioral,
+        kpis: formData.kpis,
+        competencies: formData.competencies,
         open_positions: 0
       });
       if (success) {
@@ -130,101 +131,12 @@ const CreateRole: React.FC = () => {
           <div className="bg-card rounded-2xl overflow-hidden p-6">
             <form className="divide-y divide-border" onSubmit={handleSubmit}>
               {/* Section 1: Dados Cadastrais */}
-              <div className="p-6 md:p-8">
-                <div className="flex items-center gap-2 mb-6">
-                  <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Icon icon="material-symbols:badge" className="text-sm h-5 w-5" aria-hidden="true" />
-                  </span>
-                  <h3 className="text-lg font-semibold text-foreground">Dados Cadastrais</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground" htmlFor="title">
-                      Nome do Cargo <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      className="block w-full rounded-lg border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
-                      id="title" name="title" type="text" value={formData.title} onChange={handleInputChange} required
-                      placeholder="Ex: Desenvolvedor Full Stack"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground" htmlFor="area">
-                      Área de Atuação<span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      className="block w-full rounded-lg border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
-                      id="area" name="area" type="text" value={formData.area} onChange={handleInputChange} required
-                      placeholder="Ex: Engenharia"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground" htmlFor="reports_to">
-                      Gestor(a) <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      className="block w-full rounded-lg border border-border bg-background text-foreground text-sm font-medium focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 h-11 px-3"
-                      id="reports_to" name="reports_to" type="text" value={formData.reports_to} onChange={handleInputChange} required
-                      placeholder="Ex: Gerente de Operações"
-                    />
-                  </div>
-
-                </div>
-              </div>
+              {/* Seção de Dados Cadastrais removida conforme solicitação */}
 
 
 
-              {/* Section 3: Requisitos Detalhados */}
-              <div className="p-6 md:p-8">
-                <div className="flex items-center gap-2 mb-6">
-                  <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Icon icon="material-symbols:clinical-notes" className="text-sm h-5 w-5" aria-hidden="true" />
-                  </span>
-                  <h3 className="text-lg font-semibold text-foreground">Requisitos e Competências</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-4">
-                    <label className="text-sm font-semibold text-foreground">Requisitos Técnicos</label>
-                    <DynamicListInput
-                      label=""
-                      placeholder="Ex: React, SQL, Inglês..."
-                      items={formData.requirements_technical}
-                      onChange={(items) => setFormData(prev => ({ ...prev, requirements_technical: items }))}
-                      icon="engineering"
-                    />
-                  </div>
-                  <div className="space-y-4">
-                    <label className="text-sm font-semibold text-foreground">Competências Comportamentais e Habilidades</label>
-                    <DynamicListInput
-                      label=""
-                      placeholder="Ex: Liderança, Comunicação..."
-                      items={formData.requirements_behavioral}
-                      onChange={(items) => setFormData(prev => ({ ...prev, requirements_behavioral: items }))}
-                      icon="psychology"
-                    />
-                  </div>
-                  <div className="space-y-4">
-                    <label className="text-sm font-semibold text-foreground">KPIs (Indicadores de Desempenho)</label>
-                    <DynamicListInput
-                      label=""
-                      placeholder="Ex: Tempo de resposta, Satisfação..."
-                      items={formData.kpis}
-                      onChange={(items) => setFormData(prev => ({ ...prev, kpis: items }))}
-                      icon="insights"
-                    />
-                  </div>
-                  <div className="space-y-4">
-                    <label className="text-sm font-semibold text-foreground">Competências Obrigatórias</label>
-                    <DynamicListInput
-                      label=""
-                      placeholder="Ex: Resolução de conflitos..."
-                      items={formData.competencies}
-                      onChange={(items) => setFormData(prev => ({ ...prev, competencies: items }))}
-                      icon="stars"
-                    />
-                  </div>
-                </div>
-              </div>
+              {/* Section 3: Requisitos Detalhados removida conforme solicitação */}
+
 
               {/* Section 4: Missão e Responsabilidades */}
               <div className="p-6 md:p-8 transition-colors">

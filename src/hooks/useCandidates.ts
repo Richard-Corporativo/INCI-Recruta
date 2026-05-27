@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { CandidateService } from '@src/services/candidate.service';
-import { Candidate, KanbanColumnId } from '@src/types';
+import { Candidate, CandidateFeedbackInput, CandidateSearchFilters, KanbanColumnId } from '@src/types';
 
 export const useCandidates = (jobId?: string | number) => {
     const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -19,21 +19,27 @@ export const useCandidates = (jobId?: string | number) => {
             } else {
                 data = await CandidateService.getCandidatesApplicants();
             }
-            const candidatesWithAvatars = await Promise.all((data || []).map(async (c) => {
-                if (c.has_avatar) {
-                    try {
-                        const avatarUrl = await Promise.race([
-                            CandidateService.getAvatarUrl(c.id),
-                            new Promise<null>(res => setTimeout(() => res(null), 3000))
-                        ]);
-                        if (avatarUrl) return { ...c, avatar: avatarUrl };
-                    } catch (err) {
-                        console.warn(`Failed to fetch avatar for candidate ${c.id}:`, err);
+            // No talent bank (sem jobId), avatares são carregados lazily no drawer.
+            // No kanban (com jobId), carregamos aqui pois há poucos candidatos por vaga.
+            if (jobId) {
+                const withAvatars = await Promise.all((data || []).map(async (c) => {
+                    if (c.has_avatar) {
+                        try {
+                            const avatarUrl = await Promise.race([
+                                CandidateService.getAvatarUrl(c.id),
+                                new Promise<null>(res => setTimeout(() => res(null), 3000))
+                            ]);
+                            if (avatarUrl) return { ...c, avatar: avatarUrl };
+                        } catch {
+                            // falha silenciosa — avatar não crítico
+                        }
                     }
-                }
-                return c;
-            }));
-            setCandidates(candidatesWithAvatars);
+                    return c;
+                }));
+                setCandidates(withAvatars);
+            } else {
+                setCandidates(data || []);
+            }
         } finally {
             setIsLoading(false);
         }
@@ -77,7 +83,7 @@ export const useCandidates = (jobId?: string | number) => {
         await loadCandidates();
     }, [loadCandidates]);
 
-    const addFeedback = useCallback(async (candidateId: string, feedback: any) => {
+    const addFeedback = useCallback(async (candidateId: string, feedback: CandidateFeedbackInput) => {
         await CandidateService.addFeedback(candidateId, feedback);
         await loadCandidates();
     }, [loadCandidates]);
@@ -86,7 +92,7 @@ export const useCandidates = (jobId?: string | number) => {
         await loadCandidates();
     }, [loadCandidates]);
 
-    const searchCandidates = useCallback(async (filters: any) => {
+    const searchCandidates = useCallback(async (filters: CandidateSearchFilters) => {
         setIsLoading(true);
         try {
             const data = await CandidateService.searchCandidates(filters);

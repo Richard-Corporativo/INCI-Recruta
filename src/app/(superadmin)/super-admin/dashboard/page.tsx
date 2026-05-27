@@ -1,5 +1,4 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { getServerSupabase } from '@src/lib/supabase-server';
 import SuperAdminDashboard from '@src/views/super-admin/SuperAdminDashboard';
 import { CompanyWithStats, GlobalStats } from '@src/services/super-admin.service';
 
@@ -7,12 +6,7 @@ export const metadata = { title: 'Painel Global — INCI Recruta' };
 
 async function fetchDashboardData(): Promise<{ stats: GlobalStats | null; companies: CompanyWithStats[] }> {
     try {
-        const cookieStore = await cookies();
-        const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            { cookies: { getAll() { return cookieStore.getAll(); } } }
-        );
+        const supabase = await getServerSupabase('/super-admin');
 
         const [companiesRes, jobsRes, candidatesRes, usersRes] = await Promise.all([
             supabase.from('companies').select('status'),

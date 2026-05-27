@@ -4,27 +4,53 @@
 // > Header de detalhes da vaga — título, status, breadcrumbs, ações
 // @api Job — dados da vaga, onEdit, onDelete
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from '@src/lib/router-compat';
 import Breadcrumbs from '@src/components/shared/Breadcrumbs';
 import { Job, User } from '@src/types';
 import { Icon } from "@iconify/react";
+import { formatDate } from "@src/lib/formatters";
+import { useToast } from '@src/components/ui/Toast';
 
 interface JobDetailHeaderProps {
     job: Job;
     user: User | null;
-    transitionJobStatus: (id: string, status: string, user: User) => Promise<void>;
+    transitionJobStatus: (id: string, status: Job['workflow_status'], user: User) => Promise<Job | null>;
     onArchiveClick: () => void;
 }
 
 const JobDetailHeader: React.FC<JobDetailHeaderProps> = ({ job, user, transitionJobStatus, onArchiveClick }) => {
     const navigate = useNavigate();
+    const { success: toastSuccess, error: toastError } = useToast();
+    const [isPublishing, setIsPublishing] = useState(false);
+    const canApproveJob = user?.role === 'owner' || user?.role === 'admin' || user?.role === 'quality';
+
+    const publishJob = async () => {
+        if (!user) {
+            toastError('Sessão não encontrada. Faça login novamente.');
+            return;
+        }
+
+        setIsPublishing(true);
+        try {
+            const updatedJob = await transitionJobStatus(String(job.id), 'published', user);
+            if (!updatedJob || updatedJob.workflow_status !== 'published' || updatedJob.status !== 'Ativa') {
+                throw new Error('A vaga foi atualizada, mas não retornou como publicada.');
+            }
+            toastSuccess('Vaga aprovada e publicada.');
+        } catch (error) {
+            console.error(error);
+            toastError(error instanceof Error ? error.message : 'Erro ao aprovar vaga. Tente novamente.');
+        } finally {
+            setIsPublishing(false);
+        }
+    };
 
     return (
         <header className="bg-card -b - z-20 shrink-0 sticky top-0 p-6">
             <div className="mb-4">
                 <Breadcrumbs items={[
-                    { label: 'Oportunidades', to: '/jobs' },
+                    { label: 'Oportunidades', to: '/admin/jobs' },
                     { label: 'Detalhamento Técnico' }
                 ]} />
             </div>
@@ -40,7 +66,7 @@ const JobDetailHeader: React.FC<JobDetailHeaderProps> = ({ job, user, transition
                     <div className="flex items-center gap-4 text-muted-foreground">
                         <div className="flex items-center gap-1.5">
                             <Icon icon="material-symbols:calendar-today" className="h-4 w-4" aria-hidden="true" />
-                            <span className="text-xs font-medium italic">Publicada em {job.created_at}</span>
+                            <span className="text-xs font-medium italic">Publicada em {formatDate(job.created_at, { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                         </div>
                         <div className="size-1 bg-border rounded-full"></div>
                         <div className="flex items-center gap-1.5">
@@ -52,39 +78,19 @@ const JobDetailHeader: React.FC<JobDetailHeaderProps> = ({ job, user, transition
 
                 <div className="flex items-center gap-3">
                     {/* Primary Action - Contextual based on status */}
-                    {job.workflow_status === 'draft' && (
+                    {(job.workflow_status === 'draft' || job.workflow_status === 'pending_approval' || job.workflow_status === 'approved') && canApproveJob && (
                         <button
-                            onClick={() => transitionJobStatus(String(job.id), 'pending_approval', user!)}
-                            className="flex items-center justify-center rounded-xl h-11 px-6 bg-amber-500 text-white hover:bg-amber-600 transition-all gap-2.5 text-sm font-semibold active:translate-y-[1px]"
+                            onClick={publishJob}
+                            disabled={isPublishing}
+                            className="flex items-center justify-center rounded-xl h-11 px-6 bg-emerald-600 text-white hover:bg-emerald-700 transition-all gap-2.5 text-sm font-semibold active:translate-y-[1px] disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                            <Icon icon="material-symbols:send" className="h-5 w-5" aria-hidden="true" />
-                            <span>Enviar para Aprovação</span>
-                        </button>
-                    )}
-
-                    {job.workflow_status === 'pending_approval' && (user?.role === 'admin' || user?.role === 'quality') && (
-                        <button
-                            onClick={() => transitionJobStatus(String(job.id), 'approved', user!)}
-                            className="flex items-center justify-center rounded-xl h-11 px-6 bg-emerald-600 text-white hover:bg-emerald-700 transition-all gap-2.5 text-sm font-semibold active:translate-y-[1px]"
-                        >
-                            <Icon icon="material-symbols:verified" className="h-5 w-5" aria-hidden="true" />
-                            <span>Aprovar Vaga</span>
-                        </button>
-                    )}
-
-                    {job.workflow_status === 'approved' && (
-                        <button
-                            onClick={() => transitionJobStatus(String(job.id), 'published', user!)}
-                            className="flex items-center justify-center rounded-xl h-11 px-6 bg-primary text-primary-foreground hover:bg-primary/90 transition-all gap-2.5 text-sm font-semibold /20 active:translate-y-[1px]"
-                        >
-                            <Icon icon="material-symbols:publish" className="h-5 w-5" aria-hidden="true" />
-                            <span>Publicar Vaga</span>
+                           <span>{isPublishing ? 'Aprovando...' : 'Aprovar vaga'}</span>
                         </button>
                     )}
 
                     {job.workflow_status === 'published' && (
                         <button
-                            onClick={() => navigate('/jobs', { state: { selectedJobId: job.id } })}
+                            onClick={() => navigate('/admin/jobs', { state: { selectedJobId: job.id } })}
                             className="flex items-center justify-center rounded-xl h-11 px-6 bg-primary text-primary-foreground hover:bg-primary/90 transition-all gap-2.5 text-sm font-semibold /20 active:translate-y-[1px]"
                         >
                             <Icon icon="material-symbols:group" className="filled h-5 w-5" aria-hidden="true" />
@@ -92,7 +98,7 @@ const JobDetailHeader: React.FC<JobDetailHeaderProps> = ({ job, user, transition
                         </button>
                     )}
 
-                    <Link to={`/jobs/${job.id}/edit`} className="flex items-center justify-center rounded-xl h-11 px-6 bg-background border border-border text-foreground hover:bg-accent transition-all gap-2.5 text-sm font-semibold active:translate-y-[1px]">
+                    <Link to={`/admin/jobs/${job.id}/edit`} className="flex items-center justify-center rounded-xl h-11 px-6 bg-background border border-border text-foreground hover:bg-accent transition-all gap-2.5 text-sm font-semibold active:translate-y-[1px]">
                         <Icon icon="material-symbols:edit-note" className="h-5 w-5" aria-hidden="true" />
                         <span>Editar</span>
                     </Link>
@@ -109,31 +115,32 @@ const JobDetailHeader: React.FC<JobDetailHeaderProps> = ({ job, user, transition
                 </div>
             </div>
 
-            <div className="flex gap-3 flex-wrap mt-8">
-                <div className="flex h-8 items-center justify-center gap-x-2 rounded-full bg-muted/50 border border-border px-4 transition-colors hover:bg-muted">
+            <div className="flex gap-4 flex-wrap mt-4">
+                <div className="flex h-8 items-center justify-center gap-x-2 transition-colors">
                     <Icon icon="material-symbols:location-on" className="text-muted-foreground h-4 w-4" aria-hidden="true" />
                     <p className="text-foreground text-[10px] font-semibold uppercase tracking-wider">{job.location} • {job.model}</p>
                 </div>
-                <div className="flex h-8 items-center justify-center gap-x-2 rounded-full bg-muted/50 border border-border px-4 transition-colors hover:bg-muted">
+                <div className="flex h-8 items-center justify-center gap-x-2 transition-colors">
                     <Icon icon="material-symbols:verified-user" className="text-muted-foreground h-4 w-4" aria-hidden="true" />
                     <p className="text-foreground text-[10px] font-semibold uppercase tracking-wider">{job.contract}</p>
                 </div>
-                <div className="flex h-8 items-center justify-center gap-x-2 rounded-full bg-destructive/10 border border-destructive/20 px-4">
+                <div className="flex h-8 items-center justify-center gap-x-2">
                     <Icon icon="material-symbols:priority-high" className="text-destructive h-4 w-4" aria-hidden="true" />
                     <p className="text-destructive text-[10px] font-semibold uppercase tracking-wider">Urgência {job.urgency}</p>
                 </div>
-                <div className={`flex h-8 items-center justify-center gap-x-2 rounded-full px-4 border ${job.workflow_status === 'published' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700' :
-                    job.workflow_status === 'approved' ? 'bg-chart-1/100/10 border-blue-500/20 text-chart-1' :
-                        job.workflow_status === 'pending_approval' ? 'bg-amber-500/10 border-amber-500/20 text-amber-700' :
-                            job.workflow_status === 'archived' ? 'bg-slate-500/10 border-slate-500/20 text-slate-700' :
-                                'bg-muted/50 border-border text-muted-foreground'
+                <div className={`flex h-8 items-center justify-center gap-x-2 ${
+                    job.workflow_status === 'published' ? 'text-emerald-700' :
+                    job.workflow_status === 'approved' ? 'text-chart-1' :
+                    job.workflow_status === 'pending_approval' ? 'text-amber-700' :
+                    job.workflow_status === 'archived' ? 'text-slate-700' :
+                    'text-muted-foreground'
                     }`}>
                     <Icon icon={
                         job.workflow_status === 'published' ? 'material-symbols:check-circle' :
                             job.workflow_status === 'approved' ? 'material-symbols:verified' :
                                 job.workflow_status === 'pending_approval' ? 'material-symbols:pending' :
                                     job.workflow_status === 'archived' ? 'material-symbols:archive' : 'material-symbols:draft'
-                    } className="h-5 w-5" />
+                    } className="h-5 w-5 animate-pulse" />
                     <p className="text-[10px] font-semibold uppercase tracking-wider">
                         Workflow: {
                             job.workflow_status === 'published' ? 'Publicada' :

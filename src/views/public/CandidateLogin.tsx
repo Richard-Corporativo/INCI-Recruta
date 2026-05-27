@@ -7,7 +7,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Link, useNavigate } from '@src/lib/router-compat';
-import { useAuth } from '@src/hooks/useAuth';
 import { supabase } from '@src/lib/supabase';
 import { useToast } from '@src/components/ui/Toast';
 import { Icon } from "@iconify/react";
@@ -16,13 +15,15 @@ import { getSafeNextPath, withNextParam } from '@src/lib/navigation';
 const CandidateLogin: React.FC = () => {
     const navigate = useNavigate();
     const searchParams = useSearchParams();
-    const isCompanyView = searchParams?.get('type') === 'company';
+    const authType = searchParams?.get('type');
+    const rawNextPath = searchParams?.get('next');
+    const isSuperAdminView = authType === 'super-admin' || rawNextPath?.startsWith('/super-admin');
+    const isCompanyView = authType === 'company' && !isSuperAdminView;
     const nextPath = getSafeNextPath(
-        searchParams?.get('next'),
-        isCompanyView ? '/admin/dashboard' : '/candidate/dashboard'
+        rawNextPath,
+        isSuperAdminView ? '/super-admin/dashboard' : isCompanyView ? '/admin/dashboard' : '/candidate/dashboard'
     );
     
-    const { refreshProfile } = useAuth();
     const { error: toastError, info } = useToast();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -72,9 +73,23 @@ const CandidateLogin: React.FC = () => {
             const companyRoles = ['owner', 'admin', 'manager', 'recruiter', 'quality', 'dp'];
             const role = profile?.role ?? authData.user.user_metadata?.role ?? 'candidate';
             const isSuperAdmin = role === 'super_admin';
-            const isUserCompany = companyRoles.includes(role) || isSuperAdmin;
+            const isUserCompany = companyRoles.includes(role);
 
             // 3. Valida portal vs role
+            if (isSuperAdminView && !isSuperAdmin) {
+                await supabase.auth.signOut();
+                toastError('Esta conta não possui acesso ao painel Super Admin.');
+                setIsLoading(false);
+                return;
+            }
+
+            if (isCompanyView && isSuperAdmin) {
+                await supabase.auth.signOut();
+                toastError('Use o portal Super Admin para acessar esta conta.');
+                navigate('/login?type=super-admin&next=/super-admin/dashboard', { replace: true });
+                return;
+            }
+
             if (isCompanyView && !isUserCompany) {
                 await supabase.auth.signOut();
                 toastError('Esta é uma conta de Candidato. Por favor, utilize o portal de candidatos.');
@@ -82,15 +97,14 @@ const CandidateLogin: React.FC = () => {
                 return;
             }
 
-            if (!isCompanyView && isUserCompany) {
+            if (!isCompanyView && !isSuperAdminView && isUserCompany) {
                 info('Sua conta é corporativa. Redirecionando para o portal da empresa...');
             }
 
-            // 4. Recarrega perfil no contexto (sem autenticar novamente) e navega
-            await refreshProfile();
-            if (isSuperAdmin) navigate('/super-admin/dashboard');
-            else if (isUserCompany) navigate('/admin/dashboard');
-            else navigate(nextPath);
+            // 4. A sessão já foi persistida no cookie da área correta.
+            // Usa navegação completa para o middleware/layout lerem o cookie recém-gravado.
+            const targetPath = isSuperAdmin ? '/super-admin/dashboard' : isUserCompany ? '/admin/dashboard' : nextPath;
+            window.location.assign(targetPath);
         } catch (err: any) {
             toastError('Senha incorreta ou erro na autenticação.');
             setIsLoading(false);
@@ -99,7 +113,7 @@ const CandidateLogin: React.FC = () => {
 
     const handleSocialLogin = async (provider: 'google' | 'linkedin_oidc') => {
         try {
-            const dest = isCompanyView ? '/admin/dashboard' : nextPath;
+            const dest = isSuperAdminView ? '/super-admin/dashboard' : isCompanyView ? '/admin/dashboard' : nextPath;
             const { error } = await supabase.auth.signInWithOAuth({
                 provider,
                 options: { redirectTo: `${window.location.origin}${dest}` }
@@ -130,18 +144,20 @@ const CandidateLogin: React.FC = () => {
                 <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500 relative z-10">
                     <div className="text-center space-y-3 mb-8">
                         <div className={`inline-flex items-center justify-center px-3 py-1 rounded-sm text-[10px] font-bold uppercase tracking-widest mb-2 border ${
-                            isCompanyView 
+                            isCompanyView || isSuperAdminView
                             ? 'bg-primary/10 text-primary border-primary/20' 
                             : 'bg-accent text-accent-foreground border-border'
                         }`}>
-                            {isCompanyView ? 'Portal da Empresa' : 'Acesso ao Perfil'}
+                            {isSuperAdminView ? 'Super Admin' : isCompanyView ? 'Portal da Empresa' : 'Acesso ao Perfil'}
                         </div>
                         <h1 className="text-4xl font-semibold tracking-tighter text-foreground leading-[1.1]">
-                            {isCompanyView ? 'Acesso' : 'Acesse sua'} <br />
-                            <span className="text-primary">{isCompanyView ? 'Corporativo' : 'conta'}</span>
+                            {isSuperAdminView || isCompanyView ? 'Acesso' : 'Acesse sua'} <br />
+                            <span className="text-primary">{isSuperAdminView ? 'Super Admin' : isCompanyView ? 'Corporativo' : 'conta'}</span>
                         </h1>
                         <p className="text-sm text-muted-foreground font-medium leading-relaxed">
-                            {isCompanyView 
+                            {isSuperAdminView
+                                ? 'Gerencie a operação global da plataforma.'
+                                : isCompanyView 
                                 ? 'Gerencie suas vagas e encontre os melhores talentos.'
                                 : 'Acompanhe suas vagas e gerencie seu perfil profissional.'
                             }
@@ -199,7 +215,7 @@ const CandidateLogin: React.FC = () => {
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center px-1">
                                         <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Senha</label>
-                                        <Link to={isCompanyView ? "/recuperar-senha?type=company" : "/recuperar-senha"} className="text-[10px] font-bold text-secondary hover:text-primary transition-colors uppercase tracking-widest">
+                                        <Link to={isSuperAdminView ? "/recuperar-senha?type=super-admin" : isCompanyView ? "/recuperar-senha?type=company" : "/recuperar-senha"} className="text-[10px] font-bold text-secondary hover:text-primary transition-colors uppercase tracking-widest">
                                             Esqueci
                                         </Link>
                                     </div>
@@ -214,16 +230,20 @@ const CandidateLogin: React.FC = () => {
                                 </div>
                             </div>
 
-                            {userNotFound && (
-                                <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg animate-in fade-in zoom-in duration-300">
-                                    <p className="text-[11px] font-bold text-primary uppercase tracking-widest leading-relaxed">
-                                        Não encontramos sua conta. <br/>
-                                        <Link to={isCompanyView ? "/cadastro/empresa" : withNextParam("/cadastro/candidato", nextPath)} className="underline decoration-primary/30 hover:decoration-primary transition-all">
-                                            Deseja criar um perfil agora?
-                                        </Link>
-                                    </p>
-                                </div>
-                            )}
+            {userNotFound && (
+                <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg animate-in fade-in zoom-in duration-300">
+                    <p className="text-[11px] font-bold text-primary uppercase tracking-widest leading-relaxed">
+                        Não encontramos sua conta. <br/>
+                        {isSuperAdminView ? (
+                            <span>Verifique o e-mail autorizado para Super Admin.</span>
+                        ) : (
+                            <Link to={isCompanyView ? "/cadastro/empresa" : withNextParam("/cadastro/candidato", nextPath)} className="underline decoration-primary/30 hover:decoration-primary transition-all">
+                                Deseja criar um perfil agora?
+                            </Link>
+                        )}
+                    </p>
+                </div>
+            )}
 
                             <button
                                 type="submit"
@@ -243,13 +263,15 @@ const CandidateLogin: React.FC = () => {
 
                         <div className="text-center pt-4 border-t border-border">
                             <p className="text-xs font-semibold text-muted-foreground">
-                                {isCompanyView ? 'Sua empresa ainda não tem conta?' : 'Ainda não tem conta?'}
-                                <Link 
-                                    to={isCompanyView ? "/cadastro/empresa" : withNextParam("/cadastro/candidato", nextPath)} 
-                                    className="text-primary hover:text-secondary font-bold uppercase tracking-widest block mt-0.4"
-                                >
-                                    {isCompanyView ? 'Começar a recrutar' : 'Criar conta gratuita'}
-                                </Link>
+                                {isSuperAdminView ? 'Acesso restrito a administradores globais.' : isCompanyView ? 'Sua empresa ainda não tem conta?' : 'Ainda não tem conta?'}
+                                {!isSuperAdminView && (
+                                    <Link 
+                                        to={isCompanyView ? "/cadastro/empresa" : withNextParam("/cadastro/candidato", nextPath)} 
+                                        className="text-primary hover:text-secondary font-bold uppercase tracking-widest block mt-0.4"
+                                    >
+                                        {isCompanyView ? 'Começar a recrutar' : 'Criar conta gratuita'}
+                                    </Link>
+                                )}
                             </p>
                         </div>
                     </div>

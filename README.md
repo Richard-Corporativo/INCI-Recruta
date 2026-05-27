@@ -2,7 +2,7 @@
 
 ## 📋 Visão Geral
 
-O **INCI Recruta** é uma plataforma completa de **Applicant Tracking System (ATS)** moderna, desenvolvida para otimizar o fluxo de contratação da INCI Brasil. Construída com **Next.js 15**, **React 19** e **Supabase**, a plataforma oferece uma experiência premium tanto para recrutadores quanto para candidatos.
+O **INCI Recruta** é uma plataforma completa de **Applicant Tracking System (ATS)** moderna, desenvolvida para otimizar o fluxo de contratação de empresas como a INCI Brasil. Construída com **Next.js 15**, **React 19** e **Supabase**, a plataforma oferece uma experiência premium tanto para recrutadores quanto para candidatos.
 
 ---
 

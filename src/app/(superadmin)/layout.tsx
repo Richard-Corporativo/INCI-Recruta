@@ -1,20 +1,15 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { getServerSupabase } from '@src/lib/supabase-server';
 import { redirect } from 'next/navigation';
 import SuperAdminShell from '@src/components/super-admin/SuperAdminShell';
 
+export const dynamic = 'force-dynamic';
+
 export default async function SuperAdminLayout({ children }: { children: React.ReactNode }) {
     try {
-        const cookieStore = await cookies();
-
-        const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            { cookies: { getAll() { return cookieStore.getAll(); } } }
-        );
+        const supabase = await getServerSupabase('/super-admin');
 
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) redirect('/login');
+        if (!user) redirect('/login?type=super-admin&next=/super-admin/dashboard');
 
         const { data: dbUser } = await supabase
             .from('users')
@@ -23,12 +18,12 @@ export default async function SuperAdminLayout({ children }: { children: React.R
             .single();
 
         // Usa apenas o role do banco — metadata pode estar desatualizado
-        if (dbUser?.role !== 'super_admin') redirect('/');
+        if (dbUser?.role !== 'super_admin') redirect('/login?type=super-admin&next=/super-admin/dashboard');
 
         return <SuperAdminShell>{children}</SuperAdminShell>;
 
     } catch (error: any) {
         if (error?.digest?.startsWith('NEXT_REDIRECT')) throw error;
-        redirect('/login');
+        redirect('/login?type=super-admin&next=/super-admin/dashboard');
     }
 }

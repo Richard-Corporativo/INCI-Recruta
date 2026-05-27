@@ -22,6 +22,7 @@ const Sidebar: React.FC<SidebarProps> = ({ expanded, setExpanded }) => {
     { name: 'Cargos', icon: 'material-symbols:work-outline', activeIcon: 'material-symbols:work', path: '/admin/roles' },
     { name: 'Banco de Talentos', icon: 'material-symbols:group-outline', activeIcon: 'material-symbols:group', path: '/admin/talent-bank' },
     { name: 'Vagas', icon: 'material-symbols:description-outline', activeIcon: 'material-symbols:description', path: '/admin/jobs' },
+    { name: 'Agenda', icon: 'material-symbols:calendar-today-outline', activeIcon: 'material-symbols:calendar-today', path: '/admin/agenda' },
     { name: 'Auditoria', icon: 'material-symbols:fact-check-outline', activeIcon: 'material-symbols:fact-check', path: '/admin/audit' },
   ], []);
 

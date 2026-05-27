@@ -7,6 +7,7 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from '@src/lib/router-compat';
 import { useCandidateData } from '@src/hooks/useCandidateData';
+import { useInterviews } from '@src/hooks/useInterviews';
 import { useToast } from '@src/components/ui/Toast';
 import { CandidateService } from '@src/services/candidate.service';
 import { Icon } from "@iconify/react";
@@ -30,6 +31,29 @@ const ApplicationDetail: React.FC = () => {
         [app, jobs]
     );
 
+    const { interviews } = useInterviews(app?.id);
+    const scheduledInterviews = useMemo(
+        () => interviews.filter(i => i.status === 'scheduled'),
+        [interviews]
+    );
+
+    const stageFromInterviewType: Record<string, string> = {
+        'Entrevista RH': 'hr_interview',
+        'Entrevista Técnica': 'technical',
+        'Apresentação de Case': 'technical',
+        'Entrevista Gestor': 'manager_interview',
+    };
+
+    const effectiveColumnId = useMemo(() => {
+        const col = app?.columnId || 'received';
+        if (col !== 'received') return col;
+        if (scheduledInterviews.length > 0) {
+            const iv = scheduledInterviews[0];
+            return iv.stage || stageFromInterviewType[iv.type ?? ''] || col;
+        }
+        return col;
+    }, [app?.columnId, scheduledInterviews]);
+
     const statusConfig: Record<string, { label: string; index: number }> = {
         'received': { label: 'Recebido', index: 0 },
         'screening': { label: 'Triagem', index: 1 },
@@ -41,8 +65,8 @@ const ApplicationDetail: React.FC = () => {
         'rejected': { label: 'Encerrado', index: -1 }
     };
 
-    const isRejected = app?.columnId === 'rejected';
-    const currentStatus = statusConfig[app?.columnId || 'received'] || statusConfig['received'];
+    const isRejected = effectiveColumnId === 'rejected';
+    const currentStatus = statusConfig[effectiveColumnId] || statusConfig['received'];
 
     const stages = [
         { id: 'received', label: 'Candidatura Recebida', desc: 'Sua candidatura foi registrada e está em processamento.' },
@@ -139,13 +163,22 @@ const ApplicationDetail: React.FC = () => {
 
             {/* Timeline vertical — Balha v10 */}
             <div className="bg-card border border-border rounded-2xl p-6 space-y-6">
-                <div className="space-y-1">
-                    <h2 className="text-lg font-semibold text-foreground">Progresso da Candidatura</h2>
-                    <p className="text-sm text-muted-foreground">Acompanhe cada etapa do processo seletivo.</p>
+                <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                        <h2 className="text-lg font-semibold text-foreground">Progresso da Candidatura</h2>
+                        <p className="text-sm text-muted-foreground">Acompanhe cada etapa do processo seletivo.</p>
+                    </div>
+                    <button
+                        onClick={refreshData}
+                        title="Atualizar status"
+                        className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 shrink-0"
+                    >
+                        <Icon icon="material-symbols:refresh" className="size-4" />
+                    </button>
                 </div>
 
                 <div className="relative flex flex-col gap-6 ml-2">
-                    <div className="absolute left-[3px] top-2 bottom-2 w-[2px] bg-border" />
+                    <div className="absolute left-[5px] top-2 bottom-2 w-[2px] bg-border" />
 
                     {stages.map((stage, idx) => {
                         const s = getStageStatus(idx);
@@ -159,7 +192,7 @@ const ApplicationDetail: React.FC = () => {
                                 }`} />
 
                                 {s === 'current' && (
-                                    <div className="absolute left-[-2px] top-[-0.5px] size-[18px] rounded-full bg-primary/30 animate-ping" />
+                                    <div className="absolute left-[-3px] top-[3px] size-[18px] rounded-full bg-primary/30 animate-ping" />
                                 )}
 
                                 <div className="space-y-1">
@@ -184,6 +217,59 @@ const ApplicationDetail: React.FC = () => {
                     })}
                 </div>
             </div>
+
+            {/* Card: Próximas Entrevistas */}
+            {scheduledInterviews.length > 0 && (
+                <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+                    <div className="space-y-1">
+                        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <Icon icon="material-symbols:calendar-today" className="size-5 text-primary" />
+                            Próximas Entrevistas
+                        </h2>
+                        <p className="text-sm text-muted-foreground">Entrevistas agendadas para esta candidatura.</p>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                        {scheduledInterviews.map(interview => (
+                            <div key={interview.id} className="rounded-xl border border-border bg-muted/30 p-4 space-y-2">
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="text-sm font-semibold text-foreground">{interview.type || 'Entrevista'}</span>
+                                    <span className="text-[10px] font-semibold text-primary border border-primary/20 bg-primary/5 px-2.5 py-1 rounded-lg">Agendada</span>
+                                </div>
+                                <div className="flex flex-wrap gap-4 text-[11px] text-muted-foreground">
+                                    <span className="flex items-center gap-1.5">
+                                        <Icon icon="material-symbols:schedule" className="size-4" />
+                                        {formatDate(interview.starts_at)}
+                                        {interview.starts_at && ` às ${new Date(interview.starts_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+                                    </span>
+                                    {interview.location && (
+                                        <span className="flex items-center gap-1.5">
+                                            <Icon icon="material-symbols:videocam" className="size-4" />
+                                            <span className="truncate max-w-[220px]">{interview.location}</span>
+                                        </span>
+                                    )}
+                                    {interview.interviewer_names && (
+                                        <span className="flex items-center gap-1.5">
+                                            <Icon icon="material-symbols:group" className="size-4" />
+                                            {interview.interviewer_names}
+                                        </span>
+                                    )}
+                                </div>
+                                {interview.address && (
+                                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                                        <Icon icon="material-symbols:location-on" className="size-4 shrink-0" />
+                                        <span>{interview.address}</span>
+                                    </div>
+                                )}
+                                {interview.notes && (
+                                    <p className="text-[11px] text-muted-foreground leading-relaxed border-t border-border pt-2 mt-1">
+                                        {interview.notes}
+                                    </p>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Balha v10: Accordion de ações no rodapé */}
             <div className="bg-card border border-border rounded-2xl overflow-hidden">

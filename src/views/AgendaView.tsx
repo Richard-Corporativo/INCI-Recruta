@@ -14,7 +14,7 @@ const AgendaView: React.FC = () => {
     const { interviews, isLoading, deleteInterview, updateInterview } = useInterviews();
     const { success: toastSuccess, error: toastError } = useToast();
     const [filter, setFilter] = useState<'all' | 'today' | 'week'>('all');
-    const [editing, setEditing] = useState<{ id: string; field: 'location' | 'address' } | null>(null);
+    const [editing, setEditing] = useState<{ id: string; field: 'location' | 'address' | 'starts_at' } | null>(null);
     const [editValue, setEditValue] = useState('');
 
     const filteredInterviews = interviews.filter(item => {
@@ -41,7 +41,7 @@ const AgendaView: React.FC = () => {
         }
     };
 
-    const handleEditStart = (id: string, field: 'location' | 'address', value: string) => {
+    const handleEditStart = (id: string, field: 'location' | 'address' | 'starts_at', value: string) => {
         setEditing({ id, field });
         setEditValue(value);
     };
@@ -49,7 +49,18 @@ const AgendaView: React.FC = () => {
     const handleEditSave = async (id: string) => {
         if (!editing || editing.id !== id) return;
         try {
-            await updateInterview(id, { [editing.field]: editValue });
+            let updatePayload: Record<string, string>;
+            if (editing.field === 'starts_at') {
+                const [dateStr, timeStr] = editValue.split('T');
+                const [year, month, day] = dateStr.split('-').map(Number);
+                const [hours, minutes] = timeStr.split(':').map(Number);
+                const newStart = new Date(year, month - 1, day, hours, minutes, 0);
+                const newEnd = new Date(newStart.getTime() + 60 * 60 * 1000);
+                updatePayload = { starts_at: newStart.toISOString(), ends_at: newEnd.toISOString() };
+            } else {
+                updatePayload = { [editing.field]: editValue };
+            }
+            await updateInterview(id, updatePayload);
             toastSuccess('Agendamento atualizado com sucesso');
             setEditing(null);
         } catch (err: any) {
@@ -133,18 +144,51 @@ const AgendaView: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-3">
-                                    <div className="size-8 rounded-full bg-primary/5 flex items-center justify-center text-primary border border-primary/10">
+                                <div className="flex items-start gap-3">
+                                    <div className="size-8 rounded-full bg-primary/5 flex items-center justify-center text-primary border border-primary/10 shrink-0">
                                         <Icon icon="material-symbols:schedule" width="16" />
                                     </div>
-                                    <div className="text-sm">
+                                    <div className="text-sm min-w-0 flex-1">
                                         <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-tight">Horário</p>
-                                        <p className="font-semibold text-foreground">{formatDateTime(item.starts_at, { hour: '2-digit', minute: '2-digit', hour12: false })} - {formatDateTime(item.ends_at, { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
+                                        {editing?.id === item.id && editing?.field === 'starts_at' ? (
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <input
+                                                    type="datetime-local"
+                                                    value={editValue}
+                                                    onChange={(e) => setEditValue(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') handleEditSave(item.id);
+                                                        if (e.key === 'Escape') handleEditCancel();
+                                                    }}
+                                                    autoFocus
+                                                    className="flex-1 h-8 px-3 rounded-lg border border-ring bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-ring transition-all"
+                                                />
+                                                <button onClick={() => handleEditSave(item.id)} className="p-1 hover:bg-primary/10 rounded text-primary transition-colors">
+                                                    <Icon icon="material-symbols:check" width="16" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 group/time">
+                                                <span className="font-semibold text-foreground">
+                                                    {formatDateTime(item.starts_at, { hour: '2-digit', minute: '2-digit', hour12: false })} - {formatDateTime(item.ends_at, { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                                </span>
+                                                <button
+                                                    onClick={() => {
+                                                        const d = new Date(item.starts_at);
+                                                        const localStr = d.toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).replace(' ', 'T').slice(0, 16);
+                                                        handleEditStart(item.id, 'starts_at', localStr);
+                                                    }}
+                                                    className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded opacity-0 group-hover/time:opacity-100 transition-all duration-200 ease-in-out shrink-0"
+                                                    title="Editar horário"
+                                                >
+                                                    <Icon icon="material-symbols:edit-outline" width="16" />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
-                                {(item.location || item.address) && (
-                                    <div className="space-y-3">
+                                <div className="space-y-3">
                                         {item.location && (() => {
                                             const isUrl = /^https?:\/\//i.test(item.location);
                                             const isEditing = editing?.id === item.id && editing?.field === 'location';
@@ -217,7 +261,7 @@ const AgendaView: React.FC = () => {
                                             );
                                         })()}
 
-                                        {item.address && (() => {
+                                        {(() => {
                                             const isEditing = editing?.id === item.id && editing?.field === 'address';
                                             return (
                                                 <div className="flex items-start gap-3">
@@ -244,7 +288,7 @@ const AgendaView: React.FC = () => {
                                                                     <Icon icon="material-symbols:check" width="16" />
                                                                 </button>
                                                             </div>
-                                                        ) : (
+                                                        ) : item.address ? (
                                                             <div className="flex items-start gap-2 group/address">
                                                                 <a
                                                                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.address)}`}
@@ -263,13 +307,20 @@ const AgendaView: React.FC = () => {
                                                                     <Icon icon="material-symbols:edit-outline" width="16" />
                                                                 </button>
                                                             </div>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleEditStart(item.id, 'address', '')}
+                                                                className="text-xs text-muted-foreground hover:text-amber-600 transition-colors flex items-center gap-1 mt-0.5"
+                                                            >
+                                                                <Icon icon="material-symbols:add" width="14" />
+                                                                Adicionar endereço
+                                                            </button>
                                                         )}
                                                     </div>
                                                 </div>
                                             );
                                         })()}
                                     </div>
-                                )}
                             </div>
 
                             <div className="pt-4 border-t border-border flex items-center justify-between">

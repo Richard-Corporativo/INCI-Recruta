@@ -45,8 +45,10 @@ export const useJobs = () => {
     const transitionJobStatus = useCallback(async (id: string | number, nextStatus: Job['workflow_status'], user: User) => {
         setIsLoading(true);
         try {
-            await JobService.transitionStatus(String(id), nextStatus, user);
-            await loadJobs();
+            const updatedJob = await JobService.transitionStatus(String(id), nextStatus, user);
+            if (!updatedJob) throw new Error('Falha ao atualizar status da vaga');
+            setJobs(prev => prev.map(job => String(job.id) === String(id) ? updatedJob : job));
+            return updatedJob;
         } finally {
             setIsLoading(false);
         }
@@ -54,4 +56,3 @@ export const useJobs = () => {
 
     return { jobs, isLoading, addJob, updateJob, deleteJob, transitionJobStatus };
 };
-

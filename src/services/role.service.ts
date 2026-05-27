@@ -79,6 +79,22 @@ export const RoleService = {
     },
 
     async deleteRole(id: string): Promise<boolean> {
+        const { count, error: countError } = await supabase
+            .from('jobs')
+            .select('id', { count: 'exact', head: true })
+            .eq('role_id', id)
+            .eq('status', 'Ativa');
+
+        if (countError) {
+            console.error('[RoleService] deleteRole: error checking active jobs:', countError);
+            return false;
+        }
+
+        if (count && count > 0) {
+            console.error(`[RoleService] deleteRole blocked: role ${id} has ${count} active job(s)`);
+            return false;
+        }
+
         const { error } = await supabase
             .from('roles')
             .delete()

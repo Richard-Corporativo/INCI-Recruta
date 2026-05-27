@@ -118,19 +118,29 @@ const CandidateView = ({ candidate }: { candidate: Candidate }) => {
                 <p className="text-sm text-muted-foreground font-medium">{candidate.role || 'Candidato'}</p>
                 <div className="flex gap-2 mt-3">
                     {candidate.linkedin && (
-                        <a href={candidate.linkedin} target="_blank" rel="noreferrer" className="p-2 bg-background border border-border rounded-full text-blue-600 hover:scale-110 transition-transform">
-                            <Icon icon="material-symbols:public" className="h-4 w-4" aria-hidden="true" />
+                        <a href={candidate.linkedin} target="_blank" rel="noreferrer" title="LinkedIn" className="p-2 bg-background border border-border rounded-full text-[#0A66C2] hover:scale-110 transition-transform shadow-sm">
+                            <Icon icon="mdi:linkedin" className="h-4 w-4" aria-hidden="true" />
+                        </a>
+                    )}
+                    {candidate.github && (
+                        <a href={candidate.github} target="_blank" rel="noreferrer" title="GitHub" className="p-2 bg-background border border-border rounded-full text-foreground hover:scale-110 transition-transform shadow-sm">
+                            <Icon icon="mdi:github" className="h-4 w-4" aria-hidden="true" />
+                        </a>
+                    )}
+                    {candidate.portfolio && (
+                        <a href={candidate.portfolio} target="_blank" rel="noreferrer" title="Portfólio / Link" className="p-2 bg-background border border-border rounded-full text-primary hover:scale-110 transition-transform shadow-sm">
+                            <Icon icon="material-symbols:link" className="h-4 w-4" aria-hidden="true" />
+                        </a>
+                    )}
+                    {candidate.phone && (
+                        <a href={`https://wa.me/${candidate.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" title="WhatsApp" className="p-2 bg-background border border-border rounded-full text-green-500 hover:scale-110 transition-transform shadow-sm">
+                            <Icon icon="ic:baseline-whatsapp" className="h-4 w-4" aria-hidden="true" />
                         </a>
                     )}
                     {candidate.has_resume && (
-                        <button onClick={handleDownload} className="p-2 bg-background border border-border rounded-full text-red-500 hover:scale-110 transition-transform">
+                        <button onClick={handleDownload} title="Baixar Currículo" className="p-2 bg-background border border-border rounded-full text-red-500 hover:scale-110 transition-transform shadow-sm">
                             <Icon icon="material-symbols:description" className="h-4 w-4" aria-hidden="true" />
                         </button>
-                    )}
-                    {candidate.phone && (
-                        <a href={`https://wa.me/${candidate.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="p-2 bg-background border border-border rounded-full text-green-500 hover:scale-110 transition-transform">
-                            <Icon icon="material-symbols:chat" className="h-4 w-4" aria-hidden="true" />
-                        </a>
                     )}
                 </div>
             </div>

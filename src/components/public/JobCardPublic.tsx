@@ -26,8 +26,10 @@ export interface PublicJob {
     positionsCount?: number;  // Quantidade de vagas abertas
     requirements?: string[];  // Requisitos
     experienceMin?: string;  // Experiência mínima
+    workSchedule?: string;   // Carga horária
     reportsTo?: string;  // Gestor(a)
     rank?: number;  // Posição em recomendações personalizadas
+    jobNumber?: number;
 }
 
 interface JobCardPublicProps {
@@ -124,15 +126,7 @@ const JobCardPublic: React.FC<JobCardPublicProps> = ({ job, onApply, onDetails }
                                 {job.seniority}
                             </div>
                         </div>
-                        {job.reportsTo && (
-                            <div className="space-y-0">
-                                <p className="text-[8.5px] font-bold text-muted-foreground/60 uppercase tracking-widest">Gestor(a)</p>
-                                <div className="flex items-center gap-1 text-[12px] font-semibold text-foreground">
-                                    <Icon icon="material-symbols:supervisor-account" className="size-3 text-primary/60" />
-                                    {job.reportsTo}
-                                </div>
-                            </div>
-                        )}
+
                         {job.positionsCount && job.positionsCount > 0 && (
                             <div className="space-y-0">
                                 <p className="text-[8.5px] font-bold text-muted-foreground/60 uppercase tracking-widest">Vagas</p>

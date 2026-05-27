@@ -1,236 +1,243 @@
-'use client';
-// @component JobDetailView | @tipo componente | @versao 1.0.0
-// > Visualização detalhada de vaga — missão, responsabilidades, requisitos, benefícios
-// @api job: JobDetail
-
-
 import React from 'react';
 import { Icon } from "@iconify/react";
-import { PublicJob } from './JobCardPublic';
-import { useAuth } from '@src/context/AuthContext';
-import { useFavoriteJobs } from '@src/hooks/useFavoriteJobs';
-import { formatDate } from '@src/lib/formatters';
+import { formatSalaryRange, formatDate, formatJobId } from "@src/lib/formatters";
+import { getBenefitColorClass } from "@src/lib/job-helpers";
 
 interface JobDetailViewProps {
-    job: any; // Using any for now to match the complex mapping in JobDetailPublic
-    onApply: (id: string) => void;
+    job: any;
+    onApply: (jobId: string) => void;
+    isAuthenticated: boolean;
+    isFavorite: (jobId: string) => boolean;
+    toggleFavorite: (jobId: string) => void;
 }
 
-const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onApply }) => {
-    const { isAuthenticated } = useAuth();
-    const { isFavorite, toggleFavorite } = useFavoriteJobs();
-
-
-    const isFav = job ? isFavorite(job.id) : false;
-    const areaLabel = job?.area?.trim();
-    if (!job) return (
-        <div className="flex flex-col items-center justify-center py-32 px-6 text-center border-2 border-border border-dashed bg-muted/10 rounded-3xl h-full min-h-[600px]">
-            <div className="size-20 bg-background border border-border flex items-center justify-center mb-8 rounded-2xl">
-                <Icon icon="material-symbols:info" className="text-muted-foreground/20 size-10" />
+const JobDetailView: React.FC<JobDetailViewProps> = ({ 
+    job, 
+    onApply, 
+    isAuthenticated,
+    isFavorite,
+    toggleFavorite
+}) => {
+    // Defensive check
+    if (!job) {
+        return (
+            <div className="h-full flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-border rounded-3xl bg-muted/5">
+                <Icon icon="material-symbols:work-outline" className="size-16 text-muted-foreground/20 mb-4" />
+                <h3 className="text-lg font-semibold text-foreground/60 tracking-tight">Selecione uma vaga</h3>
+                <p className="text-sm text-muted-foreground max-w-xs mt-2">
+                    Clique em uma das vagas da lista ao lado para ver os detalhes completos aqui.
+                </p>
             </div>
-                <h3 className="text-2xl font-semibold tracking-tight mb-2">Selecione uma Oportunidade.</h3>
-                        <p className="text-muted-foreground text-xs max-w-xs font-semibold tracking-wide leading-relaxed">
-                Escolha uma vaga na lateral para visualizar os detalhes completos e requisitos da posição.
-            </p>
-        </div>
-    );
+        );
+    }
+
+    const isFav = isFavorite?.(job.id) || false;
+
+    // Helper para garantir que campos que podem vir como string (newline separated) ou array sejam tratados corretamente
+    const ensureArray = (val: any): string[] => {
+        if (!val) return [];
+        if (Array.isArray(val)) return val;
+        if (typeof val === 'string') return val.split('\n').filter(s => s.trim().length > 0);
+        return [];
+    };
+
+    const techReqs = ensureArray(job.requirements_technical);
+    const behavioralReqs = ensureArray(job.requirements_behavioral);
+    const kpis = ensureArray(job.kpis);
+    const competencies = ensureArray(job.competencies);
+    const generalReqs = ensureArray(job.requirements);
 
     return (
-        <div className="space-y-6 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-150">
-            {/* Header / Summary */}
-            <div className="space-y-6">
-                <div className="space-y-1">
-
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                        <div className="flex-1">
-                            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight leading-tight">
-                                {job.title}
-                            </h1>
-                            <p className="text-[10px] text-muted-foreground/50 font-mono tracking-wider mt-1">
-                                ID #{String(job.id).slice(-6).toUpperCase()}
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            {isAuthenticated && (
-                                <button
-                                    onClick={() => toggleFavorite(job.id)}
-                                    className={`size-9 flex items-center justify-center transition-all hover:scale-110 ${
-                                        isFav ? 'text-secondary' : 'text-muted-foreground/40 hover:text-muted-foreground'
-                                    }`}
-                                    title={isFav ? "Remover dos favoritos" : "Salvar vaga"}
-                                >
-                                    <Icon icon={isFav ? 'ph:star-fill' : 'ph:star'} className="size-5" />
-                                </button>
+        <div className="bg-card/30 backdrop-blur-xl rounded-3xl border border-border/40 p-6 md:p-10 space-y-12 transition-all hover:border-border/60">
+            {/* Header / Intro */}
+            <div className="space-y-3">
+                    <div className="space-y-2">
+                        <div className="flex items-baseline gap-3">
+                            <h2 className="text-4xl font-bold text-foreground tracking-tighter">{job.title}</h2>
+                            {(job.job_number || job.jobNumber) && (
+                                <span className="text-[11px] font-semibold text-muted-foreground/50 tracking-widest shrink-0">
+                                    {formatJobId(job.job_number ?? job.jobNumber)}
+                                </span>
                             )}
-                            <button
-                                onClick={() => onApply(job.id)}
-                                className="h-9 px-6 bg-primary text-primary-foreground font-semibold text-[10px] tracking-widest rounded-lg transition-all hover:opacity-90 active:scale-95 flex items-center justify-center gap-2"
-                            >
-                                Candidatar-se
-                            </button>
+                        </div>
+                        
+                        {/* Metadata Line - Group 1 (Main Info) */}
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">
+                            <span className="flex items-center gap-1.5 text-blue-600 font-extrabold">
+                                {job.company_name || job.company?.name || 'INCICast'}
+                            </span>
+                            <span className="text-border/40">•</span>
+                            <span className="flex items-center gap-1.5">
+                                <Icon icon="ph:map-pin-bold" className="size-3.5" />
+                                {job.location || 'Juazeiro do Norte - CE'}
+                            </span>
+                            <span className="text-border/40">•</span>
+                            <span className="flex items-center gap-1.5">
+                                <Icon icon="ph:house-bold" className="size-3.5" />
+                                {job.model || 'Presencial'}
+                            </span>
+                            <span className="text-border/40">•</span>
+                            <span className="flex items-center gap-1.5">
+                                <Icon icon="ph:file-text-bold" className="size-3.5" />
+                                {job.contract || 'CLT'}
+                            </span>
+                            <span className="text-border/40">•</span>
+                            <span className="flex items-center gap-1.5">
+                                <Icon icon="ph:briefcase-bold" className="size-3.5" />
+                                {job.level || job.seniority || 'Não informada'}
+                            </span>
+                            <span className="text-border/40">•</span>
+                            <span className="flex items-center gap-1.5">
+                                <Icon icon="ph:clock-bold" className="size-3.5" />
+                                {job.workSchedule || job.work_schedule || 'Não informada'}
+                            </span>
+                            {job.hiring_manager && (
+                                <>
+                                    <span className="text-border/40">•</span>
+                                    <span className="flex items-center gap-1.5">
+                                        <Icon icon="ph:user-focus-bold" className="size-3.5" />
+                                        {job.hiring_manager}
+                                    </span>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Metadata Line - Group 2 (Secondary Info / Highlights) */}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] font-bold uppercase tracking-widest">
+                            <span className="flex items-center gap-1.5 text-foreground/80">
+                                <Icon icon="ph:medal-bold" className="size-3.5" />
+                                {job.experienceMin || job.experience_min ? `Experiência Mínima de ${job.experienceMin || job.experience_min}` : 'Experiência não informada'}
+                            </span>
+                            <span className="flex items-center gap-4 text-foreground/80">
+                                {formatSalaryRange(job.salary_min, job.salary_max)}
+                            </span>
                         </div>
                     </div>
-                </div>
 
-                <div className="bg-card border border-border rounded-2xl p-4 md:p-5">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-5">
-                        {([
-                            { label: 'Departamento/Setor',       val: (job.area && job.area !== 'Geral') ? job.area : 'Área não informada', icon: 'material-symbols:corporate-fare' },
-                            { label: 'Localização',        val: job.location,      icon: 'material-symbols:location-on' },
-                            { label: 'Modelo',             val: job.model,         icon: 'material-symbols:home-work' },
-                            { label: 'Contrato',           val: job.contract,      icon: 'material-symbols:description' },
-                            { label: 'Nível',              val: job.level,         icon: 'material-symbols:trending-up' },
-                             { label: 'Urgência',           val: job.urgency,       icon: 'material-symbols:priority-high' },
-                             { label: 'Exp. Mínima',        val: job.experienceMin || 'Não informada', icon: 'material-symbols:work-history' },
-                             {
-                                 label: 'Faixa Salarial',
-                                 val: job.salary?.min || job.salary?.max
-                                     ? [job.salary.min && `R$ ${Number(job.salary.min).toLocaleString('pt-BR')}`, job.salary.max && `R$ ${Number(job.salary.max).toLocaleString('pt-BR')}`].filter(Boolean).join(' – ')
-                                     : 'A combinar',
-                                 icon: 'material-symbols:payments'
-                             },
-                             { label: 'Gestor(a)',         val: (job.reportsTo && job.reportsTo !== 'Gestor da Área') ? job.reportsTo : 'Não informado', icon: 'material-symbols:supervisor-account' },
-                             {
-                                 label: 'Inscrições até',
-                                 val: job.registrationDeadline
-                                     ? formatDate(job.registrationDeadline, { day: '2-digit', month: 'long', year: 'numeric' })
-                                     : 'Tempo limitado',
-                                 icon: 'material-symbols:calendar-today'
-                             },
-                             { label: 'Jornada',           val: job.workSchedule,   icon: 'material-symbols:schedule' },
-                         ] as { label: string; val?: string; icon: string }[])
-                            .map((item, i) => (
-                            <div key={i} className="flex flex-col gap-1.5 min-w-0">
-                                <div className="flex items-center gap-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest leading-none">
-                                    <Icon icon={item.icon} className="size-3.5 text-primary/50 shrink-0" />
-                                    <span className="truncate">{item.label}</span>
-                                </div>
-                                <p className="text-sm font-semibold text-foreground tracking-tight leading-tight">
-                                    {item.val || 'Não informado'}
-                                </p>
-                            </div>
-                        ))}
-                    </div>
+
                 </div>
-            </div>
 
             {/* Description Content */}
-            <div className="space-y-6">
-                {/* Mission/Context */}
-                {job.mission && (
-                    <section className="space-y-4">
-                        <div className="flex items-center gap-4">
-                            <h3 className="text-[15px] font-semibold text-foreground tracking-tight">Contexto e Missão</h3>
-                            <div className="h-px flex-1 bg-border/60" />
-                        </div>
-                        <p className="text-base font-medium text-foreground/80 leading-relaxed max-w-4xl break-words">
-                            {job.mission}
-                        </p>
-                    </section>
-                )}
+            <div className="space-y-10">
+                {/* Context & Mission */}
+                <div className="grid grid-cols-1 gap-12">
+                    {job.mission && (
+                        <section className="space-y-4">
+                            <div className="flex items-center gap-4">
+                                <h3 className="text-[13px] font-bold text-foreground uppercase tracking-widest">Missão da Vaga</h3>
+                                <div className="h-px flex-1 bg-border/40" />
+                            </div>
+                            <div className="text-sm font-medium text-foreground/70 leading-relaxed break-words whitespace-pre-line">
+                                {job.mission}
+                            </div>
+                        </section>
+                    )}
 
-                {/* Requisitos e Qualificações */}
-                {job.requirements?.length > 0 && (
-                    <section className="space-y-4">
-                        <div className="flex items-center gap-4">
-                            <h3 className="text-[15px] font-semibold text-foreground tracking-tight">Requisitos e Qualificações</h3>
-                            <div className="h-px flex-1 bg-border/60" />
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            {job.requirements.map((req: string, i: number) => (
-                                <span key={i} className="inline-flex items-center gap-2.5 px-4 py-2 border border-border/50 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                                    <Icon icon="material-symbols:check-circle" className="text-primary size-4 shrink-0" />
-                                    <span className="text-xs font-semibold text-foreground/80">{req}</span>
-                                </span>
-                            ))}
-                        </div>
-                    </section>
-                )}
+                </div>
 
-                {/* Requisitos Técnicos */}
-                {job.requirementsTechnical?.length > 0 && (
-                    <section className="space-y-4">
-                        <div className="flex items-center gap-4">
-                            <h3 className="text-[15px] font-semibold text-foreground tracking-tight">Requisitos Técnicos</h3>
-                            <div className="h-px flex-1 bg-border/60" />
+                    <div className="grid grid-cols-1 gap-6 pt-2">
+                        {/* Bloco 1: Necessários */}
+                        <div className="space-y-3">
+                            <h4 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em] flex items-center gap-2 pb-4 border-b border-border/60">
+                                Requisitos Necessários
+                            </h4>
+                            <div className="grid grid-cols-1 gap-1.5">
+                                {[...generalReqs, ...techReqs].length > 0 ? (
+                                    [...generalReqs, ...techReqs].map((req, i) => (
+                                        <div key={i} className="flex items-start gap-3 group">
+                                            <div className="size-1.5 rounded-full bg-blue-600/40 mt-1.5 shrink-0 group-hover:bg-blue-600 transition-colors" />
+                                            <span className="text-[13px] font-medium text-foreground/80 leading-relaxed">
+                                                {req}
+                                            </span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <span className="text-[11px] text-muted-foreground italic">Informação não fornecida</span>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                            {job.requirementsTechnical.map((req: string, i: number) => (
-                                <span key={i} className="inline-flex items-center gap-2.5 px-4 py-2 border border-border/50 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                                    <Icon icon="material-symbols:code" className="text-primary size-4 shrink-0" />
-                                    <span className="text-xs font-semibold text-foreground/80">{req}</span>
-                                </span>
-                            ))}
-                        </div>
-                    </section>
-                )}
 
-                {/* Competências Comportamentais e Habilidades */}
-                {job.requirementsBehavioral?.length > 0 && (
-                    <section className="space-y-4">
-                        <div className="flex items-center gap-4">
-                            <h3 className="text-[15px] font-semibold text-foreground tracking-tight">Competências Comportamentais e Habilidades</h3>
-                            <div className="h-px flex-1 bg-border/60" />
+                        {/* Bloco 2: Competências */}
+                        <div className="space-y-3">
+                            <h4 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em] flex items-center gap-2 pb-4 border-b border-border/60">
+                                Competências Comportamentais e Habilidades
+                            </h4>
+                            <div className="grid grid-cols-1 gap-1.5">
+                                {competencies.length > 0 ? (
+                                    competencies.map((c, i) => (
+                                        <div key={i} className="flex items-start gap-3 group">
+                                            <div className="size-1.5 rounded-full bg-primary/40 mt-1.5 shrink-0 group-hover:bg-primary transition-colors" />
+                                            <span className="text-[13px] font-medium text-foreground/80 leading-relaxed">
+                                                {c}
+                                            </span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <span className="text-[11px] text-muted-foreground italic">Informação não fornecida</span>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                            {job.requirementsBehavioral.map((req: string, i: number) => (
-                                <span key={i} className="inline-flex items-center gap-2.5 px-4 py-2 border border-border/50 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                                    <Icon icon="material-symbols:psychology" className="text-primary size-4 shrink-0" />
-                                    <span className="text-xs font-semibold text-foreground/80">{req}</span>
-                                </span>
-                            ))}
-                        </div>
-                    </section>
-                )}
 
-                {/* Competências Obrigatórias */}
-                {job.competencies?.length > 0 && (
-                    <section className="space-y-4">
-                        <div className="flex items-center gap-4">
-                            <h3 className="text-[15px] font-semibold text-foreground tracking-tight">Competências Obrigatórias</h3>
-                            <div className="h-px flex-1 bg-border/60" />
+                        {/* Bloco 3: Desejáveis */}
+                        <div className="space-y-3">
+                            <h4 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em] flex items-center gap-2 pb-4 border-b border-border/60">
+                                Requisitos Desejáveis
+                            </h4>
+                            <div className="grid grid-cols-1 gap-1.5">
+                                {behavioralReqs.length > 0 ? (
+                                    behavioralReqs.map((req, i) => (
+                                        <div key={i} className="flex items-start gap-3 group">
+                                            <div className="size-1.5 rounded-full bg-blue-600/40 mt-1.5 shrink-0 group-hover:bg-blue-600 transition-colors" />
+                                            <span className="text-[13px] font-medium text-foreground/80 leading-relaxed">
+                                                {req}
+                                            </span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <span className="text-[11px] text-muted-foreground italic">Informação não fornecida</span>
+                                )}
+                            </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                            {job.competencies.map((c: string, i: number) => (
-                                <span key={i} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/20 bg-primary/5 text-primary text-xs font-semibold">
-                                    <Icon icon="material-symbols:star-outline" className="size-4 shrink-0" />
-                                    {c}
-                                </span>
-                            ))}
-                        </div>
-                    </section>
-                )}
 
-                {/* KPIs */}
-                {job.kpis?.length > 0 && (
-                    <section className="space-y-4">
-                        <div className="flex items-center gap-4">
-                            <h3 className="text-[15px] font-semibold text-foreground tracking-tight">KPIs</h3>
-                            <div className="h-px flex-1 bg-border/60" />
+                        {/* Bloco 4: KPIs */}
+                        <div className="space-y-3">
+                            <h4 className="text-[12px] font-black text-foreground uppercase tracking-[0.2em] flex items-center gap-2 pb-4 border-b border-border/60">
+                                Indicadores de Desempenho (KPIs)
+                            </h4>
+                            <div className="grid grid-cols-1 gap-1.5">
+                                {kpis.length > 0 ? (
+                                    kpis.map((kpi, i) => (
+                                        <div key={i} className="flex items-start gap-3 group">
+                                            <div className="size-1.5 rounded-full bg-primary/40 mt-1.5 shrink-0 group-hover:bg-primary transition-colors" />
+                                            <span className="text-[13px] font-medium text-foreground/80 leading-relaxed">
+                                                {kpi}
+                                            </span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <span className="text-[11px] text-muted-foreground italic">Informação não fornecida</span>
+                                )}
+
+                            </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                            {job.kpis.map((kpi: string, i: number) => (
-                                <span key={i} className="inline-flex items-center gap-2.5 px-4 py-2 border border-border/50 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                                    <Icon icon="material-symbols:bar-chart" className="text-primary size-4 shrink-0" />
-                                    <span className="text-xs font-semibold text-foreground/80">{kpi}</span>
-                                </span>
-                            ))}
-                        </div>
-                    </section>
-                )}
+                    </div>
+
+
+
+
 
                 {/* Responsibilities */}
-                {job.responsibilities?.length > 0 && (
+                {ensureArray(job.responsibilities).length > 0 && (
                     <section className="space-y-4">
                         <div className="flex items-center gap-4">
-                            <h3 className="text-[15px] font-semibold text-foreground tracking-tight">Atividades</h3>
-                            <div className="h-px flex-1 bg-border/60" />
+                            <h3 className="text-[13px] font-bold text-foreground uppercase tracking-widest">Atividades e Responsabilidades</h3>
+                            <div className="h-px flex-1 bg-border/40" />
                         </div>
-                        <div className="space-y-2">
-                            {job.responsibilities.map((item: string, idx: number) => (
-                                <div key={idx} className="flex items-start justify-between p-4 bg-card border border-border rounded-2xl group hover:border-primary/40 transition-all gap-4">
-                                    <span className="text-[13px] font-semibold text-foreground/90 tracking-tight break-words">{item}</span>
-                                    <Icon icon="material-symbols:arrow-forward" className="size-3.5 text-muted-foreground/30 group-hover:text-primary transition-colors mt-1 shrink-0" />
+                        <div className="grid grid-cols-1 gap-3">
+                            {ensureArray(job.responsibilities).map((item: string, idx: number) => (
+                                <div key={idx} className="flex items-start gap-4 p-5 bg-card border border-border/60 rounded-2xl group hover:border-primary/40 transition-all">
+                                    <Icon icon="material-symbols:check-circle-outline" className="size-5 text-primary mt-0.5 shrink-0" />
+                                    <span className="text-[14px] font-medium text-foreground/80 leading-relaxed">{item}</span>
                                 </div>
                             ))}
                         </div>
@@ -244,21 +251,9 @@ const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onApply }) => {
                             <h3 className="text-[15px] font-semibold text-foreground tracking-tight">Benefícios</h3>
                             <div className="h-px flex-1 bg-border/60" />
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-3">
                             {job.benefits.map((benefit: any, i: number) => {
-                                const colorMap: Record<string, string> = {
-                                    emerald: 'bg-emerald-100/70 text-emerald-700 border-emerald-200/80',
-                                    sky: 'bg-sky-100/70 text-sky-700 border-sky-200/80',
-                                    violet: 'bg-violet-100/70 text-violet-700 border-violet-200/80',
-                                    rose: 'bg-rose-100/70 text-rose-700 border-rose-200/80',
-                                    amber: 'bg-amber-100/70 text-amber-700 border-amber-200/80',
-                                    cyan: 'bg-cyan-100/70 text-cyan-700 border-cyan-200/80',
-                                    lime: 'bg-lime-100/70 text-lime-700 border-lime-200/80',
-                                    fuchsia: 'bg-fuchsia-100/70 text-fuchsia-700 border-fuchsia-200/80',
-                                    indigo: 'bg-indigo-100/70 text-indigo-700 border-indigo-200/80',
-                                    teal: 'bg-teal-100/70 text-teal-700 border-teal-200/80',
-                                };
-                                const colorClass = colorMap[benefit.colorId] || colorMap.sky;
+                                const colorClass = getBenefitColorClass(benefit.colorId);
 
                                 return (
                                     <span key={i} className={`inline-flex items-center gap-2.5 px-4 py-2 border rounded-lg transition-colors ${colorClass}`}>
@@ -272,7 +267,6 @@ const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onApply }) => {
                         </div>
                     </section>
                 )}
-
             </div>
 
             {/* Footer Action */}
@@ -284,27 +278,24 @@ const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onApply }) => {
                         Inscrições {job.registrationDeadline ? `até ${formatDate(job.registrationDeadline, { day: '2-digit', month: 'long' })}` : 'abertas por tempo limitado'}
                     </p>
                 </div>
-                <div className="flex items-center gap-2 w-full md:w-auto">
+                <div className="flex items-center gap-4 w-full md:w-auto">
                     {isAuthenticated && (
                         <button
                             onClick={() => toggleFavorite(job.id)}
-                            className={`size-10 flex items-center justify-center transition-all hover:scale-110 ${
-                                isFav ? 'text-secondary' : 'text-muted-foreground/40 hover:text-muted-foreground'
+                            className={`size-12 flex items-center justify-center rounded-xl transition-all ${
+                                isFav ? 'bg-secondary/10 text-secondary' : 'text-muted-foreground/40 hover:text-muted-foreground'
                             }`}
                             title={isFav ? "Remover dos favoritos" : "Salvar vaga"}
                         >
-                            <Icon
-                                icon="fa6-duotone:star"
-                                className="text-[28px]"
-                            />
+                            <Icon icon={isFav ? "ph:star-fill" : "ph:star-bold"} className="size-6" />
                         </button>
-
                     )}
                     <button
                         onClick={() => onApply(job.id)}
-                        className="flex-1 md:flex-none md:w-auto h-9 px-6 bg-primary text-primary-foreground font-semibold text-[10px] tracking-widest rounded-lg transition-all hover:opacity-90 active:scale-95 flex items-center justify-center gap-2"
+                        className="flex-1 md:flex-none md:w-auto h-12 px-8 bg-primary text-primary-foreground font-bold text-[11px] uppercase tracking-widest rounded-xl transition-all hover:opacity-95 active:scale-[0.98] flex items-center justify-center gap-3"
                     >
-                        Candidatar-se
+                        Candidatar-se à vaga
+                        <Icon icon="material-symbols:arrow-right-alt" className="size-5" />
                     </button>
                 </div>
             </div>

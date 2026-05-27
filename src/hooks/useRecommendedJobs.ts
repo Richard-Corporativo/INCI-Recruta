@@ -57,7 +57,7 @@ export const useRecommendedJobs = ({
 
                 // Cenário 2: autenticado mas perfil insuficiente → fallback recentes
                 if (!hasEnoughProfile) {
-                    const recent = await RecommendationService.getRecentJobs(limit);
+                    const recent = await RecommendationService.getRecentJobs(null, limit);
                     if (!cancelled) {
                         setRecommendations(recent);
                         setIsFallback(true);
@@ -66,12 +66,12 @@ export const useRecommendedJobs = ({
                 }
 
                 // Cenário 3: autenticado + perfil suficiente → RPC personalizada
-                const recs = await RecommendationService.getRecommendedJobs(user.id, limit);
+                const recs = await RecommendationService.getRecommendedJobs(user.id, null, limit);
 
                 if (!cancelled) {
                     if (recs.length === 0) {
                         // RPC sem resultado → fallback
-                        const recent = await RecommendationService.getRecentJobs(limit);
+                        const recent = await RecommendationService.getRecentJobs(null, limit);
                         setRecommendations(recent);
                         setIsFallback(true);
                     } else {

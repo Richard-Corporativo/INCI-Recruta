@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ScheduleInterviewModal from './ScheduleInterviewModal';
 import InterviewFeedbackModal from './InterviewFeedbackModal';
 import ConfirmationModal from '@src/components/ui/ConfirmationModal';
@@ -8,10 +8,12 @@ import MoveStageModal from './MoveStageModal';
 import { useCandidates } from '@src/hooks/useCandidates';
 import { useAudit } from '@src/hooks/useAudit';
 import { useJobs } from '@src/hooks/useJobs';
+import { useUsers } from '@src/hooks/useUsers';
 import { COLUMNS_CONFIG } from '@src/constants';
 import { CandidateService } from '@src/services/candidate.service';
 import { Icon } from "@iconify/react";
 import { formatDate, formatDateTime } from '@src/lib/formatters';
+import { auditService } from '@src/services/audit.service';
 
 interface CandidateProfileDrawerProps {
   isOpen: boolean;
@@ -31,13 +33,24 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
   const [activeTab, setActiveTab] = useState<'profile' | 'interviews' | 'audit'>('profile');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const { logs } = useAudit();
   const { candidates, deleteCandidate, moveCandidate, refresh } = useCandidates();
   const { jobs } = useJobs();
+  const { users } = useUsers();
 
   const candidate = candidates.find(c => String(c.id) === String(candidateId));
   const job = jobs.find(j => String(j.id) === String(candidate?.jobId));
+  const manager = users.find(u => u.id === job?.manager_id);
+
+  useEffect(() => {
+    if (!isOpen || !candidateId || !candidate?.has_avatar) {
+      setAvatarUrl(null);
+      return;
+    }
+    CandidateService.getAvatarUrl(candidateId).then(url => setAvatarUrl(url || null));
+  }, [isOpen, candidateId, candidate?.has_avatar]);
 
   if (!isOpen || !candidate) return null;
 
@@ -86,9 +99,9 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
             <div className="flex items-start gap-5">
               <div
                 className={`size-20 rounded-full ${candidate.avatarColor} ${candidate.textColor} flex items-center justify-center text-3xl font-semibold shrink-0  border-2 border-background ring-2 ring-border/50 transition-colors bg-cover bg-center`}
-                style={candidate.avatar ? { backgroundImage: `url("${candidate.avatar}")` } : {}}
+                style={avatarUrl ? { backgroundImage: `url("${avatarUrl}")` } : {}}
               >
-                {!candidate.avatar && candidate.initials}
+                {!avatarUrl && candidate.initials}
               </div>
               <div className="pt-1">
                 <div className="flex flex-wrap items-center gap-3 mb-2">
@@ -110,9 +123,21 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
                   <span className="flex items-center gap-1.5 hover:text-primary transition-colors cursor-default">
                     <Icon icon="material-symbols:location-on" className="text-[18px]" aria-hidden="true" /> {candidate.location}
                   </span>
-                  <a href={candidate.linkedin || '#'} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors font-semibold outline-none focus-visible:underline">
-                    <Icon icon="material-symbols:link" className="text-[18px]" aria-hidden="true" /> LinkedIn
-                  </a>
+                  {candidate.linkedin && (
+                    <a href={candidate.linkedin} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors font-semibold outline-none focus-visible:underline">
+                      <Icon icon="mdi:linkedin" className="text-[18px]" aria-hidden="true" /> LinkedIn
+                    </a>
+                  )}
+                  {candidate.github && (
+                    <a href={candidate.github} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors font-semibold outline-none focus-visible:underline">
+                      <Icon icon="mdi:github" className="text-[18px]" aria-hidden="true" /> GitHub
+                    </a>
+                  )}
+                  {candidate.portfolio && (
+                    <a href={candidate.portfolio} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors font-semibold outline-none focus-visible:underline">
+                      <Icon icon="material-symbols:link" className="text-[18px]" aria-hidden="true" /> Portfólio
+                    </a>
+                  )}
                   {candidate.pretension_min && (
                     <span className="flex items-center gap-1.5 text-emerald-600 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/20 font-bold">
                       <Icon icon="material-symbols:payments" className="text-[18px]" aria-hidden="true" />
@@ -200,8 +225,12 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
                   <div>
                     <p className="text-[11px] font-semibold text-muted-foreground mb-1 transition-colors">Gestor</p>
                     <div className="flex items-center gap-2 transition-colors">
-                      <div className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[8px] font-semibold transition-colors">JD</div>
-                      <p className="text-sm font-semibold text-foreground transition-colors">João Diretor</p>
+                      <div className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[8px] font-semibold transition-colors">
+                        {manager ? manager.name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase() : '—'}
+                      </div>
+                      <p className="text-sm font-semibold text-foreground transition-colors">
+                        {job?.reports_to || manager?.name || 'Não atribuído'}
+                      </p>
                     </div>
                   </div>
                   <div>
@@ -354,7 +383,7 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
                     </div>
                   )}
 
-                  {activeTab === 'interviews' ? (
+                  {activeTab === 'interviews' && (
                     <div className="space-y-4">
                       {candidate.feedbacks && candidate.feedbacks.length > 0 ? (
                         candidate.feedbacks.map((f, idx) => (
@@ -406,39 +435,63 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {logs.filter(l => String(l.entity_id) === String(candidate.id) || l.entity_id === candidate.name).length > 0 ? (
-                        <div className="relative pl-8 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-border transition-colors">
-                          {logs
-                            .filter(l => String(l.entity_id) === String(candidate.id) || l.entity_id === candidate.name)
-                            .map((l, idx) => (
-                              <div key={idx} className="relative">
-                                <span className="absolute -left-[27px] top-1 size-3.5 rounded-full bg-background border-2 border-primary z-10"></span>
-                                <div className="bg-card border border-border rounded-2xl p-4  hover: transition-all duration-200">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-xs font-bold text-primary uppercase tracking-wider">{l.action}</span>
-                                    <span className="text-[10px] text-muted-foreground font-medium">{formatDateTime(l.timestamp)}</span>
-                                  </div>
-                                  <p className="text-sm text-foreground mb-3 leading-relaxed">{l.details}</p>
-                                  <div className="flex items-center gap-2 pt-3 border-t border-border">
-                                    <div className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[8px] font-bold border border-primary/20">
-                                      {l.user_name?.substring(0, 2).toUpperCase()}
+                  )}
+
+                  {activeTab === 'audit' && (() => {
+                    const entityLabel: Record<string, string> = {
+                      'CANDIDATE': 'Candidatos',
+                      'JOB': 'Vagas',
+                      'USER': 'Usuários',
+                      'ROLE': 'Cargos',
+                      'SETTINGS': 'Configurações',
+                    };
+                    const candidateLogs = logs.filter(
+                      l => String(l.entity_id) === String(candidate.id) || l.entity_id === candidate.name
+                    );
+                    return (
+                      <div className="space-y-4">
+                        {candidateLogs.length > 0 ? (
+                          <div className="relative pl-8 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-border transition-colors">
+                            {candidateLogs.map((l, idx) => {
+                              const friendlyAction = auditService.getFriendlyAction(l.action, l.category);
+                              const where = entityLabel[l.entity_type || ''] || l.entity_type || 'Sistema';
+                              return (
+                                <div key={idx} className="relative">
+                                  <span className="absolute -left-[27px] top-1 size-3.5 rounded-full bg-background border-2 border-primary z-10" />
+                                  <div className="bg-card border border-border rounded-2xl p-4 transition-all duration-200">
+                                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                                      <span className="text-sm font-semibold text-foreground leading-snug">{friendlyAction}</span>
+                                      <span className="text-[10px] text-muted-foreground font-medium shrink-0">{formatDateTime(l.timestamp)}</span>
                                     </div>
-                                    <span className="text-[10px] font-semibold text-muted-foreground transition-colors">Realizado por {l.user_name}</span>
+                                    {l.details && (
+                                      <p className="text-xs text-muted-foreground leading-relaxed mb-3">{l.details}</p>
+                                    )}
+                                    <div className="flex items-center justify-between pt-3 border-t border-border">
+                                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                        <Icon icon="material-symbols:location-on" className="size-3.5 shrink-0" aria-hidden="true" />
+                                        <span>{where}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <div className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[8px] font-bold border border-primary/20">
+                                          {l.user_name?.substring(0, 2).toUpperCase()}
+                                        </div>
+                                        <span className="text-[10px] font-semibold text-muted-foreground">{l.user_name}</span>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
-                        </div>
-                      ) : (
-                        <div className="bg-muted/30 rounded-2xl p-12 text-center border-2 border-dashed border-border transition-colors">
-                          <Icon icon="material-symbols:history" className="text-muted-foreground/40 text-4xl mb-3 mx-auto" aria-hidden="true" />
-                          <p className="text-sm text-muted-foreground font-semibold italic transition-colors">Nenhum registro de auditoria disponível para este candidato.</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="bg-muted/30 rounded-2xl p-12 text-center border-2 border-dashed border-border transition-colors">
+                            <Icon icon="material-symbols:history" className="text-muted-foreground/40 text-4xl mb-3 mx-auto" aria-hidden="true" />
+                            <p className="text-sm text-muted-foreground font-semibold italic transition-colors">Nenhum registro de auditoria disponível para este candidato.</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </section>
 
@@ -495,23 +548,8 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
         onClose={() => setIsScheduleModalOpen(false)}
         candidateId={candidate.id}
         candidateName={candidate.name}
-        onSuccess={(data) => {
-          if (data && data.type && candidateId) {
-            const stageMap: Record<string, string> = {
-              'Entrevista RH': 'hr_interview',
-              'Entrevista Técnica': 'technical',
-              'Entrevista Gestor': 'manager_interview',
-              'Apresentação de Case': 'technical'
-            };
-            const targetStage = stageMap[data.type];
-            // Only move if we found a mapping and the candidate is not already further ahead or in that stage
-            // For simplicity, we just move them if the mapping exists.
-
-            // Ideally we check if targetStage is "after" current stage, but standard flow assumes forward movement.
-            if (targetStage && targetStage !== candidate.columnId) {
-              moveCandidate(candidateId, targetStage as any);
-            }
-          }
+        onSuccess={async () => {
+          await new Promise(r => setTimeout(r, 300));
           refresh();
           onCandidateUpdate?.();
         }}

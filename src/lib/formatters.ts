@@ -80,6 +80,11 @@ export const isExpiredDate = (date: string | Date | undefined | null, reference 
     return reference.getTime() > end.getTime();
 };
 
+export const formatJobId = (jobNumber?: number | null): string => {
+    if (!jobNumber) return '';
+    return `ID #${String(jobNumber).padStart(4, '0')}`;
+};
+
 export const formatPhone = (phone: string | undefined | null): string => {
     if (!phone) return '-';
     const cleaned = ('' + phone).replace(/\D/g, '');

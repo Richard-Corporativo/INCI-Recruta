@@ -9,17 +9,7 @@
 import React from 'react';
 import { Icon } from '@iconify/react';
 import { RecommendedJob } from '@src/services/recommendation.service';
-import { formatDate, isExpiredDate } from '@src/lib/formatters';
-
-// ── Utilitários locais ────────────────────────────────────────────────────────
-
-const formatSalary = (min: number | null, max: number | null): string => {
-    if (!min && !max) return 'A combinar';
-    const fmt = (v: number) => `R$\u00A0${v.toLocaleString('pt-BR')}`;
-    if (min && max) return `${fmt(min)} – ${fmt(max)}`;
-    if (min) return `A partir de ${fmt(min)}`;
-    return `Até ${fmt(max!)}`;
-};
+import { formatDate, isExpiredDate, formatSalaryRange, formatJobId } from '@src/lib/formatters';
 
 const urgencyConfig: Record<string, { label: string; color: string; dot: string }> = {
     'Alta': { label: 'Urgente', color: 'text-red-600 bg-red-50 border-red-100', dot: 'bg-red-500' },
@@ -86,9 +76,16 @@ const RecommendedJobCard: React.FC<RecommendedJobCardProps> = ({
             {/* Content */}
             <div className="flex-1 min-w-0 space-y-2">
                 <div className="space-y-0.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground truncate">
-                        {job.department || 'Área não informada'}
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground truncate">
+                            {job.department || 'Área não informada'}
+                        </p>
+                        {job.job_number && (
+                            <span className="text-[9px] font-semibold text-muted-foreground/50 tracking-widest shrink-0">
+                                {formatJobId(job.job_number)}
+                            </span>
+                        )}
+                    </div>
                     <h3 className="text-sm font-semibold text-foreground leading-tight line-clamp-2 group-hover:text-primary transition-colors">
                         {job.title}
                     </h3>
@@ -117,7 +114,7 @@ const RecommendedJobCard: React.FC<RecommendedJobCardProps> = ({
                 {/* Salário + prazo */}
                 <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] font-semibold text-foreground">
-                        {formatSalary(job.salary_min, job.salary_max)}
+                        {formatSalaryRange(job.salary_min, job.salary_max)}
                     </span>
                     {deadlineStr && (
                         <span className={`text-[9px] font-semibold ${isExpired ? 'text-red-500' : 'text-muted-foreground'}`}>

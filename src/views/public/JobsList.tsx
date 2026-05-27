@@ -20,13 +20,12 @@ import { mapJobToDetail } from '@src/lib/job-helpers';
 import { Icon } from "@iconify/react";
 import { useAuth } from '@src/context/AuthContext';
 import { useRecommendedJobs } from '@src/hooks/useRecommendedJobs';
+import { useFavoriteJobs } from '@src/hooks/useFavoriteJobs';
 import { analyticsService } from '@src/services/analytics.service';
-import { parseDate } from '@src/lib/formatters';
+import { parseDate, formatJobId } from '@src/lib/formatters';
 
 const mapJobToPublic = (job: Job): PublicJob => {
-    const isNew = job.created_at
-        ? (parseDate(job.created_at)?.getTime() ?? 0) > Date.now() - (7 * 24 * 60 * 60 * 1000)
-        : false;
+    const isNew = false; // Removido cálculo dinâmico para evitar erro de hidratação. Pode ser implementado no useEffect se necessário.
     const department = (job.department?.trim() && job.department !== 'Geral') 
         ? job.department 
         : 'Área não informada';
@@ -56,16 +55,25 @@ const mapJobToPublic = (job: Job): PublicJob => {
         positionsCount: job.positions_count || (job as any).positions || 1,
         requirements: requirements,
         experienceMin: job.experience_min,
+        workSchedule: job.work_schedule,
         reportsTo: job.reports_to,
-        rank: (job as any).rank
+        rank: (job as any).rank,
+        jobNumber: job.job_number,
     };
 };
 
 const JOBS_PER_PAGE = 20;
 
+const SORT_LABELS: Record<'recent' | 'deadline' | 'urgency', string> = {
+    recent: 'Recentes',
+    deadline: 'Prazo de Inscrição',
+    urgency: 'Urgência',
+};
+
 const JobsList: React.FC = () => {
     const navigate = useNavigate();
     const { user: _user, isAuthenticated } = useAuth();
+    const { isFavorite, toggleFavorite } = useFavoriteJobs();
     const { slug } = useParams() as { slug?: string };
 
     // State
@@ -88,6 +96,7 @@ const JobsList: React.FC = () => {
     const [locationFilter, setLocationFilter] = useState('');
     const [otherAreaQuery, setOtherAreaQuery] = useState('');
     const [sortOption, setSortOption] = useState<'recent' | 'deadline' | 'urgency'>('recent');
+    const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
     const [sidebarFilters, setSidebarFilters] = useState<{
         areas: string[];
         levels: string[];
@@ -199,7 +208,8 @@ const JobsList: React.FC = () => {
             const query = debouncedSearch.toLowerCase();
             results = results.filter(j =>
                 j.title.toLowerCase().includes(query) ||
-                j.department.toLowerCase().includes(query)
+                j.department.toLowerCase().includes(query) ||
+                (j.jobNumber != null && (String(j.jobNumber).includes(query) || formatJobId(j.jobNumber).toLowerCase().includes(query)))
             );
         }
 
@@ -406,17 +416,37 @@ const JobsList: React.FC = () => {
                             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                 {filteredJobs.length} Oportunidades
                             </span>
-                            <div className="flex items-center gap-2">
+                            <div className="relative flex items-center gap-2">
                                 <Icon icon="material-symbols:sort" className="size-4 text-muted-foreground" />
-                                <select
-                                    value={sortOption}
-                                    onChange={(e) => setSortOption(e.target.value as any)}
-                                    className="bg-transparent text-[10px] font-bold uppercase tracking-widest text-foreground outline-none cursor-pointer"
+                                <button
+                                    type="button"
+                                    onClick={() => setSortDropdownOpen(v => !v)}
+                                    className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-foreground hover:text-primary transition-colors duration-200 ease-in-out"
                                 >
-                                    <option value="recent">Recentes</option>
-                                    <option value="deadline">Prazo</option>
-                                    <option value="urgency">Urgência</option>
-                                </select>
+                                    {SORT_LABELS[sortOption]}
+                                    <Icon icon="material-symbols:keyboard-arrow-down" className={`size-3.5 transition-transform duration-200 ease-in-out ${sortDropdownOpen ? 'rotate-180' : ''}`} />
+                                </button>
+                                {sortDropdownOpen && (
+                                    <>
+                                        <div className="fixed inset-0 z-10" onClick={() => setSortDropdownOpen(false)} />
+                                        <div className="absolute right-0 top-full mt-1.5 z-20 bg-card border border-border rounded-lg min-w-[180px] py-1">
+                                            {(['recent', 'deadline', 'urgency'] as const).map(opt => (
+                                                <button
+                                                    key={opt}
+                                                    type="button"
+                                                    onClick={() => { setSortOption(opt); setSortDropdownOpen(false); }}
+                                                    className={`w-full flex items-center gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors duration-200 ease-in-out hover:bg-muted ${sortOption === opt ? 'text-primary' : 'text-muted-foreground'}`}
+                                                >
+                                                    <Icon
+                                                        icon="material-symbols:check"
+                                                        className={`size-3 shrink-0 transition-opacity duration-200 ease-in-out ${sortOption === opt ? 'opacity-100' : 'opacity-0'}`}
+                                                    />
+                                                    {SORT_LABELS[opt]}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -449,9 +479,12 @@ const JobsList: React.FC = () => {
                                 <div className="h-96 bg-muted/50 rounded-2xl border border-border" />
                             </div>
                         ) : (
-                            <JobDetailView
+                             <JobDetailView
                                 job={selectedJobData}
                                 onApply={handleApply}
+                                isAuthenticated={isAuthenticated}
+                                isFavorite={isFavorite}
+                                toggleFavorite={toggleFavorite}
                             />
                         )}
                     </main>

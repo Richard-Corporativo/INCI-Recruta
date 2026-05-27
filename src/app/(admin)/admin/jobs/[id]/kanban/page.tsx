@@ -31,6 +31,7 @@ import DroppableKanbanColumn from '@src/components/admin/kanban/DroppableKanbanC
 import SortableCandidateCard from '@src/components/admin/kanban/SortableCandidateCard';
 
 import { COLUMNS_CONFIG } from '@src/constants';
+import { formatJobId } from '@src/lib/formatters';
 
 export default function KanbanPage() {
   const params = useParams();
@@ -135,7 +136,9 @@ export default function KanbanPage() {
             <div>
               <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
                 Candidatos — {jobTitle}
-                <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-normal border border-border">ID: #{id || 'Admin'}</span>
+                {job?.job_number && (
+                  <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-normal border border-border">{formatJobId(job.job_number)}</span>
+                )}
               </h1>
               <p className="text-muted-foreground text-sm font-medium">Gerencie o fluxo de contratação com total precisão.</p>
             </div>
@@ -194,6 +197,8 @@ export default function KanbanPage() {
           onClose={() => setIsScheduleModalOpen(false)}
           candidateId={feedbackCandidate?.id}
           candidateName={feedbackCandidate?.name || ''}
+          jobId={Array.isArray(id) ? id[0] : id as string}
+          targetStage={targetStage ?? undefined}
           onSuccess={async () => {
             if (feedbackCandidate && targetStage) {
               const sourceIndex = COLUMNS_CONFIG.findIndex(c => c.id === movingSourceCol);

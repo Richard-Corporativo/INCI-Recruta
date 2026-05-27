@@ -1,7 +1,7 @@
 'use client';
 import { Icon } from "@iconify/react";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Breadcrumbs from '@src/components/shared/Breadcrumbs';
@@ -12,11 +12,29 @@ import { useCandidates } from '@src/hooks/useCandidates';
 import { useUsers } from '@src/hooks/useUsers';
 import { useDebounce } from '@src/hooks/useDebounce';
 import { useQuickView } from '@src/context/QuickViewContext';
-import { formatDate } from '@src/lib/formatters';
+import { formatDate, formatJobId } from '@src/lib/formatters';
+import { Job } from '@src/types';
+
+// Mapeamento workflow_status → exibição (sobrepõe status legado quando relevante)
+const WORKFLOW_LABELS: Record<string, { label: string; classes: string }> = {
+    pending_approval: { label: 'Aguard. Aprovação', classes: 'bg-amber-500/10 text-amber-700 border-amber-200' },
+    approved: { label: 'Aprovada', classes: 'bg-violet-500/10 text-violet-700 border-violet-200' },
+};
+
+// Transição seguinte disponível por workflow_status e role
+function getWorkflowAction(job: Job, canApprove: boolean): { label: string; icon: string; next: Job['workflow_status'] } | null {
+    const ws = job.workflow_status;
+    if (!ws || ws === 'draft') return { label: 'Enviar p/ Aprovação', icon: 'material-symbols:send', next: 'pending_approval' };
+    if (ws === 'pending_approval' && canApprove) return { label: 'Publicar', icon: 'material-symbols:publish', next: 'published' };
+    if (ws === 'approved' && canApprove) return { label: 'Publicar', icon: 'material-symbols:publish', next: 'published' };
+    if (ws === 'published') return { label: 'Encerrar', icon: 'material-symbols:archive', next: 'archived' };
+    if (ws === 'archived') return { label: 'Reabrir', icon: 'material-symbols:restart-alt', next: 'draft' };
+    return null;
+}
 
 const JobsPage: React.FC = () => {
     const router = useRouter();
-    const { jobs, deleteJob, isLoading } = useJobs();
+    const { jobs, deleteJob, transitionJobStatus, isLoading } = useJobs();
     const { candidates } = useCandidates();
     const { users } = useUsers();
     const { user } = useAuth();
@@ -26,21 +44,57 @@ const JobsPage: React.FC = () => {
     const [searchInputValue, setSearchInputValue] = useState('');
     const [statusFilter, setStatusFilter] = useState('Todas');
     const [managerFilter, setManagerFilter] = useState('all');
+    const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
     const debouncedSearchTerm = useDebounce(searchInputValue, 300);
 
     const isAdmin = user?.role === 'admin' || user?.role === 'recruiter' || user?.role === 'quality';
+    const canApprove = user?.role === 'owner' || user?.role === 'admin' || user?.role === 'quality';
+
+    const showToast = useCallback((message: string, type: 'success' | 'error') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3500);
+    }, []);
+
+    const handleWorkflowTransition = useCallback(async (e: React.MouseEvent, job: Job, next: Job['workflow_status']) => {
+        e.stopPropagation();
+        if (!user) return;
+        try {
+            await transitionJobStatus(job.id, next, user);
+            const labels: Record<string, string> = {
+                pending_approval: 'enviada para aprovação',
+                published: 'publicada',
+                approved: 'aprovada',
+                archived: 'encerrada',
+                draft: 'reaberta como rascunho',
+            };
+            showToast(`Vaga ${labels[next as string] ?? 'atualizada'} com sucesso.`, 'success');
+        } catch (err: any) {
+            showToast(err?.message ?? 'Erro ao atualizar status da vaga.', 'error');
+        }
+    }, [user, transitionJobStatus, showToast]);
 
     const filteredJobs = useMemo(() => {
         return jobs.filter(job => {
             const matchesSearch = !debouncedSearchTerm ||
                 job.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
                 job.department.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-                job.location.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-            const matchesStatus = statusFilter === 'Todas' || job.status === statusFilter;
+                job.location.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                (job.job_number != null && String(job.job_number).includes(debouncedSearchTerm));
+
+            let matchesStatus = true;
+            if (statusFilter !== 'Todas') {
+                if (statusFilter === 'Aguardando') {
+                    matchesStatus = job.workflow_status === 'pending_approval';
+                } else {
+                    matchesStatus = job.status === statusFilter;
+                }
+            }
+
             let matchesManager = true;
             if (!isAdmin) matchesManager = job.manager_id === user?.id;
             else if (managerFilter !== 'all') matchesManager = job.manager_id === managerFilter;
+
             return matchesSearch && matchesStatus && matchesManager;
         });
     }, [jobs, debouncedSearchTerm, statusFilter, managerFilter, isAdmin, user]);
@@ -64,7 +118,7 @@ const JobsPage: React.FC = () => {
             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1 items-center flex-wrap">
                 <div className="flex gap-2 items-center">
                     <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest shrink-0">Status</span>
-                    {['Todas', 'Ativa', 'Pausada', 'Encerrada', 'Rascunho'].map(s => (
+                    {['Todas', 'Ativa', 'Aguardando', 'Rascunho', 'Encerrada'].map(s => (
                         <button key={s} onClick={() => setStatusFilter(s)}
                             className={`h-8 px-3 rounded-2xl text-xs font-semibold transition-all ${
                                 statusFilter === s ? 'bg-primary text-primary-foreground' : 'bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary'
@@ -106,27 +160,49 @@ const JobsPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" role="list">
                     {filteredJobs.map((job) => {
                         const jobCandidatesCount = candidates.filter(c => c.jobId?.toString() === job.id.toString()).length;
+                        const workflowBadge = job.workflow_status ? WORKFLOW_LABELS[job.workflow_status] : null;
+                        const workflowAction = getWorkflowAction(job, canApprove);
+                        const isExpired = !!job.registration_deadline && new Date(job.registration_deadline) < new Date();
                         return (
                             <div key={job.id} role="listitem" onClick={() => router.push(`/admin/jobs/${job.id}/kanban`)}
                                 className="bg-card border border-border rounded-2xl p-5 hover:bg-muted transition-colors cursor-pointer flex flex-col gap-3 group"
                             >
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">{job.title}</h3>
+                                        <div className="flex items-baseline gap-2">
+                                            <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">{job.title}</h3>
+                                            {job.job_number && (
+                                                <span className="text-[9px] font-semibold text-muted-foreground/50 tracking-widest shrink-0">
+                                                    {formatJobId(job.job_number)}
+                                                </span>
+                                            )}
+                                        </div>
                                         <p className="text-[11px] text-muted-foreground truncate mt-0.5">{job.department} / {job.location}</p>
                                     </div>
-                                    <div className="flex gap-1.5 shrink-0">
-                                        <span className={`h-5 px-2 rounded text-[10px] font-semibold flex items-center border ${
-                                            job.status === 'Ativa' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' :
-                                            job.status === 'Pausada' ? 'bg-amber-500/10 text-amber-600 border-amber-200' :
-                                            job.status === 'Rascunho' ? 'bg-blue-500/10 text-blue-600 border-blue-200' :
-                                            'bg-slate-500/10 text-slate-600 border-slate-200'
-                                        }`}>{job.status}</span>
-                                        <span className={`h-5 px-2 rounded text-[10px] font-semibold flex items-center border ${
-                                            job.urgency === 'Alta' ? 'bg-red-500/10 text-red-600 border-red-200' :
-                                            job.urgency === 'Média' ? 'bg-orange-500/10 text-orange-600 border-orange-200' :
-                                            'bg-slate-100 text-slate-600 border-slate-200'
-                                        }`}>{job.urgency}</span>
+                                    <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
+                                        {isExpired ? (
+                                            <span className="h-5 px-2 rounded text-[10px] font-semibold flex items-center border bg-slate-500/10 text-slate-500 border-slate-200">
+                                                Vaga Expirada
+                                            </span>
+                                        ) : workflowBadge ? (
+                                            <span className={`h-5 px-2 rounded text-[10px] font-semibold flex items-center border ${workflowBadge.classes}`}>
+                                                {workflowBadge.label}
+                                            </span>
+                                        ) : (
+                                            <span className={`h-5 px-2 rounded text-[10px] font-semibold flex items-center border ${
+                                                job.status === 'Ativa' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' :
+                                                job.status === 'Pausada' ? 'bg-amber-500/10 text-amber-600 border-amber-200' :
+                                                job.status === 'Rascunho' ? 'bg-blue-500/10 text-blue-600 border-blue-200' :
+                                                'bg-slate-500/10 text-slate-600 border-slate-200'
+                                            }`}>{job.status}</span>
+                                        )}
+                                        {!isExpired && (
+                                            <span className={`h-5 px-2 rounded text-[10px] font-semibold flex items-center border ${
+                                                job.urgency === 'Alta' ? 'bg-red-500/10 text-red-600 border-red-200' :
+                                                job.urgency === 'Média' ? 'bg-orange-500/10 text-orange-600 border-orange-200' :
+                                                'bg-slate-100 text-slate-600 border-slate-200'
+                                            }`}>{job.urgency}</span>
+                                        )}
                                     </div>
                                 </div>
 
@@ -174,6 +250,17 @@ const JobsPage: React.FC = () => {
                                         className="size-8 flex items-center justify-center rounded-2xl text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Editar">
                                         <Icon icon="material-symbols:edit" className="size-4" />
                                     </Link>
+                                    {/* Ação de workflow contextual */}
+                                    {workflowAction && (
+                                        <button
+                                            onClick={e => handleWorkflowTransition(e, job, workflowAction.next)}
+                                            className="h-7 px-2.5 rounded-xl text-[10px] font-semibold flex items-center gap-1 bg-primary/8 text-primary hover:bg-primary/15 transition-colors border border-primary/20"
+                                            title={workflowAction.label}
+                                        >
+                                            <Icon icon={workflowAction.icon} className="size-3.5" />
+                                            {workflowAction.label}
+                                        </button>
+                                    )}
                                     <button onClick={e => { e.stopPropagation(); setJobToDelete(job.id); }}
                                         className="size-8 flex items-center justify-center rounded-2xl text-muted-foreground hover:text-error hover:bg-error/10 transition-colors ml-auto" title="Excluir">
                                         <Icon icon="material-symbols:delete" className="size-4" />
@@ -194,6 +281,16 @@ const JobsPage: React.FC = () => {
                 confirmLabel="Excluir Vaga"
                 type="danger"
             />
+
+            {/* Toast de feedback */}
+            {toast && (
+                <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-lg text-sm font-semibold transition-all duration-200 ${
+                    toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-destructive text-destructive-foreground'
+                }`}>
+                    <Icon icon={toast.type === 'success' ? 'material-symbols:check-circle' : 'material-symbols:error'} className="size-4 shrink-0" />
+                    {toast.message}
+                </div>
+            )}
         </div>
     );
 };

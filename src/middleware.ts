@@ -1,6 +1,6 @@
-/// <reference types="node" />
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr'; // HMR_FORCE_RELOAD_01
 import { NextResponse, type NextRequest } from 'next/server';
+import { getAuthStorageConfig } from './lib/auth-utils';
 
 // Roles que têm acesso ao painel administrativo
 const COMPANY_ROLES = ['owner', 'admin', 'manager', 'recruiter', 'quality', 'dp'];
@@ -13,6 +13,9 @@ export async function middleware(request: NextRequest) {
         if (!supabaseUrl || !supabaseAnonKey) {
             return NextResponse.next();
         }
+
+        const { pathname, searchParams } = request.nextUrl;
+        const { cookieName } = getAuthStorageConfig(pathname, searchParams);
 
         let supabaseResponse = NextResponse.next({ request });
 
@@ -32,11 +35,16 @@ export async function middleware(request: NextRequest) {
                         );
                     },
                 },
+                cookieOptions: {
+                    name: cookieName,
+                },
+                auth: {
+                    storageKey: cookieName,
+                }
             }
         );
 
         const { data: { user } } = await supabase.auth.getUser();
-        const { pathname } = request.nextUrl;
 
         // ── Redirecionar rota legada de login admin ──────────────────────────
         if (pathname === '/admin/login') {
@@ -56,6 +64,11 @@ export async function middleware(request: NextRequest) {
             if (isProtectedRoute) {
                 const loginUrl = new URL('/login', request.url);
                 loginUrl.searchParams.set('next', pathname);
+                if (pathname.startsWith('/admin')) {
+                    loginUrl.searchParams.set('type', 'company');
+                } else if (pathname.startsWith('/super-admin')) {
+                    loginUrl.searchParams.set('type', 'super-admin');
+                }
                 return NextResponse.redirect(loginUrl);
             }
 
@@ -64,17 +77,34 @@ export async function middleware(request: NextRequest) {
 
         // ── Com sessão: buscar role no banco ─────────────────────────────────
         let dbUser: any = null;
-        const { data } = await supabase
+        const { data, error: dbError } = await supabase
             .from('users')
-            .select('role, status, profile_status')
+            .select('role, status, phone')
             .eq('id', user.id)
             .maybeSingle();
         dbUser = data;
 
-        // Fallback: usa metadata do Auth (definido no cadastro) se banco falhar
+        const dbFailed = dbError || dbUser === null;
+
+        // Fallback: usa metadata do Auth apenas se banco falhou
+        // SEGURANÇA: se banco falhou e rota é super-admin, rejeita acesso
+        if (dbFailed && pathname.startsWith('/super-admin')) {
+            const loginUrl = new URL('/login', request.url);
+            loginUrl.searchParams.set('type', 'super-admin');
+            loginUrl.searchParams.set('next', pathname);
+            return NextResponse.redirect(loginUrl);
+        }
+
+        if (dbFailed && dbError) {
+            console.warn('[Middleware] Banco falhou, usando metadata como fallback:', {
+                pathname,
+                userId: user.id,
+                errorCode: (dbError as any)?.code ?? 'unknown',
+            });
+        }
+
         const role = dbUser?.role || user.user_metadata?.role || 'candidate';
         const status = dbUser?.status ?? 'active';
-        const profileStatus = dbUser?.profile_status;
         const isSuperAdmin = role === 'super_admin';
         const isCompanyUser = COMPANY_ROLES.includes(role);
         const isActive = status === 'active';
@@ -94,22 +124,28 @@ export async function middleware(request: NextRequest) {
 
         // Não-super_admin tentando acessar área super-admin → login
         if (pathname.startsWith('/super-admin') && !isSuperAdmin) {
-            return NextResponse.redirect(new URL('/login', request.url));
+            const loginUrl = new URL('/login', request.url);
+            loginUrl.searchParams.set('type', 'super-admin');
+            loginUrl.searchParams.set('next', pathname);
+            return NextResponse.redirect(loginUrl);
         }
 
         // ── Regras de Redirecionamento ────────────────────────────────────────
 
-        // Logado e em página de auth pública → redireciona para o dashboard correto
-        if (pathname === '/login' || pathname === '/cadastro' ||
-            pathname === '/cadastro/empresa' || pathname === '/cadastro/candidato') {
+        // Logado e em /login → redireciona para dashboard correto
+        if (pathname === '/login') {
+            if (isCompanyUser && isActive) return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+            if (!isCompanyUser && isActive) return NextResponse.redirect(new URL('/candidate/dashboard', request.url));
+        }
+
+        // Logado e tentando acessar cadastro direto de empresa/candidato → redireciona se já tiver role
+        if (pathname === '/cadastro/empresa' || pathname === '/cadastro/candidato') {
             if (isCompanyUser && isActive) {
                 return NextResponse.redirect(new URL('/admin/dashboard', request.url));
             }
-            // Candidatos: não redireciona de cadastro (deixa ver a confirmação)
-            if (pathname === '/login') {
-                return NextResponse.redirect(new URL('/candidate/dashboard', request.url));
+            if (!isCompanyUser && pathname === '/cadastro/candidato' && isActive) {
+                 return NextResponse.redirect(new URL('/candidate/dashboard', request.url));
             }
-            return supabaseResponse;
         }
 
         // Empresa tentando acessar área de candidato → admin dashboard
@@ -132,8 +168,8 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(new URL('/admin/dashboard', request.url));
         }
 
-        // Candidato com perfil incompleto tentando candidatar
-        if (isApplicationRoute && !isCompanyUser && profileStatus === 'incomplete') {
+        // Candidato com perfil incompleto tentando candidatar (checa se tem telefone)
+        if (isApplicationRoute && !isCompanyUser && dbUser !== null && !dbUser.phone) {
             const completeProfileUrl = new URL('/perfil/completar', request.url);
             completeProfileUrl.searchParams.set('next', pathname);
             return NextResponse.redirect(completeProfileUrl);
@@ -160,6 +196,11 @@ export async function middleware(request: NextRequest) {
         if (isProtectedRoute) {
             const loginUrl = new URL('/login', request.url);
             loginUrl.searchParams.set('next', pathname);
+            if (pathname.startsWith('/admin')) {
+                loginUrl.searchParams.set('type', 'company');
+            } else if (pathname.startsWith('/super-admin')) {
+                loginUrl.searchParams.set('type', 'super-admin');
+            }
             return NextResponse.redirect(loginUrl);
         }
 

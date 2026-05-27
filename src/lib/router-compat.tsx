@@ -3,7 +3,7 @@
 // @component Router Compat Layer | @tipo lib | @versao 1.0.0
 // > Ponte react-router-dom → next/navigation para migração gradual
 
-import { useRouter as useNextRouter, useParams as useNextParams, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter as useNextRouter, useParams as useNextParams, usePathname } from 'next/navigation';
 import NextLink from 'next/link';
 import React, { useCallback, useMemo } from 'react';
 
@@ -29,15 +29,14 @@ export function useNavigate() {
 // ─── useLocation ────────────────────────────────────────────────────────────
 export function useLocation() {
     const pathname = usePathname();
-    const searchParams = useSearchParams();
 
     return useMemo(() => ({
         pathname,
-        search: searchParams?.toString() ? `?${searchParams?.toString()}` : '',
+        search: typeof window !== 'undefined' ? window.location.search : '',
         hash: typeof window !== 'undefined' ? window.location.hash : '',
         state: null as unknown,
         key: 'default',
-    }), [pathname, searchParams]);
+    }), [pathname]);
 }
 
 // ─── useParams ──────────────────────────────────────────────────────────────

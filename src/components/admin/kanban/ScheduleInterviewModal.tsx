@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 
 import React, { useState } from 'react';
 import { InterviewService } from '@src/services/interview.service';
+import type { Interview } from '@src/types';
 import BaseModal from '@src/components/ui/BaseModal';
 import { useToast } from '@src/components/ui/Toast';
 
@@ -36,8 +37,11 @@ const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen,
 
     try {
       if (candidateId) {
-        const startTime = new Date(`${formData.date}T${formData.time}:00`).toISOString();
-        const endDate = new Date(new Date(startTime).getTime() + 60 * 60 * 1000);
+        const [year, month, day] = formData.date.split('-').map(Number);
+        const [hours, minutes] = formData.time.split(':').map(Number);
+        const startDate = new Date(year, month - 1, day, hours, minutes, 0);
+        const startTime = startDate.toISOString();
+        const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
 
         await InterviewService.addInterview({
           candidate_id: candidateId,
@@ -49,7 +53,7 @@ const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen,
           location: formData.location,
           address: formData.address,
           type: formData.type,
-          status: formData.status === 'Agendada' ? 'scheduled' : 'completed',
+          status: ({ Agendada: 'scheduled', Realizada: 'completed', Cancelada: 'cancelled', Remarcada: 'rescheduled' } as Record<string, Interview['status']>)[formData.status] ?? 'scheduled',
           notes: formData.notes,
           interviewer_names: formData.interviewer,
           stage: targetStage

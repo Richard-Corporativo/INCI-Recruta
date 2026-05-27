@@ -131,12 +131,18 @@ const JobFilterConsole: React.FC<JobFilterConsoleProps> = ({
 
                                     return (
                                         <label key={option} className="flex items-center gap-3 px-3 py-1.5 hover:bg-muted/50 rounded-lg cursor-pointer group transition-colors">
-                                            <input
-                                                type="checkbox"
-                                                checked={filters.areas.includes(option)}
-                                                onChange={() => onFilterChange('areas', option)}
-                                                className="peer appearance-none size-4 border border-border rounded bg-background checked:bg-primary checked:border-primary transition-all"
-                                            />
+                                            <div className="relative flex items-center justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={filters.areas.includes(option)}
+                                                    onChange={() => onFilterChange('areas', option)}
+                                                    className="peer appearance-none size-4 border border-border rounded bg-background checked:bg-primary checked:border-primary transition-all"
+                                                />
+                                                <Icon 
+                                                    icon="material-symbols:check-small-rounded" 
+                                                    className={`absolute size-3.5 text-primary-foreground transition-opacity pointer-events-none ${filters.areas.includes(option) ? 'opacity-100' : 'opacity-0'}`}
+                                                />
+                                            </div>
                                             <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground group-hover:text-foreground">
                                                 {option}
                                             </span>
@@ -199,12 +205,18 @@ const JobFilterConsole: React.FC<JobFilterConsoleProps> = ({
                         <div className="absolute top-full left-0 mt-2 w-48 bg-card border border-border rounded-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200">
                             {filterOptions.contracts.map(option => (
                                 <label key={option} className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 rounded-lg cursor-pointer group transition-colors">
-                                    <input
-                                        type="checkbox"
-                                        checked={filters.contracts.includes(option)}
-                                        onChange={() => onFilterChange('contracts', option)}
-                                        className="peer appearance-none size-4 border border-border rounded bg-background checked:bg-primary checked:border-primary transition-all"
-                                    />
+                                    <div className="relative flex items-center justify-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={filters.contracts.includes(option)}
+                                            onChange={() => onFilterChange('contracts', option)}
+                                            className="peer appearance-none size-4 border border-border rounded bg-background checked:bg-primary checked:border-primary transition-all"
+                                        />
+                                        <Icon 
+                                            icon="material-symbols:check-small-rounded" 
+                                            className={`absolute size-3.5 text-primary-foreground transition-opacity pointer-events-none ${filters.contracts.includes(option) ? 'opacity-100' : 'opacity-0'}`}
+                                        />
+                                    </div>
                                     <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground group-hover:text-foreground">
                                         {option}
                                     </span>
@@ -232,12 +244,18 @@ const JobFilterConsole: React.FC<JobFilterConsoleProps> = ({
                         <div className="absolute top-full left-0 mt-2 w-48 bg-card border border-border rounded-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200">
                             {filterOptions.models.map(option => (
                                 <label key={option} className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 rounded-lg cursor-pointer group transition-colors">
-                                    <input
-                                        type="checkbox"
-                                        checked={filters.models.includes(option)}
-                                        onChange={() => onFilterChange('models', option)}
-                                        className="peer appearance-none size-4 border border-border rounded bg-background checked:bg-primary checked:border-primary transition-all"
-                                    />
+                                    <div className="relative flex items-center justify-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={filters.models.includes(option)}
+                                            onChange={() => onFilterChange('models', option)}
+                                            className="peer appearance-none size-4 border border-border rounded bg-background checked:bg-primary checked:border-primary transition-all"
+                                        />
+                                        <Icon 
+                                            icon="material-symbols:check-small-rounded" 
+                                            className={`absolute size-3.5 text-primary-foreground transition-opacity pointer-events-none ${filters.models.includes(option) ? 'opacity-100' : 'opacity-0'}`}
+                                        />
+                                    </div>
                                     <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground group-hover:text-foreground">
                                         {option}
                                     </span>
@@ -265,12 +283,18 @@ const JobFilterConsole: React.FC<JobFilterConsoleProps> = ({
                         <div className="absolute top-full left-0 mt-2 w-48 bg-card border border-border rounded-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200">
                             {filterOptions.levels.map(option => (
                                 <label key={option} className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 rounded-lg cursor-pointer group transition-colors">
-                                    <input
-                                        type="checkbox"
-                                        checked={filters.levels.includes(option)}
-                                        onChange={() => onFilterChange('levels', option)}
-                                        className="peer appearance-none size-4 border border-border rounded bg-background checked:bg-primary checked:border-primary transition-all"
-                                    />
+                                    <div className="relative flex items-center justify-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={filters.levels.includes(option)}
+                                            onChange={() => onFilterChange('levels', option)}
+                                            className="peer appearance-none size-4 border border-border rounded bg-background checked:bg-primary checked:border-primary transition-all"
+                                        />
+                                        <Icon 
+                                            icon="material-symbols:check-small-rounded" 
+                                            className={`absolute size-3.5 text-primary-foreground transition-opacity pointer-events-none ${filters.levels.includes(option) ? 'opacity-100' : 'opacity-0'}`}
+                                        />
+                                    </div>
                                     <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground group-hover:text-foreground">
                                         {option}
                                     </span>
@@ -298,12 +322,18 @@ const JobFilterConsole: React.FC<JobFilterConsoleProps> = ({
                         <div className="absolute top-full left-0 mt-2 w-48 bg-card border border-border rounded-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200">
                             {filterOptions.urgencies.map(option => (
                                 <label key={option} className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 rounded-lg cursor-pointer group transition-colors">
-                                    <input
-                                        type="checkbox"
-                                        checked={filters.urgencies.includes(option)}
-                                        onChange={() => onFilterChange('urgencies', option)}
-                                        className="peer appearance-none size-4 border border-border rounded bg-background checked:bg-primary checked:border-primary transition-all"
-                                    />
+                                    <div className="relative flex items-center justify-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={filters.urgencies.includes(option)}
+                                            onChange={() => onFilterChange('urgencies', option)}
+                                            className="peer appearance-none size-4 border border-border rounded bg-background checked:bg-primary checked:border-primary transition-all"
+                                        />
+                                        <Icon 
+                                            icon="material-symbols:check-small-rounded" 
+                                            className={`absolute size-3.5 text-primary-foreground transition-opacity pointer-events-none ${filters.urgencies.includes(option) ? 'opacity-100' : 'opacity-0'}`}
+                                        />
+                                    </div>
                                     <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground group-hover:text-foreground">
                                         {option}
                                     </span>
@@ -331,12 +361,18 @@ const JobFilterConsole: React.FC<JobFilterConsoleProps> = ({
                         <div className="absolute top-full left-0 mt-2 w-40 bg-card border border-border rounded-2xl p-2 z-[100] animate-in fade-in zoom-in-95 duration-200">
                             {filterOptions.pcd.map(option => (
                                 <label key={option} className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 rounded-lg cursor-pointer group transition-colors">
-                                    <input
-                                        type="checkbox"
-                                        checked={filters.pcd.includes(option)}
-                                        onChange={() => onFilterChange('pcd', option)}
-                                        className="peer appearance-none size-4 border border-border rounded bg-background checked:bg-primary checked:border-primary transition-all"
-                                    />
+                                    <div className="relative flex items-center justify-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={filters.pcd.includes(option)}
+                                            onChange={() => onFilterChange('pcd', option)}
+                                            className="peer appearance-none size-4 border border-border rounded bg-background checked:bg-primary checked:border-primary transition-all"
+                                        />
+                                        <Icon 
+                                            icon="material-symbols:check-small-rounded" 
+                                            className={`absolute size-3.5 text-primary-foreground transition-opacity pointer-events-none ${filters.pcd.includes(option) ? 'opacity-100' : 'opacity-0'}`}
+                                        />
+                                    </div>
                                     <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground group-hover:text-foreground">
                                         {option}
                                     </span>

@@ -10,8 +10,12 @@ import { Candidate, Job } from '@src/types';
 import AdvancedSearchFilters from '@src/components/admin/AdvancedSearchFilters';
 import { CandidateService } from '@src/services/candidate.service';
 import Toast from '@src/components/shared/Toast';
+import { useAuth } from '@src/context/AuthContext';
+
+const ALLOWED_ROLES = ['super_admin', 'owner', 'admin', 'manager', 'recruiter'] as const;
 
 const TalentBankPage: React.FC = () => {
+    const { user } = useAuth();
     const { candidates, isLoading: candidatesLoading, allSkills, allLocations, searchCandidates, refresh } = useCandidates();
     const { jobs } = useJobs();
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -64,6 +68,16 @@ const TalentBankPage: React.FC = () => {
         } catch { setToast({ message: 'Erro ao vincular candidato.', type: 'error' }); }
         finally { setIsInviting(false); }
     };
+
+    if (user && !ALLOWED_ROLES.includes(user.role as typeof ALLOWED_ROLES[number])) {
+        return (
+            <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
+                <Icon icon="material-symbols:lock" className="size-12 text-muted-foreground/40" />
+                <h2 className="text-lg font-semibold text-foreground">Acesso restrito</h2>
+                <p className="text-sm text-muted-foreground">Você não tem permissão para acessar o Banco de Talentos.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col gap-6">

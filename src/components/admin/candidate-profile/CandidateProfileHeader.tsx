@@ -46,9 +46,21 @@ const CandidateProfileHeader: React.FC<CandidateProfileHeaderProps> = ({
             <span className="flex items-center gap-1.5 hover:text-primary transition-colors cursor-default">
               <Icon icon="material-symbols:location-on" className="h-4 w-4" aria-hidden="true" /> {candidate.location}
             </span>
-            <a href={candidate.linkedin || '#'} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors font-semibold outline-none focus-visible:underline">
-              <Icon icon="material-symbols:link" className="h-4 w-4" aria-hidden="true" /> LinkedIn
-            </a>
+            {candidate.linkedin && (
+              <a href={candidate.linkedin} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-[#0A66C2] hover:opacity-80 transition-all font-semibold">
+                <Icon icon="mdi:linkedin" className="h-4 w-4" aria-hidden="true" /> LinkedIn
+              </a>
+            )}
+            {candidate.github && (
+              <a href={candidate.github} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-foreground hover:opacity-80 transition-all font-semibold">
+                <Icon icon="mdi:github" className="h-4 w-4" aria-hidden="true" /> GitHub
+              </a>
+            )}
+            {candidate.portfolio && (
+              <a href={candidate.portfolio} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-primary hover:opacity-80 transition-all font-semibold">
+                <Icon icon="material-symbols:link" className="h-4 w-4" aria-hidden="true" /> Portfólio
+              </a>
+            )}
             {candidate.pretension_min && (
               <span className="flex items-center gap-1.5 text-emerald-600 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/20 font-semibold">
                 <Icon icon="material-symbols:payments" className="h-4 w-4" aria-hidden="true" />

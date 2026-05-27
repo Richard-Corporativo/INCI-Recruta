@@ -1,33 +1,39 @@
-// @component tenant | @tipo lib | @versao 1.0.0
+// @component tenant | @tipo lib | @versao 1.1.0
 // > Helpers de contexto multi-tenant — resolve company_id do usuário autenticado
 // @api getCurrentCompanyId(): retorna o company_id ativo do usuário ou null
 // @api clearTenantCache(): limpa o cache (chamar no logout)
 
 import { supabase } from '@src/lib/supabase';
 
-let cachedCompanyId: string | null = null;
-let cachedUserId: string | null = null;
-let inFlight: Promise<string | null> | null = null;
+// Cache em memória apenas para o CLIENTE (browser)
+// No servidor (Next.js), variáveis de módulo são compartilhadas entre requisições.
+const isBrowser = typeof window !== 'undefined';
+let clientCachedCompanyId: string | null = null;
+let clientCachedUserId: string | null = null;
+let clientInFlight: Promise<string | null> | null = null;
 
 /**
  * Resolve o company_id ativo do usuário autenticado a partir de company_members.
- * Mantém cache em memória por sessão para evitar round-trips.
+ * No cliente, mantém cache em memória. No servidor, busca sempre do Supabase (que usa cookies).
  */
 export async function getCurrentCompanyId(): Promise<string | null> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-        cachedCompanyId = null;
-        cachedUserId = null;
+        if (isBrowser) {
+            clientCachedCompanyId = null;
+            clientCachedUserId = null;
+        }
         return null;
     }
 
-    if (cachedUserId === user.id && cachedCompanyId) {
-        return cachedCompanyId;
+    // Se estiver no browser, usa o cache local
+    if (isBrowser && clientCachedUserId === user.id && clientCachedCompanyId) {
+        return clientCachedCompanyId;
     }
 
-    if (inFlight) return inFlight;
+    if (isBrowser && clientInFlight) return clientInFlight;
 
-    inFlight = (async () => {
+    const fetchPromise = (async () => {
         const timeout = new Promise<null>((_, reject) =>
             setTimeout(() => reject(new Error('TENANT_TIMEOUT')), 6000)
         );
@@ -59,30 +65,48 @@ export async function getCurrentCompanyId(): Promise<string | null> {
                 companyId = anyMember?.company_id ?? null;
             }
 
-            cachedUserId = user.id;
-            cachedCompanyId = companyId;
-            return cachedCompanyId;
+            // Se o DB retornou null, tenta JWT como última defesa
+            if (!companyId && user.user_metadata?.company_id) {
+                companyId = user.user_metadata.company_id as string;
+            }
+
+            if (isBrowser) {
+                clientCachedUserId = user.id;
+                clientCachedCompanyId = companyId;
+            }
+            return companyId;
         } catch (e: any) {
             console.warn('[tenant] getCurrentCompanyId timeout ou erro:', e.message);
-            return null;
+            const jwtCompanyId = (user.user_metadata?.company_id as string) ?? null;
+            return jwtCompanyId;
         }
     })();
 
-    try {
-        return await inFlight;
-    } finally {
-        inFlight = null;
+    if (isBrowser) {
+        clientInFlight = fetchPromise;
+        try {
+            return await clientInFlight;
+        } finally {
+            clientInFlight = null;
+        }
+    }
+
+    return await fetchPromise;
+}
+
+/** Pré-popula o cache a partir do AuthContext (Client Side only). */
+export function primeTenantCache(userId: string, companyId: string | null) {
+    if (isBrowser) {
+        clientCachedUserId = userId;
+        clientCachedCompanyId = companyId;
     }
 }
 
-/** Pré-popula o cache a partir do AuthContext, evitando re-query ao salvar registros. */
-export function primeTenantCache(userId: string, companyId: string | null) {
-    cachedUserId = userId;
-    cachedCompanyId = companyId;
+export function clearTenantCache() {
+    if (isBrowser) {
+        clientCachedCompanyId = null;
+        clientCachedUserId = null;
+        clientInFlight = null;
+    }
 }
 
-export function clearTenantCache() {
-    cachedCompanyId = null;
-    cachedUserId = null;
-    inFlight = null;
-}

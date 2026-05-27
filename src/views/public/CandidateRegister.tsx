@@ -12,6 +12,7 @@ import { Icon } from "@iconify/react";
 import TermsModal from '@src/components/public/TermsModal';
 import { analyticsService } from '@src/services/analytics.service';
 import { getSafeNextPath, withNextParam } from '@src/lib/navigation';
+import { PasswordStrengthIndicator } from '@src/components/ui/PasswordStrengthIndicator';
 
 const CandidateRegister: React.FC = () => {
     const navigate = useNavigate();
@@ -172,6 +173,7 @@ const CandidateRegister: React.FC = () => {
                                         />
                                     </div>
                                 </div>
+                                <PasswordStrengthIndicator password={formData.password} />
 
                                 {/* Termos */}
                                 <div className="p-4 rounded-xl border border-border bg-muted/30 space-y-3">

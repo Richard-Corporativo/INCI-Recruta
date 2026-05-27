@@ -1,14 +1,14 @@
-'use client';
-
 // @route CadastroChoicePage | @tipo page | @versao 1.0.0
 // > Seletor de tipo de cadastro — Candidato vs Empresa
 
 import React from 'react';
 import { Link } from '@src/lib/router-compat';
 import { Icon } from "@iconify/react";
+import { Suspense } from 'react';
 
 export default function Page() {
     return (
+        <Suspense fallback={null}>
         <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center p-6 bg-background">
             <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Opção Candidato */}
@@ -69,5 +69,6 @@ export default function Page() {
                 </Link>
             </div>
         </div>
+        </Suspense>
     );
 }

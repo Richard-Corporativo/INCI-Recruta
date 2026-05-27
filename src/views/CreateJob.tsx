@@ -140,14 +140,26 @@ const CreateJob: React.FC = () => {
         title: '', department: '', model: 'Híbrido', contract: 'CLT',
         positionsCount: 1, workSchedule: '', registrationDeadline: '',
         location: '', urgency: 'Média',
-        salaryMin: '', salaryMax: '', context: '',
+        salaryMin: '', salaryMax: '', context: '', mission: '',
         seniority: 'Pleno', experienceMin: '',
-        requirements: [] as string[], benefits: [] as string[],
+        requirements: [] as string[], 
+        requirementsTechnical: [] as string[],
+        requirementsBehavioral: [] as string[],
+        kpis: [] as string[],
+        competencies: [] as string[],
+        benefits: [] as string[],
         responsibilities: '',
         reports_to: '',
         role_id: '',
+        role_code: '',
         slaSettings: { 'Triagem': { days: 2 }, 'Entrevista': { days: 3 }, 'Aprovação': { days: 1 } }
     });
+
+    const toStringArray = (value: unknown): string[] => {
+        if (Array.isArray(value)) return value.filter((item): item is string => typeof item === 'string');
+        if (typeof value !== 'string') return [];
+        return value.split('\n').map(item => item.trim()).filter(Boolean);
+    };
 
     const handleInputChange = (e: any) => {
         const { name, value } = e.target;
@@ -166,10 +178,16 @@ const CreateJob: React.FC = () => {
                 salaryMax: role.salary_max?.toString() || '',
                 seniority: role.seniority || 'Pleno',
                 experienceMin: role.experience_min || '',
-                requirements: role.requirements ? role.requirements.split('\n') : [],
+                requirements: toStringArray(role.requirements),
+                requirementsTechnical: toStringArray(role.requirements_technical),
+                requirementsBehavioral: toStringArray(role.requirements_behavioral),
+                kpis: toStringArray(role.kpis),
+                competencies: toStringArray(role.competencies),
                 context: role.mission || '',
+                mission: role.mission || '',
                 reports_to: role.reports_to || '',
-                role_id: role.id
+                role_id: role.id,
+                role_code: role.code
             });
         }
     };
@@ -182,10 +200,16 @@ const CreateJob: React.FC = () => {
         location: formData.location,
         urgency: formData.urgency,
         context: formData.context,
+        mission: formData.mission,
         seniority: formData.seniority,
         requirements: formData.requirements,
+        requirements_technical: formData.requirementsTechnical,
+        requirements_behavioral: formData.requirementsBehavioral,
+        kpis: formData.kpis,
+        competencies: formData.competencies,
         benefits: formData.benefits,
         role_id: formData.role_id || undefined,
+        role_code: formData.role_code || undefined,
         status,
         workflow_status: workflowStatus,
         approval_status: approvalStatus,
@@ -207,30 +231,18 @@ const CreateJob: React.FC = () => {
         setIsSaving(true);
         try {
             await addJob(buildJobPayload('Rascunho', 'Rascunho', 'draft'));
-            toastSuccess('Rascunho salvo com sucesso!');
+            toastSuccess('Vaga salva como rascunho.');
             router.push('/admin/jobs');
         } catch (err) {
             console.error(err);
-            toastError('Erro ao salvar rascunho. Tente novamente.');
-        } finally { setIsSaving(false); }
-    };
-
-    const handleApprove = async () => {
-        if (!formData.title) return;
-        setIsSaving(true);
-        try {
-            await addJob(buildJobPayload('Ativa', 'Aprovado', 'published'));
-            toastSuccess('Vaga publicada com sucesso!');
-            router.push('/admin/jobs');
-        } catch (err) {
-            console.error(err);
-            toastError('Erro ao publicar vaga. Tente novamente.');
+            toastError('Erro ao salvar vaga. Tente novamente.');
         } finally { setIsSaving(false); }
     };
 
     const steps = [
         { id: 1, label: 'Dados Gerais' },
-        { id: 2, label: 'Benefícios' },
+        { id: 2, label: 'Atividades e Responsabilidades' },
+        { id: 3, label: 'Benefícios' },
     ];
 
     return (
@@ -400,19 +412,33 @@ const CreateJob: React.FC = () => {
 
                     {step === 2 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                            <div className="space-y-2">
-                                <label className="text-xs font-semibold text-foreground uppercase tracking-widest">
-                                    Responsabilidades <span className="text-muted-foreground font-normal normal-case tracking-normal">(opcional — aparece na página da vaga)</span>
-                                </label>
-                                <textarea
-                                    name="responsibilities"
-                                    value={formData.responsibilities}
-                                    onChange={handleInputChange}
-                                    rows={4}
-                                    placeholder="Descreva as principais atividades e responsabilidades do cargo, uma por linha..."
-                                    className="w-full rounded-xl border border-border bg-background px-4 py-3 outline-none text-sm font-semibold text-foreground focus:border-primary transition-all placeholder:text-muted-foreground/40 resize-none"
-                                />
+                            <JobForm
+                                formData={formData as any}
+                                handleInputChange={handleInputChange}
+                                updateFormData={updateFormData}
+                                showCoreFields={false}
+                                showPositionsAndSchedule={false}
+                                showSalary={false}
+                                showClassification={false}
+                                showContext={false}
+                                showRequirements={false}
+                                showUrgency={false}
+                                showBenefits={false}
+                                showResponsibilitiesTab={true}
+                            />
+                            <div className="flex justify-between pt-4">
+                                <button type="button" onClick={() => setStep(1)} className="h-12 px-8 rounded-xl border border-border text-sm font-semibold text-foreground hover:bg-muted transition-all flex items-center gap-2">
+                                    <Icon icon="material-symbols:west" className="size-5" /> Voltar
+                                </button>
+                                <button type="button" onClick={() => setStep(3)} className="h-12 px-8 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all flex items-center gap-2">
+                                    Próximo <Icon icon="material-symbols:east" className="size-5" />
+                                </button>
                             </div>
+                        </div>
+                    )}
+
+                    {step === 3 && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                             <JobForm
                                 formData={formData as any}
                                 handleInputChange={handleInputChange}
@@ -428,19 +454,13 @@ const CreateJob: React.FC = () => {
                                 showBenefits={true}
                             />
                             <div className="flex justify-between pt-4">
-                                <button type="button" onClick={() => setStep(1)} className="h-12 px-8 rounded-xl border border-border text-sm font-semibold text-foreground hover:bg-muted transition-all flex items-center gap-2">
+                                <button type="button" onClick={() => setStep(2)} className="h-12 px-8 rounded-xl border border-border text-sm font-semibold text-foreground hover:bg-muted transition-all flex items-center gap-2">
                                     <Icon icon="material-symbols:west" className="size-5" /> Voltar
                                 </button>
-                                <div className="flex gap-3">
-                                    <button type="submit" disabled={isSaving}
-                                        className="h-12 px-8 rounded-xl border border-border text-sm font-semibold text-foreground hover:bg-muted transition-all disabled:opacity-50">
-                                        {isSaving ? 'Salvando...' : 'Salvar rascunho'}
-                                    </button>
-                                    <button type="button" disabled={isSaving} onClick={handleApprove}
-                                        className="h-12 px-8 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all disabled:opacity-50">
-                                        {isSaving ? 'Publicando...' : 'Aprovar vaga'}
-                                    </button>
-                                </div>
+                                <button type="submit" disabled={isSaving}
+                                    className="h-12 px-8 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-all disabled:opacity-50">
+                                    {isSaving ? 'Salvando...' : 'Salvar vaga'}
+                                </button>
                             </div>
                         </div>
                     )}

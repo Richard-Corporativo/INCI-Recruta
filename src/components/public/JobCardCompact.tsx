@@ -6,7 +6,7 @@ import React from 'react';
 import { Icon } from "@iconify/react";
 import { PublicJob } from './JobCardPublic';
 import { useFavoriteJobs } from '@src/hooks/useFavoriteJobs';
-import { formatDate } from '@src/lib/formatters';
+import { formatDate, formatJobId } from '@src/lib/formatters';
 
 const modelIcons: Record<string, string> = {
     'Remoto':     'material-symbols:home-work',
@@ -66,12 +66,18 @@ const JobCardCompact: React.FC<JobCardCompactProps> = ({ job, isSelected, onSele
                     ) : <span />}
 
                     <div className="flex items-center gap-1.5">
-                        {job.isUrgent && (
+                        {job.urgencyLevel && job.urgencyLevel !== 'Baixa' && (
                             <div className={`flex items-center gap-1.5 rounded-full border px-2 py-0.5 ${
-                                isSelected ? 'bg-white text-red-600 border-white' : 'bg-red-50 text-red-600 border-red-100'
+                                isSelected 
+                                    ? 'bg-white text-foreground border-white' 
+                                    : job.urgencyLevel === 'Alta'
+                                        ? 'bg-red-50 text-red-600 border-red-100'
+                                        : 'bg-orange-50 text-orange-600 border-orange-100'
                             }`}>
-                                <span className="text-[9px] font-bold uppercase">Urgente</span>
-                                <span className="size-1.5 rounded-full animate-pulse bg-red-500" />
+                                <span className="text-[9px] font-bold uppercase">
+                                    {job.urgencyLevel === 'Alta' ? 'Urgente' : 'Prioridade Média'}
+                                </span>
+                                <span className={`size-1.5 rounded-full ${job.urgencyLevel === 'Alta' ? 'animate-pulse bg-red-500' : 'bg-orange-500'}`} />
                             </div>
                         )}
                         <button
@@ -87,11 +93,20 @@ const JobCardCompact: React.FC<JobCardCompactProps> = ({ job, isSelected, onSele
                 </div>
 
                 {/* Título */}
-                <h3 className={`text-sm font-bold tracking-tight leading-tight uppercase ${
-                    isSelected ? 'text-white' : 'text-foreground'
-                }`}>
-                    {job.title}
-                </h3>
+                <div className="space-y-0.5">
+                    <h3 className={`text-sm font-bold tracking-tight leading-tight uppercase ${
+                        isSelected ? 'text-white' : 'text-foreground'
+                    }`}>
+                        {job.title}
+                    </h3>
+                    {job.jobNumber && (
+                        <span className={`text-[9px] font-semibold tracking-widest ${
+                            isSelected ? 'text-white/40' : 'text-muted-foreground/50'
+                        }`}>
+                            {formatJobId(job.jobNumber)}
+                        </span>
+                    )}
+                </div>
 
                 {/* Localidade + Senioridade + Salário */}
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 opacity-80">
@@ -109,13 +124,13 @@ const JobCardCompact: React.FC<JobCardCompactProps> = ({ job, isSelected, onSele
                     )}
                     {(job.salaryMin || job.salaryMax) && (
                         <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide">
-                            <Icon icon="material-symbols:attach-money" className="size-3.5" />
+
                             {job.salaryMin && job.salaryMax
-                                ? `R$ ${(job.salaryMin / 1000).toFixed(0)}k - ${(job.salaryMax / 1000).toFixed(0)}k`
+                                ? `R$ ${job.salaryMin >= 1000 ? `${(job.salaryMin / 1000).toFixed(1).replace('.0', '')}k` : job.salaryMin} - ${job.salaryMax >= 1000 ? `${(job.salaryMax / 1000).toFixed(1).replace('.0', '')}k` : job.salaryMax}`
                                 : job.salaryMin
-                                ? `R$ ${(job.salaryMin / 1000).toFixed(0)}k+`
+                                ? `R$ ${job.salaryMin >= 1000 ? `${(job.salaryMin / 1000).toFixed(1).replace('.0', '')}k+` : `${job.salaryMin}+`}`
                                 : job.salaryMax
-                                ? `R$ ${(job.salaryMax / 1000).toFixed(0)}k`
+                                ? `R$ ${job.salaryMax >= 1000 ? `${(job.salaryMax / 1000).toFixed(1).replace('.0', '')}k` : job.salaryMax}`
                                 : null}
                         </div>
                     )}
@@ -125,12 +140,7 @@ const JobCardCompact: React.FC<JobCardCompactProps> = ({ job, isSelected, onSele
                             {job.positionsCount} {job.positionsCount === 1 ? 'vaga' : 'vagas'}
                         </div>
                     )}
-                    {job.reportsTo && (
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide">
-                            <Icon icon="material-symbols:supervisor-account" className="size-3.5" />
-                            {job.reportsTo}
-                        </div>
-                    )}
+
                 </div>
 
                 {/* Tags com ícones */}

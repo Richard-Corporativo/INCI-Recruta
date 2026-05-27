@@ -22,6 +22,7 @@ const PublicLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isTermsOpen, setIsTermsOpen] = useState(false);
     const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
     // List of routes that should have NO header/footer (Full Page Experience)
     const isFullPage = useMemo(() => {
@@ -42,13 +43,14 @@ const PublicLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
     };
 
     React.useEffect(() => {
+        setMounted(true);
         document.documentElement.classList.remove('dark');
         document.documentElement.classList.add('light');
     }, []);
 
     if (isFullPage) {
         return (
-            <div className="bg-background min-h-screen flex flex-col antialiased">
+            <div className="bg-background min-h-screen flex flex-col antialiased" suppressHydrationWarning>
                 <main className="flex-1">
                     {children}
                 </main>
@@ -57,7 +59,7 @@ const PublicLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
     }
 
     return (
-        <div className="bg-background text-foreground font-sans overflow-x-hidden min-h-screen flex flex-col antialiased">
+        <div className="bg-background text-foreground font-sans overflow-x-hidden min-h-screen flex flex-col antialiased" suppressHydrationWarning>
             {/* Tactical Navigation Console - Balha 10.0 Dual Portal */}
             <header className="h-20 bg-background border-b border-border sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 md:px-6 h-full flex items-center justify-between">
@@ -67,12 +69,12 @@ const PublicLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
 
                     <nav className="hidden lg:flex items-center gap-8">
                         <div className="flex items-center gap-8 border-r border-border pr-8">
-                            {['Vagas', 'Quem somos?'].map((item, idx) => (
+                            {['Vagas', 'Quem somos?', 'Planos'].map((item, idx) => (
                                 <a
                                     key={idx}
-                                    href={item === 'Vagas' ? "/vagas" : "https://incibrasil.com.br/"}
-                                    target={item === 'Vagas' ? undefined : "_blank"}
-                                    rel={item === 'Vagas' ? undefined : "noopener noreferrer"}
+                                    href={item === 'Vagas' ? "/vagas" : item === 'Planos' ? "#plans" : "https://incibrasil.com.br/"}
+                                    target={item === 'Quem somos?' ? "_blank" : undefined}
+                                    rel={item === 'Quem somos?' ? "noopener noreferrer" : undefined}
                                     className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground transition-all relative group"
                                 >
                                     {item}
@@ -82,42 +84,56 @@ const PublicLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
                         </div>
                         
                         <div className="flex items-center">
-                            {isAuthenticated ? (
-                                <div className="flex items-center gap-4">
-                                    <Link to={user?.role === 'candidate' ? "/candidate/dashboard" : "/admin/dashboard"}>
-                                        <button className="h-11 px-6 bg-gradient-to-r from-[#3857EF] to-[#1E3A8A] text-white text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2">
-                                            {user?.role === 'candidate' ? 'Painel do Candidato' : 'Painel da Empresa'}
-                                        </button>
-                                    </Link>
-                                    <button
-                                        onClick={handleLogout}
-                                        className="size-11 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-all border border-border hover:bg-muted"
-                                        title="Sair"
-                                    >
-                                        <Icon icon="ion:exit-outline" className="size-6" />
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="flex items-center">
-                                    <div className="flex items-center px-6">
-                                        <div className="flex items-center gap-6">
-                                            <Link to="/login" className="h-11 px-5 rounded-lg bg-gradient-to-r from-[#3857EF] to-[#1E3A8A] text-white text-[11px] font-bold uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center">
-                                                Login Candidato
-                                            </Link>
+                            {mounted && (
+                                <>
+                                    {isAuthenticated && user ? (
+                                        <div className="flex items-center gap-4">
+                                            {/* Tactical Dashboard Router - Detecta role e direciona para o portal correto */}
+                                            {user.role === 'candidate' ? (
+                                                <Link to="/candidate/dashboard">
+                                                    <button className="h-11 px-6 bg-gradient-to-r from-[#3857EF] to-[#1E3A8A] text-white text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                                                        Painel do Candidato
+                                                    </button>
+                                                </Link>
+                                            ) : (
+                                                <Link to="/admin/dashboard">
+                                                    <button className="h-11 px-6 bg-gradient-to-r from-[#3857EF] to-[#1E3A8A] text-white text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                                                        Painel da Empresa
+                                                    </button>
+                                                </Link>
+                                            )}
+                                            
+                                            <button
+                                                onClick={handleLogout}
+                                                className="size-11 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground transition-all border border-border hover:bg-muted"
+                                                title="Sair"
+                                            >
+                                                <Icon icon="ion:exit-outline" className="size-6" />
+                                            </button>
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <div className="flex items-center">
+                                            <div className="flex items-center px-6">
+                                                <div className="flex items-center gap-6">
+                                                    <Link to="/login" className="h-11 px-5 rounded-lg bg-gradient-to-r from-[#3857EF] to-[#1E3A8A] text-white text-[11px] font-bold uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center">
+                                                        Login Candidato
+                                                    </Link>
+                                                </div>
+                                            </div>
 
-                                    {/* Vertical Divider */}
-                                    <div className="w-px h-12 bg-border opacity-60" />
+                                            {/* Vertical Divider */}
+                                            <div className="w-px h-12 bg-border opacity-60" />
 
-                                    <div className="flex items-center px-6">
-                                        <div className="flex items-center gap-6">
-                                            <Link to="/login?type=company" className="h-11 px-5 rounded-lg bg-gradient-to-r from-[#3857EF] to-[#1E3A8A] text-white text-[11px] font-bold uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center">
-                                                Login Empresa
-                                            </Link>
+                                            <div className="flex items-center px-6">
+                                                <div className="flex items-center gap-6">
+                                                    <Link to="/login?type=company" className="h-11 px-5 rounded-lg bg-gradient-to-r from-[#3857EF] to-[#1E3A8A] text-white text-[11px] font-bold uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center">
+                                                        Login Empresa
+                                                    </Link>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </nav>
@@ -137,7 +153,8 @@ const PublicLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
                 <div className="fixed inset-0 top-20 bg-background z-50 lg:hidden flex flex-col p-8 space-y-8 animate-in slide-in-from-top-4 duration-300 overflow-y-auto">
                     <div className="flex flex-col gap-6">
                         <Link to="/vagas" onClick={() => setIsMobileMenuOpen(false)} className="text-3xl font-semibold tracking-tight uppercase">Vagas</Link>
-                        <a href="https://incibrasil.com.br/" target="_blank" className="text-3xl font-semibold tracking-tight uppercase text-muted-foreground">Quem somos?</a>
+                        <a href="https://incibrasil.com.br/" target="_blank" rel="noopener noreferrer" className="text-3xl font-semibold tracking-tight uppercase text-muted-foreground">Quem somos?</a>
+                        <a href="#plans" onClick={() => setIsMobileMenuOpen(false)} className="text-3xl font-semibold tracking-tight uppercase text-muted-foreground">Planos</a>
                     </div>
                     
                     <div className="space-y-8 pt-8 border-t border-border">

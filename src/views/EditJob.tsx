@@ -7,7 +7,7 @@ import Breadcrumbs from '@src/components/shared/Breadcrumbs';
 import JobForm from '@src/components/admin/JobForm';
 import { Icon } from '@iconify/react';
 import { useToast } from '@src/components/ui/Toast';
-import { parseDate } from '@src/lib/formatters';
+import { parseDate, formatJobId } from '@src/lib/formatters';
 import { JobService } from '@src/services/job.service';
 import { Job } from '@src/types';
 
@@ -49,9 +49,16 @@ const EditJob: React.FC = () => {
         salaryMin: '',
         salaryMax: '',
         context: '',
+        mission: '',
         responsibilities: '',
         reports_to: '',
+        seniority: 'Pleno',
+        experienceMin: '',
         requirements: [] as string[],
+        requirementsTechnical: [] as string[],
+        requirementsBehavioral: [] as string[],
+        kpis: [] as string[],
+        competencies: [] as string[],
         benefits: [] as string[],
         slaSettings: {
             'Triagem': { days: 2 },
@@ -78,10 +85,17 @@ const EditJob: React.FC = () => {
                     urgency: data.urgency || 'Média',
                     salaryMin: data.salary_min?.toString() || '',
                     salaryMax: data.salary_max?.toString() || '',
+                    seniority: data.seniority || 'Pleno',
                     context: data.context || '',
+                    mission: data.mission || '',
                     responsibilities: data.responsibilities || '',
                     reports_to: data.reports_to || '',
+                    experienceMin: data.experience_min || '',
                     requirements: toStringArray(data.requirements),
+                    requirementsTechnical: toStringArray(data.requirements_technical),
+                    requirementsBehavioral: toStringArray(data.requirements_behavioral),
+                    kpis: toStringArray(data.kpis),
+                    competencies: toStringArray(data.competencies),
                     benefits: toStringArray(data.benefits),
                     slaSettings: (data.sla_settings as any) || {
                         'Triagem': { days: 2 },
@@ -117,15 +131,22 @@ const EditJob: React.FC = () => {
                 location: formData.location,
                 urgency: formData.urgency,
                 context: formData.context,
+                mission: formData.mission,
                 responsibilities: formData.responsibilities || undefined,
                 reports_to: formData.reports_to || undefined,
+                experience_min: formData.experienceMin || undefined,
                 requirements: formData.requirements,
+                requirements_technical: formData.requirementsTechnical,
+                requirements_behavioral: formData.requirementsBehavioral,
+                kpis: formData.kpis,
+                competencies: formData.competencies,
                 benefits: formData.benefits,
                 registration_deadline: formData.registrationDeadline || undefined,
                 positions_count: formData.positionsCount,
                 work_schedule: formData.workSchedule || undefined,
                 salary_min: formData.salaryMin ? parseFloat(formData.salaryMin) : undefined,
                 salary_max: formData.salaryMax ? parseFloat(formData.salaryMax) : undefined,
+                seniority: formData.seniority,
                 sla_settings: formData.slaSettings,
             } as any);
             toastSuccess('Vaga atualizada com sucesso!');
@@ -177,7 +198,14 @@ const EditJob: React.FC = () => {
                 </div>
                 <div className="flex justify-between items-center mb-6">
                     <div className="flex flex-col">
-                        <h1 className="text-3xl font-semibold text-foreground tracking-tight">Editar Vaga: <span className="text-primary">{job.title}</span></h1>
+                        <div className="flex items-baseline gap-3">
+                            <h1 className="text-3xl font-semibold text-foreground tracking-tight">Editar Vaga: <span className="text-primary">{job.title}</span></h1>
+                            {job.job_number && (
+                                <span className="text-xs font-semibold text-muted-foreground/60 tracking-widest">
+                                    {formatJobId(job.job_number)}
+                                </span>
+                            )}
+                        </div>
                         <p className="text-sm text-muted-foreground mt-1 font-medium">Atualize as informações da vaga e salve as alterações.</p>
                     </div>
                 </div>
@@ -216,20 +244,6 @@ const EditJob: React.FC = () => {
                                     className="block w-full h-11 rounded-2xl border border-border bg-background text-foreground font-medium transition-all duration-200 ease-in-out outline-none hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 px-3.5 text-sm"
                                 />
                             </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                                Responsabilidades <span className="text-muted-foreground font-normal normal-case tracking-normal">(opcional)</span>
-                            </label>
-                            <textarea
-                                name="responsibilities"
-                                value={formData.responsibilities}
-                                onChange={handleInputChange}
-                                rows={4}
-                                placeholder="Descreva as principais atividades e responsabilidades do cargo, uma por linha..."
-                                className="block w-full rounded-2xl border border-border bg-background text-foreground font-medium transition-all duration-200 ease-in-out outline-none hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 p-3.5 text-sm resize-none placeholder:text-muted-foreground"
-                            />
                         </div>
 
                         <JobForm

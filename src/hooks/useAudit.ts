@@ -14,10 +14,12 @@ export const useAudit = () => {
         user_name: log.user?.name || 'Sistema',
         company_id: log.company_id,
         action: log.action,
+        category: log.category || log.details?.category,
         timestamp: log.created_at,
-        details: log.details?.message || log.details || '',
+        details: auditService.formatDetails(log.details),
         entity_type: log.resource_type,
         entity_id: log.resource_id,
+        job_id: log.job_id,
         old_value: log.details?.old,
         new_value: log.details?.new,
         user: log.user

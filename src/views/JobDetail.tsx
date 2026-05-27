@@ -29,7 +29,7 @@ const JobDetail: React.FC = () => {
             <JobDetailHeader 
                 job={job} 
                 user={user} 
-                transitionJobStatus={transitionJobStatus as any} 
+                transitionJobStatus={transitionJobStatus} 
                 onArchiveClick={() => {}} 
             />
             <div className="flex-1 flex overflow-hidden p-4 lg:p-8 gap-8">

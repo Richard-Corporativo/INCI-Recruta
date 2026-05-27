@@ -11,10 +11,14 @@
 // @rule Fallback para metadata se DB indisponível (timeout 4s)
 // @calls supabase.ts — cliente Supabase
 // @references types/index.ts — User
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { User, Company } from '@src/types';
 import { supabase } from '@src/lib/supabase';
+import { getAuthStorageConfig } from '@src/lib/auth-utils';
 import { clearTenantCache, primeTenantCache } from '@src/lib/tenant';
+
+// Removido getAuthArea local em favor do getAuthStorageConfig global
 
 interface AuthContextType {
     user: User | null;
@@ -38,12 +42,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const loadCompany = useCallback(async (userId: string, metadata?: any): Promise<Company | null> => {
         try {
-            let { data: member } = await supabase
-                .from('company_members')
-                .select('company_id, role, status')
-                .eq('user_id', userId)
-                .eq('status', 'active')
-                .maybeSingle();
+            const timeout = new Promise<never>((_, reject) =>
+                setTimeout(() => reject(new Error('TIMEOUT_LOAD_COMPANY')), 5000)
+            );
+
+            let member: any;
+            try {
+                const result = await Promise.race([
+                    supabase
+                        .from('company_members')
+                        .select('company_id, role, status')
+                        .eq('user_id', userId)
+                        .eq('status', 'active')
+                        .maybeSingle(),
+                    timeout
+                ]) as any;
+                if (result?.error) {
+                    console.warn('[AuthContext] loadCompany DB error:', result.error.code ?? 'unknown');
+                    return null;
+                }
+                member = result?.data;
+            } catch (e: any) {
+                console.warn('[AuthContext] loadCompany timeout:', e.message);
+                return null;
+            }
 
             // Self-service: usuário acabou de confirmar email e empresa ainda não foi criada
             // super_admin não tem empresa própria — pula o bootstrap
@@ -158,6 +180,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
 
             console.log('[AuthContext] Fallback construído:', fallbackUser.name, `[${fallbackUser.role}]`);
+
+            const fallbackCompanyId = metadata?.company_id ?? null;
+            if (fallbackCompanyId) {
+                primeTenantCache(userId, fallbackCompanyId);
+            }
+
             return fallbackUser;
 
         } catch (e: any) {
@@ -166,8 +194,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, []);
 
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    
+    const authArea = useMemo(() => {
+        const { type } = getAuthStorageConfig(pathname, searchParams);
+        return type;
+    }, [pathname, searchParams]);
+
     useEffect(() => {
         let mounted = true;
+        console.log(`[AuthContext] Iniciando contexto para área: ${authArea}`);
 
         const initialize = async () => {
             try {
@@ -237,7 +274,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             mounted = false;
             subscription.unsubscribe();
         };
-    }, [fetchProfile, loadCompany]);
+    }, [fetchProfile, loadCompany, authArea]);
 
     const login = useCallback(async (email: string, password: string): Promise<boolean> => {
         // Não setamos isLoading total aqui para não travar a tela de login inteira, 

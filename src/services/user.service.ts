@@ -6,13 +6,18 @@
 // @references types/index.ts — User
 
 import { supabase } from '@src/lib/supabase';
+import { getCurrentCompanyId } from '@src/lib/tenant';
 import { User } from '@src/types';
 
 export const UserService = {
     async getUsers(): Promise<User[]> {
+        const companyId = await getCurrentCompanyId();
+        if (!companyId) return [];
+
         const { data, error } = await supabase
             .from('users')
             .select('*')
+            .eq('company_id', companyId)
             .neq('role', 'candidate')
             .neq('role', 'super_admin')
             .order('name');
@@ -26,10 +31,14 @@ export const UserService = {
     },
 
     async getUserById(id: string): Promise<User | null> {
+        const companyId = await getCurrentCompanyId();
+        if (!companyId) return null;
+
         const { data, error } = await supabase
             .from('users')
             .select('*')
             .eq('id', id)
+            .eq('company_id', companyId)
             .single();
 
         if (error) {
@@ -73,10 +82,14 @@ export const UserService = {
     },
 
     async deleteUser(id: string): Promise<boolean> {
+        const companyId = await getCurrentCompanyId();
+        if (!companyId) return false;
+
         const { error } = await supabase
             .from('users')
             .delete()
-            .eq('id', id);
+            .eq('id', id)
+            .eq('company_id', companyId);
 
         if (error) {
             console.error(`Error deleting user ${id}:`, error);

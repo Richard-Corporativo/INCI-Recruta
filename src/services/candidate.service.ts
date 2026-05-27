@@ -360,6 +360,21 @@ export const CandidateService = {
         return !error;
     },
 
+    async hasApplied(userId: string, jobId: string): Promise<boolean> {
+        const { count, error } = await supabase
+            .from('candidates')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .eq('job_id', jobId);
+
+        if (error) {
+            console.error('[CandidateService] Error checking duplicate application:', error);
+            return false;
+        }
+
+        return (count ?? 0) > 0;
+    },
+
     async addCandidate(candidate: Omit<Candidate, 'id'>, resumeFile?: File, companySlug?: string): Promise<Candidate> {
         console.log('[CandidateService] Iniciando addCandidate...', { name: candidate.name, jobId: candidate.jobId, companySlug });
         
@@ -406,16 +421,10 @@ export const CandidateService = {
             availability: candidate.availability || null
         };
 
-        // Tarefa 3: Sem log de payload com dados pessoais (e-mail, telefone etc.)
-        // Tarefa 4: Verificar candidatura duplicada antes de inserir
+        // Verificar candidatura duplicada antes de inserir
         if (dbPayload.user_id && dbPayload.job_id) {
-            const { count } = await supabase
-                .from('candidates')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', dbPayload.user_id as string)
-                .eq('job_id', dbPayload.job_id as string);
-
-            if ((count ?? 0) > 0) {
+            const alreadyApplied = await CandidateService.hasApplied(dbPayload.user_id as string, dbPayload.job_id as string);
+            if (alreadyApplied) {
                 throw new Error('Você já se candidatou a esta vaga.');
             }
         }

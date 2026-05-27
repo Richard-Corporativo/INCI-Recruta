@@ -132,6 +132,7 @@ const MyApplications: React.FC = () => {
                 {filtered.map((app) => {
                     const job = jobs.find(j => j.id.toString() === app.jobId?.toString());
                     const config = STATUS_CONFIG[app.columnId] || STATUS_CONFIG.received;
+                    const isTalentPool = !app.jobId;
 
                     return (
                         <div
@@ -140,19 +141,11 @@ const MyApplications: React.FC = () => {
                             onClick={() => navigate(`/candidate/applications/${app.id}`)}
                             className="bg-card border border-border rounded-xl p-5 hover:border-primary/40 transition-all cursor-pointer flex flex-col gap-4 group"
                         >
-                            {/* Status badge + ícone */}
+                            {/* Título + badge de status na mesma linha */}
                             <div className="flex items-start justify-between gap-3">
-                                <div className="size-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                                    <Icon
-                                        icon={
-                                            job?.department?.toLowerCase().includes('design') ? 'material-symbols:draw' :
-                                            job?.department?.toLowerCase().includes('tech') ? 'material-symbols:code' :
-                                            job?.department?.toLowerCase().includes('rh') || job?.department?.toLowerCase().includes('recursos') ? 'material-symbols:groups' :
-                                            'material-symbols:work'
-                                        }
-                                        className="size-5 text-muted-foreground"
-                                    />
-                                </div>
+                                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 uppercase tracking-tight leading-tight">
+                                    {job?.title || (isTalentPool ? 'Banco de Talentos' : 'Vaga em processamento')}
+                                </h3>
                                 <span className={`inline-flex h-6 items-center gap-1.5 px-3 rounded-full text-[10px] font-semibold uppercase tracking-wide shrink-0 ${config.color}`}>
                                     {config.pulse && (
                                         <span className="relative flex size-1.5">
@@ -164,29 +157,41 @@ const MyApplications: React.FC = () => {
                                 </span>
                             </div>
 
-                            {/* Título + metadados */}
-                            <div className="flex-1 space-y-1">
-                                <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
-                                    {job?.title || 'Vaga em processamento'}
-                                </h3>
-                                <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                            {/* Tags */}
+                            <div className="flex-1 space-y-3">
+                                
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    {isTalentPool && (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary/5 text-primary text-[10px] font-bold uppercase rounded border border-primary/10">
+                                            <Icon icon="material-symbols:account-circle" className="size-3.5" />
+                                            Candidatura Espontânea
+                                        </span>
+                                    )}
                                     {job?.location && (
-                                        <span className="flex items-center gap-1">
-                                            <Icon icon="material-symbols:location-on" className="size-3" />
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-muted text-muted-foreground text-[10px] font-bold uppercase rounded">
+                                            <Icon icon="material-symbols:location-on" className="size-3.5" />
                                             {job.location}
                                         </span>
                                     )}
                                     {job?.model && (
-                                        <>
-                                            <span className="size-1 rounded-full bg-border" />
-                                            <span>{job.model}</span>
-                                        </>
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary/5 text-primary text-[10px] font-bold uppercase rounded border border-primary/10">
+                                            <Icon icon={
+                                                job.model.toLowerCase().includes('remoto') ? 'material-symbols:home-work' :
+                                                job.model.toLowerCase().includes('híbrido') ? 'material-symbols:sync-alt' :
+                                                'material-symbols:location-city'
+                                            } className="size-3.5" />
+                                            {job.model}
+                                        </span>
                                     )}
-                                    {job?.department && (
-                                        <>
-                                            <span className="size-1 rounded-full bg-border" />
-                                            <span>{job.department}</span>
-                                        </>
+                                    {job?.contract && (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-muted text-muted-foreground text-[10px] font-bold uppercase rounded">
+                                            <Icon icon={
+                                                job.contract.toLowerCase().includes('clt') ? 'material-symbols:badge' :
+                                                job.contract.toLowerCase().includes('pj') ? 'material-symbols:business-center' :
+                                                'material-symbols:description'
+                                            } className="size-3.5" />
+                                            {job.contract}
+                                        </span>
                                     )}
                                 </div>
                             </div>
@@ -198,6 +203,18 @@ const MyApplications: React.FC = () => {
                                     {config.nextStep}
                                 </p>
                             </div>
+
+                            {app.nextInterview && (
+                                <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/5 border border-blue-500/10 rounded-lg">
+                                    <Icon icon="material-symbols:calendar-today" className="size-3.5 text-blue-600" />
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] font-bold text-blue-600 uppercase tracking-tight">Próxima Entrevista</span>
+                                        <span className="text-[10px] font-semibold text-foreground">
+                                            {formatDate(app.nextInterview.date)} às {app.nextInterview.time}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
 
                             {app.applied_at && (
                                 <p className="text-[10px] text-muted-foreground/60 -mt-2">

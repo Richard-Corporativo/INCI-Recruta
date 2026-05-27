@@ -34,7 +34,7 @@ const EditRole: React.FC = () => {
         title: '',
         department: '',
         area: '',
-        level: 1,
+        level: '1', // banco é text
         mission: '',
         requirements_technical: [] as string[],
         requirements_behavioral: [] as string[],
@@ -52,10 +52,18 @@ const EditRole: React.FC = () => {
                 title: role.title || '',
                 department: role.department || '',
                 area: role.area || '',
-                level: role.level || 1,
+                level: String(role.level || '1'), // banco é text
                 mission: role.mission || '',
-                requirements_technical: typeof role.requirements_technical === 'string' ? role.requirements_technical.split('\n').filter(Boolean) : (Array.isArray(role.requirements_technical) ? role.requirements_technical : []),
-                requirements_behavioral: typeof role.requirements_behavioral === 'string' ? role.requirements_behavioral.split('\n').filter(Boolean) : (Array.isArray(role.requirements_behavioral) ? role.requirements_behavioral : []),
+                requirements_technical: Array.isArray(role.requirements_technical)
+                    ? role.requirements_technical
+                    : (typeof role.requirements_technical === 'string'
+                        ? role.requirements_technical.split('\n').filter(Boolean)
+                        : []),
+                requirements_behavioral: Array.isArray(role.requirements_behavioral)
+                    ? role.requirements_behavioral
+                    : (typeof role.requirements_behavioral === 'string'
+                        ? role.requirements_behavioral.split('\n').filter(Boolean)
+                        : []),
                 kpis: typeof role.kpis === 'string' ? role.kpis.split('\n').filter(Boolean) : (Array.isArray(role.kpis) ? role.kpis : []),
                 competencies: typeof role.competencies === 'string' ? role.competencies.split('\n').filter(Boolean) : (Array.isArray(role.competencies) ? role.competencies : []),
                 status: role.status || 'Ativo',
@@ -68,7 +76,7 @@ const EditRole: React.FC = () => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: name === 'level' ? parseInt(value) : value
+            [name]: value // level é text no banco — sem parseInt
         }));
     };
 
@@ -79,11 +87,12 @@ const EditRole: React.FC = () => {
             try {
                 await updateRole(id, {
                     ...formData,
+                    level: parseInt(formData.level) || 1,
                     status: formData.status as Role['status'],
-                    requirements_technical: formData.requirements_technical.join('\n'),
-                    requirements_behavioral: formData.requirements_behavioral.join('\n'),
-                    kpis: formData.kpis.join('\n'),
-                    competencies: formData.competencies.join('\n')
+                    requirements_technical: formData.requirements_technical,
+                    requirements_behavioral: formData.requirements_behavioral,
+                    kpis: formData.kpis,
+                    competencies: formData.competencies
                 });
 
                 // Sync with Jobs using role_id
@@ -131,9 +140,9 @@ const EditRole: React.FC = () => {
                         <button
                             onClick={handleSubmit}
                             disabled={isLoading}
-                            className="flex items-center gap-2.5 h-10 px-6 bg-primary text-primary-foreground border border-border/40 rounded-xl text-sm font-semibold /20 transition-all duration-200 ease-in-out hover:bg-primary/90 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center gap-2.5 h-10 px-6 bg-primary text-primary-foreground border border-border/40 rounded-xl text-sm font-semibold transition-all duration-200 ease-in-out hover:bg-primary/90 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Icon icon="material-symbols:{isLoading ? 'progress-activity' : 'save'}" className="text-[20px]" width="20" height="20" />
+                            <Icon icon={isLoading ? "material-symbols:progress-activity" : "material-symbols:save"} className="text-[20px]" width="20" height="20" />
                             {isLoading ? 'Salvando...' : 'Salvar Alterações'}
                         </button>
                     </div>
@@ -150,7 +159,7 @@ const EditRole: React.FC = () => {
                             {/* Section 1: Dados Cadastrais */}
                             <div className="p-6 md:p-8 transition-colors">
                                 <div className="flex items-center gap-3 mb-8">
-                                    <div className="size-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center /20 transition-all">
+                                    <div className="size-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center transition-all">
                                         <Icon icon="material-symbols:badge" className="h-5 w-5" aria-hidden="true" />
                                     </div>
                                     <h3 className="text-xl font-semibold text-foreground transition-colors uppercase tracking-tight">Dados Cadastrais</h3>
@@ -190,62 +199,52 @@ const EditRole: React.FC = () => {
 
 
 
-                            {/* Section 3: Requisitos Detalhados */}
-                            <div className="p-6 md:p-8 transition-colors">
-                                <div className="flex items-center gap-3 mb-8">
-                                    <div className="size-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center /20 transition-all">
-                                        <Icon icon="material-symbols:clinical-notes" className="h-5 w-5" aria-hidden="true" />
-                                    </div>
-                                    <h3 className="text-xl font-semibold text-foreground transition-colors uppercase tracking-tight">Requisitos e Competências</h3>
-                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="space-y-4">
-                                        <label className="text-sm font-semibold text-foreground">Requisitos Técnicos</label>
-                                        <DynamicListInput
-                                            label=""
-                                            placeholder="Ex: React, SQL, Inglês..."
-                                            items={formData.requirements_technical}
+                                        <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Requisitos e Qualificações</label>
+                                        <RequirementsSelector
+                                            selectedRequirements={formData.requirements_technical}
                                             onChange={(items) => setFormData(prev => ({ ...prev, requirements_technical: items }))}
-                                            icon="engineering"
+                                            placeholder="Ex: React, SQL, Inglês..."
                                         />
                                     </div>
+
                                     <div className="space-y-4">
-                                        <label className="text-sm font-semibold text-foreground">Competências Comportamentais e Habilidades</label>
-                                        <DynamicListInput
-                                            label=""
-                                            placeholder="Ex: Liderança, Comunicação..."
-                                            items={formData.requirements_behavioral}
-                                            onChange={(items) => setFormData(prev => ({ ...prev, requirements_behavioral: items }))}
-                                            icon="psychology"
-                                        />
-                                    </div>
-                                    <div className="space-y-4">
-                                        <label className="text-sm font-semibold text-foreground">KPIs (Indicadores de Desempenho)</label>
-                                        <DynamicListInput
-                                            label=""
-                                            placeholder="Ex: Tempo de resposta, Satisfação..."
-                                            items={formData.kpis}
-                                            onChange={(items) => setFormData(prev => ({ ...prev, kpis: items }))}
-                                            icon="insights"
-                                        />
-                                    </div>
-                                    <div className="space-y-4">
-                                        <label className="text-sm font-semibold text-foreground">Competências Obrigatórias</label>
-                                        <DynamicListInput
-                                            label=""
-                                            placeholder="Ex: Resolução de conflitos..."
-                                            items={formData.competencies}
+                                        <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Requisitos e Qualificações</label>
+                                        <RequirementsSelector
+                                            selectedRequirements={formData.competencies}
                                             onChange={(items) => setFormData(prev => ({ ...prev, competencies: items }))}
-                                            icon="stars"
+                                            placeholder="Ex: Liderança, Comunicação..."
+                                        />
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Requisitos e Qualificações</label>
+                                        <RequirementsSelector
+                                            selectedRequirements={formData.requirements_behavioral}
+                                            onChange={(items) => setFormData(prev => ({ ...prev, requirements_behavioral: items }))}
+                                            placeholder="Ex: Resolução de conflitos..."
+                                        />
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Requisitos e Qualificações</label>
+                                        <RequirementsSelector
+                                            selectedRequirements={formData.kpis}
+                                            onChange={(items) => setFormData(prev => ({ ...prev, kpis: items }))}
+                                            placeholder="Ex: Tempo de resposta, Satisfação..."
                                         />
                                     </div>
                                 </div>
-                            </div>
+
+
+
+
 
                             {/* Section 4: Missão e Responsabilidades */}
                             <div className="p-6 md:p-8 transition-colors">
                                 <div className="flex items-center gap-3 mb-8">
-                                    <div className="size-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center /20 transition-all">
+                                    <div className="size-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center transition-all">
                                         <Icon icon="material-symbols:description" className="h-5 w-5" aria-hidden="true" />
                                     </div>
                                     <h3 className="text-xl font-semibold text-foreground transition-colors uppercase tracking-tight">Missão do Cargo</h3>

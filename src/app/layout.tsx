@@ -6,6 +6,7 @@ import React from 'react';
 import type { Metadata } from 'next';
 import Providers from './providers';
 import './globals.css';
+import { Suspense } from 'react';
 
 export const metadata: Metadata = {
     title: 'INCI Recruta — Sistema de Recrutamento',
@@ -28,10 +29,12 @@ export default function RootLayout({
                 {/* <link rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v6.5.1/css/all.css" /> */}
                 <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js" async></script>
             </head>
-            <body className="font-sans antialiased">
-                <Providers>
-                    {children}
-                </Providers>
+            <body className="font-sans antialiased" suppressHydrationWarning>
+                <Suspense fallback={null}>
+                    <Providers>
+                        {children}
+                    </Providers>
+                </Suspense>
             </body>
         </html>
     );

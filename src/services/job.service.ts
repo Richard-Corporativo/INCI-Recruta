@@ -3,17 +3,17 @@
 // @component JobService | @tipo service | @versao 1.0.0
 // > CRUD de vagas e transições de workflow com auditoria
 // @api getJobs(): Job[], getJobById(id), createJob(job), updateJob(id, updates), deleteJob(id), syncJobsByRole(id, updates), transitionStatus(id, status, user)
-// @rule Transições seguem matriz: draft → pending_approval → approved → published → archived
-// @rule Apenas admin/quality podem aprovar vagas
+// @rule Transições seguem matriz: draft → published|pending_approval → published|approved → published → archived
+// @rule Apenas owner/admin/quality podem aprovar e publicar vagas
 // @calls audit.service.ts — log automático de transições
 // @references types/index.ts — Job, User
 
 // @component JobService | @tipo service | @versao 1.0.0
 // > CRUD de vagas e transições de workflow com auditoria
 // @api getJobs(): Job[], getJobById(id): Job, createJob(job): Job, updateJob(id, updates): Job, deleteJob(id): bool, syncJobsByRole(roleId, updates): void, transitionStatus(jobId, nextStatus, user): Job
-// @state workflow_status — draft → pending_approval → approved → published → archived
+// @state workflow_status — draft → published|pending_approval → published|approved → published → archived
 // @action logChange — registra auditoria em transições
-// @rule Apenas admin/quality podem aprovar vagas
+// @rule Apenas owner/admin/quality podem aprovar e publicar vagas
 // @calls src/services/audit.service.ts — log de transições
 // @references src/types/index.ts — Job, User
 
@@ -22,20 +22,54 @@ import { Job, User } from '@src/types';
 import { AuditService } from '@src/services/audit.service';
 import { getCurrentCompanyId } from '@src/lib/tenant';
 
-const normalizeJobPayload = (job: Partial<Job>): Partial<Job> => ({
-    ...job,
-    requirements: Array.isArray(job.requirements) ? job.requirements : job.requirements,
-    benefits: Array.isArray(job.benefits) ? job.benefits : job.benefits,
-});
+const JOB_APPROVER_ROLES = ['owner', 'admin', 'quality'] as const;
 
-const PUBLIC_JOB_COLUMNS = 'id, title, department, location, model, contract, seniority, urgency, created_at, registration_deadline, status, salary_min, salary_max, positions_count, requirements, experience_min, reports_to';
-const PUBLIC_JOB_COLUMNS_WITH_PCD = `${PUBLIC_JOB_COLUMNS}, is_pcd`;
+const normalizeJobPayload = (job: Partial<Job>): Partial<Job> => {
+    const normalized = { ...job };
+
+    // Converte requirements de Array para String (banco espera TEXT)
+    if (Array.isArray(normalized.requirements)) {
+        normalized.requirements = normalized.requirements.join('\n');
+    }
+
+    // Garante que benefícios e novos campos JSONB sejam enviados corretamente
+    const jsonFields: (keyof Job)[] = [
+        'benefits',
+        'requirements_technical',
+        'requirements_behavioral',
+        'kpis',
+        'competencies',
+        'sla_settings'
+    ];
+
+    jsonFields.forEach(field => {
+        if (normalized[field] !== undefined) {
+            normalized[field] = normalized[field] as any;
+        }
+    });
+
+    // Trata datas vazias para evitar erro de formato no Postgres
+    if (normalized.registration_deadline === '') {
+        delete normalized.registration_deadline;
+    }
+
+    return normalized;
+};
+
+const PUBLIC_JOB_COLUMNS = 'id, job_number, title, department, location, model, contract, seniority, urgency, created_at, registration_deadline, status, salary_min, salary_max, positions_count, requirements, experience_min, reports_to, context, mission, responsibilities, requirements_technical, requirements_behavioral, kpis, competencies, role_code, work_schedule';
 
 export const JobService = {
     async getJobs(): Promise<Job[]> {
+        const companyId = await getCurrentCompanyId();
+        if (!companyId) {
+            console.warn('[JobService] getJobs: sem company_id — retornando lista vazia.');
+            return [];
+        }
+
         const { data, error } = await supabase
             .from('jobs')
             .select('*')
+            .eq('company_id', companyId)
             .order('created_at', { ascending: false });
 
         if (error) {
@@ -51,43 +85,30 @@ export const JobService = {
      * Inclui campos enriquecidos quando o schema real já tiver essas colunas.
      */
     async getPublicJobs(): Promise<Job[]> {
-        const fullSelect = 'id, title, department, location, model, contract, seniority, urgency, created_at, registration_deadline, status, salary_min, salary_max, requirements, experience_min, reports_to, company_id, company:companies!inner(slug, status)';
-        const basicSelect = 'id, title, department, location, model, contract, seniority, status, created_at, reports_to, company_id, company:companies!inner(slug, status)';
+        const fullSelect = `${PUBLIC_JOB_COLUMNS}, company_id, company:companies!inner(name, slug, status)`;
 
-        const mapResults = (rows: any[]): Job[] =>
-            rows
-                .filter(r => r.company?.status === 'active')
-                .map(({ company, ...rest }) => ({ ...rest, company_slug: company?.slug })) as Job[];
-
-        let { data, error } = await supabase
+        const today = new Date().toISOString();
+        const { data, error } = await supabase
             .from('jobs')
             .select(fullSelect)
             .eq('status', 'Ativa')
+            .in('company.status', ['active', 'trial'])
+            .or(`registration_deadline.is.null,registration_deadline.gte.${today}`)
             .order('created_at', { ascending: false });
 
-        // Se falhar (ex: coluna inexistente), tenta o fallback com colunas básicas
         if (error) {
-            console.warn('[JobService] Erro na consulta completa de vagas (possível schema desatualizado), tentando fallback básico:', error.message);
-            const retry = await supabase
-                .from('jobs')
-                .select(basicSelect)
-                .eq('status', 'Ativa')
-                .order('created_at', { ascending: false });
-
-            if (retry.error) {
-                console.error('[JobService] Erro crítico ao buscar vagas públicas:', retry.error);
-                return [];
-            }
-
-            return mapResults(retry.data ?? []);
-        }
-
-        if (error) {
-            console.error('[JobService] Erro crítico ao buscar vagas públicas:', error);
+            console.error('[JobService] Erro ao buscar vagas públicas:', error);
             return [];
         }
 
-        return mapResults(data ?? []);
+        const results = (data ?? []).map((job: any) => ({ 
+            ...job, 
+            company_slug: Array.isArray(job.company) ? job.company[0]?.slug : job.company?.slug,
+            company_name: Array.isArray(job.company) ? job.company[0]?.name : job.company?.name
+        })) as Job[];
+
+        console.log(`[JobService] getPublicJobs retornou ${results.length} vagas.`);
+        return results;
     },
 
 
@@ -100,18 +121,20 @@ export const JobService = {
             .from('companies')
             .select('id')
             .eq('slug', slug)
-            .eq('status', 'active')
+            .in('status', ['active', 'trial'])
             .maybeSingle();
 
         if (companyError || !company) {
             return [];
         }
 
+        const today = new Date().toISOString();
         const { data, error } = await supabase
             .from('jobs')
-            .select('*')
+            .select(`${PUBLIC_JOB_COLUMNS}, company_id, company:companies(name, slug, status)`)
             .eq('company_id', company.id)
             .eq('status', 'Ativa')
+            .or(`registration_deadline.is.null,registration_deadline.gte.${today}`)
             .order('created_at', { ascending: false });
 
         if (error) {
@@ -119,7 +142,11 @@ export const JobService = {
             return [];
         }
 
-        return (data ?? []) as Job[];
+        return (data || []).map((job: any) => ({
+            ...job,
+            company_slug: Array.isArray(job.company) ? job.company[0]?.slug : job.company?.slug,
+            company_name: Array.isArray(job.company) ? job.company[0]?.name : job.company?.name
+        })) as Job[];
     },
 
     /**
@@ -129,20 +156,24 @@ export const JobService = {
     async getPublicJobByIdInCompany(slug: string, jobId: string): Promise<Job | null> {
         const { data, error } = await supabase
             .from('jobs')
-            .select('*, company:companies!inner(slug, status)')
+            .select(`*, company:companies(name, slug, status)`)
             .eq('id', jobId)
             .eq('status', 'Ativa')
             .maybeSingle();
 
         if (error || !data) return null;
 
-        const company = (data as any).company;
-        if (!company || company.slug !== slug || company.status !== 'active') {
-            return null;
-        }
+        const job = data as any;
+        if (job.company?.slug !== slug) return null;
 
-        const { company: _drop, ...job } = data as any;
-        return job as Job;
+        const companyStatus = Array.isArray(job.company) ? job.company[0]?.status : job.company?.status;
+        if (!companyStatus || !['active', 'trial'].includes(companyStatus)) return null;
+
+        return {
+            ...job,
+            company_slug: Array.isArray(job.company) ? job.company[0]?.slug : job.company?.slug,
+            company_name: Array.isArray(job.company) ? job.company[0]?.name : job.company?.name
+        } as Job;
     },
 
     /**
@@ -194,7 +225,7 @@ export const JobService = {
         }
 
         if (data) {
-            await AuditService.logChange('JOB', data.id, `Vaga criada: ${data.title}`, null, data);
+            await AuditService.logChange('JOB', data.id, `Vaga criada: ${data.title}`, null, data, 'job_management', data.id);
         }
 
         return data as Job;
@@ -233,7 +264,9 @@ export const JobService = {
         }
 
         if (data) {
-            await AuditService.logChange('JOB', id, `Vaga atualizada`, null, updatesWithRevision);
+            void AuditService.logChange('JOB', id, `Vaga atualizada`, null, updatesWithRevision, 'job_management', id).catch((auditError) => {
+                console.warn('[JobService] Auditoria de atualização não bloqueante falhou:', auditError);
+            });
         }
 
         return data as Job;
@@ -250,14 +283,21 @@ export const JobService = {
             return false;
         }
 
-        await AuditService.logChange('JOB', id, `Vaga excluída`, { id }, null);
+        await AuditService.logChange('JOB', id, `Vaga excluída`, { id }, null, 'job_management', id);
         return true;
     },
     async syncJobsByRole(roleId: string, updates: Partial<Job>): Promise<void> {
+        const companyId = await getCurrentCompanyId();
+        if (!companyId) {
+            console.warn('[JobService] syncJobsByRole: sem company_id — operação ignorada.');
+            return;
+        }
+
         const { error } = await supabase
             .from('jobs')
             .update(updates)
-            .eq('role_id', roleId);
+            .eq('role_id', roleId)
+            .eq('company_id', companyId);
 
         if (error) {
             console.error('Error syncing jobs with role:', error);
@@ -275,8 +315,8 @@ export const JobService = {
         const currentStatus = currentJob.workflow_status || 'draft';
 
         const allowedTransitions: Record<string, string[]> = {
-            'draft': ['pending_approval', 'archived'],
-            'pending_approval': ['approved', 'draft', 'archived'],
+            'draft': ['published', 'pending_approval', 'archived'],
+            'pending_approval': ['published', 'approved', 'draft', 'archived'],
             'approved': ['published', 'archived'],
             'published': ['archived'],
             'archived': ['draft']
@@ -286,10 +326,10 @@ export const JobService = {
             throw new Error(`Transition from ${currentStatus} to ${nextStatus} not allowed.`);
         }
 
-        const isAdmin = ['admin', 'quality'].includes(user.role);
+        const canApproveJob = JOB_APPROVER_ROLES.includes(user.role as typeof JOB_APPROVER_ROLES[number]);
 
-        if (nextStatus === 'approved' && !isAdmin) {
-            throw new Error('Only Admin or Quality users can approve jobs.');
+        if ((nextStatus === 'approved' || nextStatus === 'published') && !canApproveJob) {
+            throw new Error('Apenas Owner, Admin ou Qualidade podem aprovar e publicar vagas.');
         }
 
         const updates: Partial<Job> = { workflow_status: nextStatus };
@@ -308,19 +348,50 @@ export const JobService = {
             updates.approval_status = 'Rascunho';
         }
 
-        const updatedJob = await this.updateJob(jobId, updates);
+        const updatesWithRevision = normalizeJobPayload({
+            ...updates,
+            revision: (currentJob.revision ?? 0) + 1
+        });
+
+        let { data: updatedJob, error } = await supabase
+            .from('jobs')
+            .update(updatesWithRevision)
+            .eq('id', jobId)
+            .select()
+            .single();
+
+        if (error?.code === 'PGRST204' && error.message.includes("'revision'")) {
+            const { revision: _revision, ...updatesWithoutRevision } = updatesWithRevision;
+            const retry = await supabase
+                .from('jobs')
+                .update(updatesWithoutRevision)
+                .eq('id', jobId)
+                .select()
+                .single();
+
+            updatedJob = retry.data;
+            error = retry.error;
+        }
+
+        if (error) {
+            console.error(`Error transitioning job ${jobId}:`, error);
+            throw error;
+        }
 
         if (updatedJob) {
-            await AuditService.logChange(
-                'job',
+            void AuditService.logChange(
+                'JOB',
                 jobId,
                 `Workflow Transition: ${currentStatus} -> ${nextStatus}`,
                 currentJob,
                 updatedJob,
-                'job_management'
-            );
+                'job_management',
+                jobId
+            ).catch((auditError) => {
+                console.warn('[JobService] Auditoria de workflow não bloqueante falhou:', auditError);
+            });
         }
 
-        return updatedJob;
+        return updatedJob as Job | null;
     }
 };

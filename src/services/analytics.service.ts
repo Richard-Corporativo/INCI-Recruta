@@ -52,7 +52,9 @@ class AnalyticsService {
     jobId?: string
   ) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Usa getSession que é mais rápido (lê do storage) do que getUser (valida no servidor)
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
 
       const effectiveJobId = jobId || metadata.job_id || null;
       let companyId: string | null = null;
@@ -77,7 +79,12 @@ class AnalyticsService {
       });
 
       if (error) {
-        console.error('Error tracking event:', error);
+        console.error('Error tracking event:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
       }
     } catch (err) {
       console.error('Analytics error:', err);

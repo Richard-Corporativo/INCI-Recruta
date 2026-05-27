@@ -87,7 +87,7 @@ const DashboardPage: React.FC = () => {
   }, [candidates, jobsMap, filters, user?.id]);
 
   const stats = React.useMemo(() => {
-    const hired = candidates.filter(c => c.columnId === 'hired' && c.applied_at && c.hired_at);
+    const hired = filteredCandidates.filter(c => c.columnId === 'hired' && c.applied_at && c.hired_at);
     let avg = 0;
     if (hired.length > 0) {
       const totalDays = hired.reduce((acc, c) => {
@@ -103,7 +103,7 @@ const DashboardPage: React.FC = () => {
       delayedJobs: filteredJobs.filter(j => j.urgency === 'Alta' && j.status === 'Ativa').length,
       avgTime: avg
     };
-  }, [filteredJobs, filteredCandidates, candidates]);
+  }, [filteredJobs, filteredCandidates]);
 
   const priorities = React.useMemo(() => {
     return candidates

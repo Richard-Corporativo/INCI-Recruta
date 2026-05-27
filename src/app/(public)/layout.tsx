@@ -1,5 +1,6 @@
 // @component PublicLayout | @tipo layout | @versao 1.0.0
 // > Layout de rotas públicas — sem proteção, wrapper genérico
+// Rebuild triggered to fix 404 chunk issue.
 
 /**
  * Public routes layout — (public)
@@ -13,11 +14,16 @@
  */
 
 import PublicLayout from '@src/layouts/PublicLayout';
+import { Suspense } from 'react';
 
 export default function AppPublicLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    return <PublicLayout>{children}</PublicLayout>;
+    return (
+        <Suspense fallback={null}>
+            <PublicLayout>{children}</PublicLayout>
+        </Suspense>
+    );
 }

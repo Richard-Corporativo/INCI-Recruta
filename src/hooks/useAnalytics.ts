@@ -19,8 +19,6 @@ export function useCompanyJobAnalytics() {
   useEffect(() => {
     fetchStats();
 
-    const fallbackInterval = window.setInterval(fetchStats, 30000);
-
     const channel = supabase
       .channel('company-job-analytics')
       .on(
@@ -36,7 +34,6 @@ export function useCompanyJobAnalytics() {
       .subscribe();
 
     return () => {
-      window.clearInterval(fallbackInterval);
       supabase.removeChannel(channel);
     };
   }, [fetchStats]);
