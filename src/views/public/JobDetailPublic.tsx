@@ -7,17 +7,22 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from '@src/lib/router-compat';
 import { JobService } from '@src/services/job.service';
+import { CandidateService } from '@src/services/candidate.service';
+import { useAuth } from '@src/context/AuthContext';
 import { Icon } from "@iconify/react";
 import { analyticsService } from '@src/services/analytics.service';
 import { formatDate } from '@src/lib/formatters';
 
-import { mapJobToDetail } from '@src/lib/job-helpers';
+import { mapJobToDetail, getBenefitColorClass } from '@src/lib/job-helpers';
 
 const JobDetailPublic: React.FC = () => {
     const navigate = useNavigate();
     const { slug, id } = useParams() as { slug?: string; id?: string };
+    const { user, isLoading: isAuthLoading } = useAuth();
     const [job, setJob] = useState<any | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [hasApplied, setHasApplied] = useState(false);
+    const [isCheckingApplication, setIsCheckingApplication] = useState(false);
 
     const handleApply = () => {
         if (id) analyticsService.trackApplicationStart(id);
@@ -51,6 +56,29 @@ const JobDetailPublic: React.FC = () => {
         fetchJob();
     }, [id, slug]);
 
+    useEffect(() => {
+        const checkApplication = async () => {
+            if (!user?.id || !id) {
+                setHasApplied(false);
+                setIsCheckingApplication(false);
+                return;
+            }
+            setIsCheckingApplication(true);
+            try {
+                const applied = await CandidateService.hasApplied(user.id, id);
+                setHasApplied(applied);
+            } catch (error) {
+                console.error('[JobDetailPublic] Error checking application status:', error);
+                setHasApplied(false);
+            } finally {
+                setIsCheckingApplication(false);
+            }
+        };
+        checkApplication();
+    }, [user?.id, id]);
+
+
+    const isButtonLoading = isAuthLoading || isCheckingApplication;
 
     if (isLoading) return <div className="h-screen flex items-center justify-center bg-[#FAFAFA] text-[var(--foreground)] font-semibold uppercase tracking-widest text-[10px]">Carregando detalhes da oportunidade...</div>;
     if (!job) return (
@@ -111,21 +139,80 @@ const JobDetailPublic: React.FC = () => {
                                 </p>
                             </section>
 
-                            {/* Requirements */}
-                            <section className="space-y-8">
-                                <div className="flex items-center gap-4">
-                                    <h3 className="text-[12px] font-semibold text-[var(--foreground)] uppercase tracking-widest">Requisitos</h3>
-                                    <div className="h-px flex-1 bg-border/60" />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {job.requirements.map((req: string, i: number) => (
-                                        <div key={i} className="flex items-start gap-4 p-5 border border-border rounded-xl bg-muted/20 hover:bg-muted/30 transition-colors">
-                                            <Icon icon="material-symbols:check-circle" className="text-primary size-5 mt-0.5" />
-                                            <span className="text-[13px] font-semibold text-[var(--foreground)]/80 leading-tight">{req}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </section>
+                             {/* Requirements - Technical */}
+                             {job.requirements_technical && job.requirements_technical.length > 0 && (
+                                <section className="space-y-8">
+                                    <div className="flex items-center gap-4">
+                                        <h3 className="text-[12px] font-semibold text-[var(--foreground)] uppercase tracking-widest">Requisitos Necessários</h3>
+                                        <div className="h-px flex-1 bg-border/60" />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {job.requirements_technical.map((req: string, i: number) => (
+                                            <div key={i} className="flex items-start gap-4 p-5 border border-border rounded-xl bg-muted/20 hover:bg-muted/30 transition-colors">
+                                                <Icon icon="material-symbols:check-circle" className="text-primary size-5 mt-0.5" />
+                                                <span className="text-[13px] font-semibold text-[var(--foreground)]/80 leading-tight">{req}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                             )}
+
+                             {/* Competencies */}
+                             {job.competencies && job.competencies.length > 0 && (
+                                <section className="space-y-8">
+                                    <div className="flex items-center gap-4">
+                                        <h3 className="text-[12px] font-semibold text-[var(--foreground)] uppercase tracking-widest">Competências Comportamentais e Habilidades</h3>
+                                        <div className="h-px flex-1 bg-border/60" />
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {job.competencies.map((comp: string, i: number) => (
+                                            <div key={i} className="flex items-center gap-4 p-5 border border-border rounded-xl bg-muted/10">
+                                                <Icon icon="material-symbols:psychology" className="text-primary size-5" />
+                                                <span className="text-[13px] font-semibold text-[var(--foreground)]/80 leading-tight">{comp}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                             )}
+
+                             {/* Requirements - Behavioral */}
+                             {job.requirements_behavioral && job.requirements_behavioral.length > 0 && (
+                                <section className="space-y-8">
+                                    <div className="flex items-center gap-4">
+                                        <h3 className="text-[12px] font-semibold text-[var(--foreground)] uppercase tracking-widest">Requisitos Desejáveis</h3>
+                                        <div className="h-px flex-1 bg-border/60" />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {job.requirements_behavioral.map((req: string, i: number) => (
+                                            <div key={i} className="flex items-start gap-4 p-5 border border-border rounded-xl bg-muted/5">
+                                                <Icon icon="material-symbols:verified" className="text-primary/60 size-5 mt-0.5" />
+                                                <span className="text-[13px] font-semibold text-[var(--foreground)]/70 leading-tight">{req}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                             )}
+
+                             {/* KPIs */}
+                             {job.kpis && job.kpis.length > 0 && (
+                                <section className="space-y-8">
+                                    <div className="flex items-center gap-4">
+                                        <h3 className="text-[12px] font-semibold text-[var(--foreground)] uppercase tracking-widest">Indicadores de Desempenho (KPIs)</h3>
+                                        <div className="h-px flex-1 bg-border/60" />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {job.kpis.map((kpi: string, i: number) => (
+                                            <div key={i} className="flex flex-col gap-2 p-6 border border-border rounded-2xl bg-primary/5">
+                                                <div className="flex items-center gap-2">
+                                                    <Icon icon="material-symbols:monitoring" className="text-primary size-4" />
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60">Indicador</span>
+                                                </div>
+                                                <span className="text-[14px] font-bold text-[var(--foreground)] leading-tight">{kpi}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                             )}
 
                             {/* Responsibilities */}
                             <section className="space-y-8">
@@ -154,13 +241,25 @@ const JobDetailPublic: React.FC = () => {
                             </div>
 
                             <div className="space-y-4">
-                                <button
-                                    onClick={handleApply}
-                                    className="w-full h-14 bg-white text-primary font-semibold text-[11px] uppercase tracking-widest rounded-xl transition-all hover:bg-white/90 active:scale-95 flex items-center justify-center gap-2"
-                                >
-                                    Candidatar-se agora
-                                    <Icon icon="material-symbols:arrow-forward" className="size-5" />
-                                </button>
+                                {isButtonLoading ? (
+                                    <div className="w-full h-14 bg-white/10 text-white/40 font-semibold text-[11px] uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 border border-white/20 cursor-default">
+                                        <Icon icon="material-symbols:hourglass-empty" className="size-5 animate-spin" />
+                                        Verificando...
+                                    </div>
+                                ) : hasApplied ? (
+                                    <div className="w-full h-14 bg-white/20 text-white font-semibold text-[11px] uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 border border-white/30">
+                                        <Icon icon="material-symbols:check-circle" className="size-5" />
+                                        Candidatura enviada
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={handleApply}
+                                        className="w-full h-14 bg-white text-primary font-semibold text-[11px] uppercase tracking-widest rounded-xl transition-all hover:bg-white/90 active:scale-95 flex items-center justify-center gap-2"
+                                    >
+                                        Candidatar-se agora
+                                        <Icon icon="material-symbols:arrow-forward" className="size-5" />
+                                    </button>
+                                )}
                                 <button onClick={handleShare} className="w-full h-14 bg-white/5 border border-white/20 text-white font-semibold text-[10px] uppercase tracking-widest rounded-xl transition-all hover:bg-white/10 active:scale-95 flex items-center justify-center gap-2">
                                     <Icon icon="material-symbols:share" className="size-4" />
                                     Compartilhar vaga
@@ -186,14 +285,17 @@ const JobDetailPublic: React.FC = () => {
                             <div className="bg-card border border-border p-8 rounded-2xl space-y-6">
                                 <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">Benefícios</h4>
                                 <div className="grid grid-cols-1 gap-4">
-                                    {job.benefits.slice(0, 5).map((benefit: any, i: number) => (
-                                        <div key={i} className="flex items-center gap-4 text-[11px] font-semibold text-[var(--foreground)] uppercase tracking-wide">
-                                            <div className="size-10 bg-muted/30 border border-border flex items-center justify-center rounded-lg">
-                                                <Icon icon={`material-symbols:${benefit.icon}`} className="size-5 text-primary/70" />
+                                     {job.benefits.slice(0, 10).map((benefit: any, i: number) => {
+                                        const colorClass = getBenefitColorClass(benefit.colorId);
+                                        return (
+                                            <div key={i} className="flex items-center gap-4 text-[11px] font-semibold text-[var(--foreground)] uppercase tracking-wide">
+                                                <div className={`size-10 flex items-center justify-center rounded-lg border ${colorClass}`}>
+                                                    <Icon icon={benefit.icon.includes(':') ? benefit.icon : `material-symbols:${benefit.icon}`} className="size-5" />
+                                                </div>
+                                                {benefit.title}
                                             </div>
-                                            {benefit.title}
-                                        </div>
-                                    ))}
+                                        );
+                                     })}
                                 </div>
                             </div>
                         )}
@@ -203,13 +305,25 @@ const JobDetailPublic: React.FC = () => {
 
             {/* Mobile Actions */}
             <div className="lg:hidden fixed bottom-0 left-0 w-full bg-white border-t border-border p-6 z-[60]">
-                <button
-                    onClick={handleApply}
-                    className="w-full h-14 bg-primary text-white font-semibold text-[11px] uppercase tracking-widest rounded-xl flex items-center justify-center gap-2"
-                >
-                    Candidatar-se agora
-                    <Icon icon="material-symbols:arrow-forward" className="size-5" />
-                </button>
+                {isButtonLoading ? (
+                    <div className="w-full h-14 bg-muted text-muted-foreground font-semibold text-[11px] uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 border border-border cursor-default">
+                        <Icon icon="material-symbols:hourglass-empty" className="size-5 animate-spin" />
+                        Verificando...
+                    </div>
+                ) : hasApplied ? (
+                    <div className="w-full h-14 bg-muted text-foreground font-semibold text-[11px] uppercase tracking-widest rounded-xl flex items-center justify-center gap-2 border border-border">
+                        <Icon icon="material-symbols:check-circle" className="size-5" />
+                        Candidatura enviada
+                    </div>
+                ) : (
+                    <button
+                        onClick={handleApply}
+                        className="w-full h-14 bg-primary text-white font-semibold text-[11px] uppercase tracking-widest rounded-xl flex items-center justify-center gap-2"
+                    >
+                        Candidatar-se agora
+                        <Icon icon="material-symbols:arrow-forward" className="size-5" />
+                    </button>
+                )}
             </div>
         </main>
     );
