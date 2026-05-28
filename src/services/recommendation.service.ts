@@ -91,7 +91,7 @@ export const RecommendationService = {
      */
     async getRecentJobs(companyId?: string | null, limit = 3, excludeUserApplicationsId?: string): Promise<RecommendedJob[]> {
         try {
-            const today = new Date().toISOString();
+            const today = new Date().toISOString().split('T')[0];
             let query = supabase
                 .from('jobs')
                 .select('id, title, department, location, model, contract, seniority, salary_min, salary_max, urgency, created_at, registration_deadline, company_id, experience_min, work_schedule')
