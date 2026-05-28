@@ -123,7 +123,30 @@ export const CandidateService = {
             return [];
         }
 
-        return (data || []).map(mapDbToCandidate);
+        const rows = data || [];
+        const userIds = [...new Set(rows.map((r: any) => r.user_id).filter(Boolean))];
+
+        if (userIds.length > 0) {
+            const { data: profiles } = await supabase
+                .from('candidates')
+                .select('user_id, summary, skills, experience, education')
+                .in('user_id', userIds)
+                .is('job_id', null);
+
+            if (profiles && profiles.length > 0) {
+                const profileMap = new Map(profiles.map((p: any) => [p.user_id, p]));
+                rows.forEach((row: any) => {
+                    const profile = profileMap.get(row.user_id) as any;
+                    if (!profile) return;
+                    if (!row.summary) row.summary = profile.summary;
+                    if (!row.skills) row.skills = profile.skills;
+                    if (!row.experience) row.experience = profile.experience;
+                    if (!row.education) row.education = profile.education;
+                });
+            }
+        }
+
+        return rows.map(mapDbToCandidate);
     },
 
     async getJobForecast(jobId: string) {
