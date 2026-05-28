@@ -87,7 +87,7 @@ export const JobService = {
     async getPublicJobs(): Promise<Job[]> {
         const fullSelect = `${PUBLIC_JOB_COLUMNS}, company_id, company:companies!inner(name, slug, status)`;
 
-        const today = new Date().toISOString();
+        const today = new Date().toISOString().split('T')[0];
         const { data, error } = await supabase
             .from('jobs')
             .select(fullSelect)
@@ -128,7 +128,7 @@ export const JobService = {
             return [];
         }
 
-        const today = new Date().toISOString();
+        const today = new Date().toISOString().split('T')[0];
         const { data, error } = await supabase
             .from('jobs')
             .select(`${PUBLIC_JOB_COLUMNS}, company_id, company:companies(name, slug, status)`)
