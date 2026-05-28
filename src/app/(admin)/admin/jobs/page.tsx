@@ -12,7 +12,7 @@ import { useCandidates } from '@src/hooks/useCandidates';
 import { useUsers } from '@src/hooks/useUsers';
 import { useDebounce } from '@src/hooks/useDebounce';
 import { useQuickView } from '@src/context/QuickViewContext';
-import { formatDate, formatJobId } from '@src/lib/formatters';
+import { formatDate, formatJobId, isExpiredDate } from '@src/lib/formatters';
 import { Job } from '@src/types';
 
 // Mapeamento workflow_status → exibição (sobrepõe status legado quando relevante)
@@ -162,7 +162,7 @@ const JobsPage: React.FC = () => {
                         const jobCandidatesCount = candidates.filter(c => c.jobId?.toString() === job.id.toString()).length;
                         const workflowBadge = job.workflow_status ? WORKFLOW_LABELS[job.workflow_status] : null;
                         const workflowAction = getWorkflowAction(job, canApprove);
-                        const isExpired = !!job.registration_deadline && new Date(job.registration_deadline) < new Date();
+                        const isExpired = isExpiredDate(job.registration_deadline);
                         return (
                             <div key={job.id} role="listitem" onClick={() => router.push(`/admin/jobs/${job.id}/kanban`)}
                                 className="bg-card border border-border rounded-2xl p-5 hover:bg-muted transition-colors cursor-pointer flex flex-col gap-3 group"
