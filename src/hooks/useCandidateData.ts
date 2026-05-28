@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@src/lib/supabase';
 import { CandidateService } from '@src/services/candidate.service';
-import { Job, Candidate } from '@src/types';
+import { Job, Candidate, Interview } from '@src/types';
 
 import { useAuth } from '@src/context/AuthContext';
 
@@ -73,6 +73,26 @@ export const useCandidateData = () => {
 
             if (applicationsError) throw applicationsError;
 
+            // Buscar entrevistas para todas as candidaturas deste usuário
+            const appIds = (applicationRows || []).map(a => a.id).filter(Boolean);
+            let interviewsByAppId = new Map<string, Interview[]>();
+
+            if (appIds.length > 0) {
+                const { data: interviewRows } = await supabase
+                    .from('interviews')
+                    .select('id, candidate_id, job_id, title, type, starts_at, status')
+                    .in('candidate_id', appIds)
+                    .in('status', ['scheduled', 'rescheduled']);
+
+                if (interviewRows) {
+                    interviewRows.forEach(iv => {
+                        const key = iv.candidate_id as string;
+                        if (!interviewsByAppId.has(key)) interviewsByAppId.set(key, []);
+                        interviewsByAppId.get(key)!.push(iv as Interview);
+                    });
+                }
+            }
+
             if (baseProfile) {
                 const profile = baseProfile;
 
@@ -111,11 +131,33 @@ export const useCandidateData = () => {
                 setCurrentCandidate(fallbackProfile as Candidate);
             }
 
-            const mappedApplications = (applicationRows || []).map(app => ({
-                ...app,
-                jobId: app.job_id,
-                columnId: app.column_id || 'received'
-            }));
+            const now = new Date().toISOString();
+
+            const mappedApplications = (applicationRows || []).map(app => {
+                const appInterviews = interviewsByAppId.get(app.id as string) || [];
+                const future = appInterviews
+                    .filter(iv => iv.starts_at > now)
+                    .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+
+                const next = future[0];
+                const nextInterview = next
+                    ? {
+                          type: next.type || 'Entrevista',
+                          date: new Date(next.starts_at).toLocaleDateString('pt-BR'),
+                          time: new Date(next.starts_at).toLocaleTimeString('pt-BR', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                          }),
+                      }
+                    : undefined;
+
+                return {
+                    ...app,
+                    jobId: app.job_id,
+                    columnId: app.column_id || 'received',
+                    nextInterview,
+                };
+            });
 
             setMyApplications(mappedApplications as unknown as Candidate[]);
 
