@@ -421,14 +421,6 @@ export const CandidateService = {
             availability: candidate.availability || null
         };
 
-        // Verificar candidatura duplicada antes de inserir
-        if (dbPayload.user_id && dbPayload.job_id) {
-            const alreadyApplied = await CandidateService.hasApplied(dbPayload.user_id as string, dbPayload.job_id as string);
-            if (alreadyApplied) {
-                throw new Error('Você já se candidatou a esta vaga.');
-            }
-        }
-
         const { data, error } = await supabase
             .from('candidates')
             .insert([dbPayload])

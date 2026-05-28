@@ -228,16 +228,6 @@ const JobApplication: React.FC = () => {
                 return;
             }
 
-            // Double-check antes de submeter
-            if (!isTalentPool && user.id && id) {
-                const alreadyApplied = await CandidateService.hasApplied(user.id, id);
-                if (alreadyApplied) {
-                    error('Você já se candidatou a esta vaga. Redirecionando...');
-                    setTimeout(() => navigate(`/vagas/${slug}/${id}`), 1000);
-                    setIsSubmitting(false);
-                    return;
-                }
-            }
 
             const newCandidate: Omit<Candidate, 'id'> = {
                 jobId: isTalentPool ? undefined : id,
