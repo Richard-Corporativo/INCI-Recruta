@@ -13,13 +13,13 @@ import { CandidateService } from '@src/services/candidate.service';
 import { Icon } from "@iconify/react";
 import { formatDate } from '@src/lib/formatters';
 import { useAuth } from '@src/hooks/useAuth';
-import { useNotifications } from '@src/hooks/useNotifications';
+import { useNotificationsContext } from '@src/context/NotificationsContext';
 import { NotificationService } from '@src/services/notification.service';
 
 const ApplicationDetail: React.FC = () => {
     const { id } = useParams();
     const { user } = useAuth();
-    const { notifications } = useNotifications();
+    const { notifications } = useNotificationsContext();
     const navigate = useNavigate();
     const { myApplications, jobs, isLoading, refreshData } = useCandidateData();
     const { success: toastSuccess, error: toastError } = useToast();
@@ -37,7 +37,7 @@ const ApplicationDetail: React.FC = () => {
     );
 
     const jobNotifications = useMemo(
-        () => notifications.filter(n => n.job_id === app?.jobId),
+        () => notifications.filter(n => n.job_id != null && n.job_id.toString() === app?.jobId?.toString()),
         [notifications, app?.jobId]
     );
 
@@ -49,8 +49,10 @@ const ApplicationDetail: React.FC = () => {
 
     useEffect(() => {
         if (!user?.id || !app?.jobId) return;
+        const hasUnread = notifications.some(n => n.job_id != null && n.job_id.toString() === app.jobId?.toString() && !n.read);
+        if (!hasUnread) return;
         NotificationService.markReadByJob(user.id, app.jobId.toString());
-    }, [user?.id, app?.jobId]);
+    }, [user?.id, app?.jobId, notifications]);
 
     const stageFromInterviewType: Record<string, string> = {
         'Entrevista RH': 'hr_interview',

@@ -3,7 +3,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useNavigate } from '@src/lib/router-compat';
 import { cn } from '@src/lib/utils';
-import { useNotifications } from '@src/hooks/useNotifications';
+import { useNotificationsContext } from '@src/context/NotificationsContext';
 
 const TYPE_LABEL: Record<string, string> = {
     interview_scheduled: 'Entrevista agendada',
@@ -22,7 +22,7 @@ function formatRelative(dateStr: string): string {
 }
 
 export function NotificationBell() {
-    const { notifications, unreadCount, markRead, markAllRead, isLoading } = useNotifications();
+    const { notifications, unreadCount, markRead, markAllRead, isLoading } = useNotificationsContext();
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();

@@ -12,6 +12,7 @@ import { useAuth } from '@src/context/AuthContext';
 import { Icon } from "@iconify/react";
 import { cn } from '@src/lib/utils';
 import { NotificationBell } from '@src/components/candidate/NotificationBell';
+import { NotificationsProvider } from '@src/context/NotificationsContext';
 
 const CandidateLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     const navigate = useNavigate();
@@ -49,6 +50,7 @@ const CandidateLayout: React.FC<{ children?: React.ReactNode }> = ({ children })
     ];
 
     return (
+        <NotificationsProvider>
         <div className="flex h-screen w-full overflow-hidden bg-background transition-colors duration-150">
             {/* Desktop Sidebar — colapsável */}
             <aside
@@ -238,6 +240,7 @@ const CandidateLayout: React.FC<{ children?: React.ReactNode }> = ({ children })
 
             <style>{`.pb-safe-area { padding-bottom: env(safe-area-inset-bottom); }`}</style>
         </div>
+        </NotificationsProvider>
     );
 };
 
