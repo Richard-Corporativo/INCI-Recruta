@@ -7,6 +7,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from '@src/lib/router-compat';
 import { useCandidateData } from '@src/hooks/useCandidateData';
+import { useNotifications } from '@src/hooks/useNotifications';
 import { Icon } from "@iconify/react";
 import { formatDate } from '@src/lib/formatters';
 
@@ -43,6 +44,7 @@ const MyApplications: React.FC = () => {
     const navigate = useNavigate();
     const { myApplications, jobs, isLoading } = useCandidateData();
     const [activeTab, setActiveTab] = useState<Tab>('todas');
+    const { notifications } = useNotifications();
 
     const counts = useMemo(() => {
         const c: Record<Tab, number> = { todas: 0, inscrita: 0, entrevista: 0, finalizada: 0, arquivada: 0 };
@@ -139,8 +141,11 @@ const MyApplications: React.FC = () => {
                             key={app.id}
                             role="listitem"
                             onClick={() => navigate(`/candidate/applications/${app.id}`)}
-                            className="bg-card border border-border rounded-xl p-5 hover:border-primary/40 transition-all cursor-pointer flex flex-col gap-4 group"
+                            className="relative bg-card border border-border rounded-xl p-5 hover:border-primary/40 transition-all cursor-pointer flex flex-col gap-4 group"
                         >
+                            {notifications.some(n => n.job_id === app.jobId && !n.read) && (
+                                <span className="absolute top-3 right-3 size-2.5 rounded-full bg-red-500 ring-2 ring-card" />
+                            )}
                             {/* Título + badge de status na mesma linha */}
                             <div className="flex items-start justify-between gap-3">
                                 <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors line-clamp-2 uppercase tracking-tight leading-tight">
