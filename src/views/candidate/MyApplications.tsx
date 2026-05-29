@@ -144,7 +144,7 @@ const MyApplications: React.FC = () => {
                             className="relative bg-card border border-border rounded-xl p-5 hover:border-primary/40 transition-all cursor-pointer flex flex-col gap-4 group"
                         >
                             {notifications.some(n => n.job_id === app.jobId && !n.read) && (
-                                <span className="absolute top-3 right-3 size-2.5 rounded-full bg-red-500 ring-2 ring-card" />
+                                <span className="absolute top-3 right-3 size-2.5 rounded-full bg-destructive ring-2 ring-card" />
                             )}
                             {/* Título + badge de status na mesma linha */}
                             <div className="flex items-start justify-between gap-3">
