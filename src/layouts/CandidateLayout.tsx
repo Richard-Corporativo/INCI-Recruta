@@ -11,6 +11,7 @@ import TermsModal from '@src/components/public/TermsModal';
 import { useAuth } from '@src/context/AuthContext';
 import { Icon } from "@iconify/react";
 import { cn } from '@src/lib/utils';
+import { NotificationBell } from '@src/components/candidate/NotificationBell';
 
 const CandidateLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     const navigate = useNavigate();
@@ -171,6 +172,7 @@ const CandidateLayout: React.FC<{ children?: React.ReactNode }> = ({ children })
                         </nav>
                     </div>
                     <div className="flex items-center gap-4">
+                        <NotificationBell />
                         <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.2em]">Painel do Candidato</span>
                     </div>
                 </header>
@@ -180,13 +182,16 @@ const CandidateLayout: React.FC<{ children?: React.ReactNode }> = ({ children })
                     <Link to="/vagas" className="outline-none focus-visible:ring-2 focus-visible:ring-gray-300 rounded-md shrink-0">
                         <img src="https://incibrasil.com.br/i.inci.com.br/storage/site/img/inci-site-logo.png" alt="INCI Recruta" className="h-7 w-auto" />
                     </Link>
-                    <button
-                        onClick={handleLogout}
-                        className="p-2 text-destructive hover:bg-destructive/10 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-gray-300"
-                        title="Sair"
-                    >
-                        <Icon icon="material-symbols:logout" className="h-5 w-5" aria-hidden="true" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <NotificationBell />
+                        <button
+                            onClick={handleLogout}
+                            className="p-2 text-destructive hover:bg-destructive/10 rounded-full transition-colors outline-none focus-visible:ring-2 focus-visible:ring-gray-300"
+                            title="Sair"
+                        >
+                            <Icon icon="material-symbols:logout" className="h-5 w-5" aria-hidden="true" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Page Content — scroll zero, grid de cards */}
