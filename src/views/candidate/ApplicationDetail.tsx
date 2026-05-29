@@ -36,7 +36,10 @@ const ApplicationDetail: React.FC = () => {
         [app, jobs]
     );
 
-    const jobNotifications = notifications.filter(n => n.job_id === app?.jobId);
+    const jobNotifications = useMemo(
+        () => notifications.filter(n => n.job_id === app?.jobId),
+        [notifications, app?.jobId]
+    );
 
     const { interviews } = useInterviews(app?.id);
     const scheduledInterviews = useMemo(
