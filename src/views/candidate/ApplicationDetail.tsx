@@ -4,7 +4,7 @@
 // > Detalhes candidatura — Balha v10: stage cards horizontal, accordion ações
 // @calls useCandidateData, useParams, CandidateService
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from '@src/lib/router-compat';
 import { useCandidateData } from '@src/hooks/useCandidateData';
 import { useInterviews } from '@src/hooks/useInterviews';
@@ -12,9 +12,14 @@ import { useToast } from '@src/components/ui/Toast';
 import { CandidateService } from '@src/services/candidate.service';
 import { Icon } from "@iconify/react";
 import { formatDate } from '@src/lib/formatters';
+import { useAuth } from '@src/hooks/useAuth';
+import { useNotifications } from '@src/hooks/useNotifications';
+import { NotificationService } from '@src/services/notification.service';
 
 const ApplicationDetail: React.FC = () => {
     const { id } = useParams();
+    const { user } = useAuth();
+    const { notifications } = useNotifications();
     const navigate = useNavigate();
     const { myApplications, jobs, isLoading, refreshData } = useCandidateData();
     const { success: toastSuccess, error: toastError } = useToast();
@@ -31,11 +36,18 @@ const ApplicationDetail: React.FC = () => {
         [app, jobs]
     );
 
+    const jobNotifications = notifications.filter(n => n.job_id === app?.jobId);
+
     const { interviews } = useInterviews(app?.id);
     const scheduledInterviews = useMemo(
         () => interviews.filter(i => i.status === 'scheduled'),
         [interviews]
     );
+
+    useEffect(() => {
+        if (!user?.id || !app?.jobId) return;
+        NotificationService.markReadByJob(user.id, app.jobId.toString());
+    }, [user?.id, app?.jobId]);
 
     const stageFromInterviewType: Record<string, string> = {
         'Entrevista RH': 'hr_interview',
@@ -217,6 +229,40 @@ const ApplicationDetail: React.FC = () => {
                     })}
                 </div>
             </div>
+
+            {/* Seção: Atualizações (notificações da vaga) */}
+            {jobNotifications.length > 0 && (
+                <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+                    <div className="space-y-1">
+                        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <Icon icon="material-symbols:notifications" className="size-5 text-primary" />
+                            Atualizações
+                        </h2>
+                        <p className="text-sm text-muted-foreground">Novidades sobre esta candidatura.</p>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                        {jobNotifications.map(notif => (
+                            <div key={notif.id} className="flex items-start gap-3 rounded-xl border border-border bg-muted/30 p-4">
+                                <Icon
+                                    icon={
+                                        notif.type === 'interview_scheduled' || notif.type === 'interview_rescheduled'
+                                            ? 'material-symbols:calendar-today'
+                                            : notif.type === 'interview_cancelled'
+                                            ? 'material-symbols:event-busy'
+                                            : 'material-symbols:swap-horiz'
+                                    }
+                                    className="size-5 text-primary shrink-0 mt-0.5"
+                                />
+                                <div className="flex-1 space-y-1 min-w-0">
+                                    <p className="text-sm font-semibold text-foreground">{notif.title}</p>
+                                    <p className="text-[11px] text-muted-foreground leading-relaxed">{notif.message}</p>
+                                    <p className="text-[10px] text-muted-foreground/60">{formatDate(notif.created_at)}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Card: Próximas Entrevistas */}
             {scheduledInterviews.length > 0 && (
