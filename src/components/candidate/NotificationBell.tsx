@@ -39,9 +39,14 @@ export function NotificationBell() {
     }, [open]);
 
     const handleItemClick = async (id: string) => {
-        await markRead(id);
-        setOpen(false);
-        navigate('/candidate/applications');
+        try {
+            await markRead(id);
+        } catch (error) {
+            console.warn('Failed to mark notification as read:', error);
+        } finally {
+            setOpen(false);
+            navigate('/candidate/applications');
+        }
     };
 
     return (

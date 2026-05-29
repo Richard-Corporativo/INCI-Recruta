@@ -16,10 +16,15 @@ export function useNotifications() {
 
     const fetchAll = useCallback(async () => {
         if (!user?.id) return;
-        setIsLoading(true);
-        const data = await NotificationService.getForUser(user.id, 10);
-        setNotifications(data);
-        setIsLoading(false);
+        try {
+            setIsLoading(true);
+            const data = await NotificationService.getForUser(user.id);
+            setNotifications(data);
+        } catch (error) {
+            console.warn('Failed to fetch notifications:', error);
+        } finally {
+            setIsLoading(false);
+        }
     }, [user?.id]);
 
     useEffect(() => {
@@ -65,16 +70,24 @@ export function useNotifications() {
     }, [user?.id, fetchAll]);
 
     const markRead = useCallback(async (id: string) => {
-        await NotificationService.markRead(id);
-        setNotifications(prev =>
-            prev.map(n => n.id === id ? { ...n, read: true } : n)
-        );
+        try {
+            await NotificationService.markRead(id);
+            setNotifications(prev =>
+                prev.map(n => n.id === id ? { ...n, read: true } : n)
+            );
+        } catch (error) {
+            console.warn('Failed to mark notification as read:', error);
+        }
     }, []);
 
     const markAllRead = useCallback(async () => {
         if (!user?.id) return;
-        await NotificationService.markAllRead(user.id);
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        try {
+            await NotificationService.markAllRead(user.id);
+            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        } catch (error) {
+            console.warn('Failed to mark all notifications as read:', error);
+        }
     }, [user?.id]);
 
     return { notifications, unreadCount, markRead, markAllRead, isLoading };
