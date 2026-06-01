@@ -417,3 +417,24 @@ export interface CandidateFeedbackInput {
   stage?: string;
   createdBy?: string;
 }
+
+export interface CandidateNotification {
+  id: string;
+  user_id: string;
+  candidate_id: string;
+  job_id?: string | null;
+  company_id: string;
+  type: 'interview_scheduled' | 'interview_rescheduled' | 'interview_cancelled' | 'stage_changed';
+  title: string;
+  message: string;
+  reference_id?: string | null;
+  read: boolean;
+  created_at: string;
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
