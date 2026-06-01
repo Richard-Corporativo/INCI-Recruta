@@ -5,8 +5,6 @@ import { Icon } from '@iconify/react';
 import { useToast } from '@src/components/ui/Toast';
 import { getAllJobsCrossTenant, getAllCandidatesCrossTenant, JobWithCompany, CandidateWithCompany } from '@src/services/super-admin.service';
 
-// ── Stat Card ─────────────────────────────────────────────────────────────────
-
 function StatCard({ icon, label, value, sub, color = 'primary' }: {
     icon: string; label: string; value: number | string; sub?: string; color?: string;
 }) {
@@ -24,20 +22,25 @@ function StatCard({ icon, label, value, sub, color = 'primary' }: {
     );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
-
 export default function SuperAdminOverview() {
     const { error: toastError } = useToast();
     const [jobs, setJobs] = useState<JobWithCompany[]>([]);
     const [candidates, setCandidates] = useState<CandidateWithCompany[]>([]);
+    const [totalJobs, setTotalJobs] = useState(0);
+    const [totalCandidates, setTotalCandidates] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
 
     const load = useCallback(async () => {
         setIsLoading(true);
         try {
-            const [j, c] = await Promise.all([getAllJobsCrossTenant(), getAllCandidatesCrossTenant()]);
-            setJobs(j);
-            setCandidates(c);
+            const [jobsResult, candidatesResult] = await Promise.all([
+                getAllJobsCrossTenant({ page: 1, pageSize: 500 }),
+                getAllCandidatesCrossTenant({ page: 1, pageSize: 500 }),
+            ]);
+            setJobs(jobsResult.data);
+            setTotalJobs(jobsResult.total);
+            setCandidates(candidatesResult.data);
+            setTotalCandidates(candidatesResult.total);
         } catch {
             toastError('Erro ao carregar analytics.');
         } finally {
@@ -50,11 +53,10 @@ export default function SuperAdminOverview() {
     const activeJobs = jobs.filter(j => j.status === 'Ativa').length;
     const pausedJobs = jobs.filter(j => j.status === 'Pausada').length;
     const hiredCandidates = candidates.filter(c => c.columnId === 'hired').length;
-    const conversionRate = candidates.length > 0
-        ? ((hiredCandidates / candidates.length) * 100).toFixed(1)
+    const conversionRate = totalCandidates > 0
+        ? ((hiredCandidates / totalCandidates) * 100).toFixed(1)
         : '0.0';
 
-    // Companies with most active jobs
     const jobsByCompany = jobs.reduce((acc: Record<string, { name: string; count: number; active: number }>, j) => {
         const key = j.company_id ?? 'unknown';
         if (!acc[key]) acc[key] = { name: j.company_name, count: 0, active: 0 };
@@ -82,14 +84,13 @@ export default function SuperAdminOverview() {
                 </div>
             ) : (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <StatCard icon="material-symbols:work-rounded" label="Total de Vagas" value={jobs.length} sub={`${activeJobs} ativas · ${pausedJobs} pausadas`} />
-                    <StatCard icon="material-symbols:group-rounded" label="Candidaturas" value={candidates.length} sub={`${hiredCandidates} contratados`} />
+                    <StatCard icon="material-symbols:work-rounded" label="Total de Vagas" value={totalJobs} sub={`${activeJobs} ativas · ${pausedJobs} pausadas`} />
+                    <StatCard icon="material-symbols:group-rounded" label="Candidaturas" value={totalCandidates} sub={`${hiredCandidates} contratados`} />
                     <StatCard icon="material-symbols:trending-up-rounded" label="Taxa de Conversão" value={`${conversionRate}%`} sub="candidatura → contratação" />
                     <StatCard icon="material-symbols:business-center-rounded" label="Empresas Ativas" value={topCompanies.length} sub="com pelo menos 1 vaga" />
                 </div>
             )}
 
-            {/* Top companies by active jobs */}
             {!isLoading && topCompanies.length > 0 && (
                 <div className="bg-card border border-border rounded-2xl overflow-hidden">
                     <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -131,7 +132,6 @@ export default function SuperAdminOverview() {
                 </div>
             )}
 
-            {/* Job status breakdown */}
             {!isLoading && jobs.length > 0 && (
                 <div className="bg-card border border-border rounded-2xl overflow-hidden">
                     <div className="flex items-center gap-3 px-6 py-4 border-b border-border">
