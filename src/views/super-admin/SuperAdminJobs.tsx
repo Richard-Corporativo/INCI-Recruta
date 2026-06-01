@@ -5,17 +5,23 @@ import { Icon } from '@iconify/react';
 import { useToast } from '@src/components/ui/Toast';
 import { getAllJobsCrossTenant, JobWithCompany } from '@src/services/super-admin.service';
 
+const PAGE_SIZE = 50;
+
 export default function SuperAdminJobs() {
     const { error: toastError } = useToast();
     const [jobs, setJobs] = useState<JobWithCompany[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('Todas');
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
 
-    const load = useCallback(async () => {
+    const load = useCallback(async (p: number) => {
         setIsLoading(true);
         try {
-            setJobs(await getAllJobsCrossTenant());
+            const result = await getAllJobsCrossTenant({ page: p, pageSize: PAGE_SIZE });
+            setJobs(result.data);
+            setTotal(result.total);
         } catch {
             toastError('Erro ao carregar vagas.');
         } finally {
@@ -23,7 +29,7 @@ export default function SuperAdminJobs() {
         }
     }, [toastError]);
 
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => { load(page); }, [load, page]);
 
     const filtered = jobs.filter(j => {
         const matchSearch = !search ||
@@ -33,6 +39,8 @@ export default function SuperAdminJobs() {
         const matchStatus = statusFilter === 'Todas' || j.status === statusFilter;
         return matchSearch && matchStatus;
     });
+
+    const totalPages = Math.ceil(total / PAGE_SIZE);
 
     const statusColors: Record<string, string> = {
         'Ativa': 'bg-success/10 text-success border-success/20',
@@ -73,7 +81,7 @@ export default function SuperAdminJobs() {
                             }`}>{s}</button>
                     ))}
                 </div>
-                <button onClick={load} className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors duration-200">
+                <button onClick={() => load(page)} className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors duration-200">
                     <Icon icon="material-symbols:refresh-rounded" className="size-4" />
                     Atualizar
                 </button>
@@ -91,12 +99,11 @@ export default function SuperAdminJobs() {
             ) : (
                 <>
                     <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">
-                        {filtered.length} vaga{filtered.length !== 1 ? 's' : ''}
-                        {filtered.length !== jobs.length ? ` (de ${jobs.length})` : ''}
+                        {filtered.length} vaga{filtered.length !== 1 ? 's' : ''} nesta página · {total} no total
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {filtered.map(job => (
-                            <div key={job.id} className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-3 hover:bg-accent/20 transition-colors duration-150">
+                            <div key={job.id} className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-3 hover:bg-accent/20 transition-colors duration-200">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-foreground truncate">{job.title}</p>
@@ -138,6 +145,32 @@ export default function SuperAdminJobs() {
                         ))}
                     </div>
                 </>
+            )}
+
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-2">
+                    <p className="text-[10px] text-muted-foreground font-medium">
+                        Página {page} de {totalPages}
+                    </p>
+                    <div className="flex gap-2">
+                        <button
+                            disabled={page <= 1}
+                            onClick={() => setPage(p => p - 1)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+                        >
+                            <Icon icon="material-symbols:chevron-left-rounded" className="size-4" />
+                            Anterior
+                        </button>
+                        <button
+                            disabled={page >= totalPages}
+                            onClick={() => setPage(p => p + 1)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+                        >
+                            Próxima
+                            <Icon icon="material-symbols:chevron-right-rounded" className="size-4" />
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );
