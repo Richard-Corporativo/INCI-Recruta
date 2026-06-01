@@ -20,13 +20,15 @@ interface CandidateProfileDrawerProps {
   onClose: () => void;
   candidateId?: string;
   onCandidateUpdate?: () => void;
+  moveCandidate?: (candidateId: string, stageId: string) => Promise<void>;
 }
 
 const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
   isOpen,
   onClose,
   candidateId,
-  onCandidateUpdate
+  onCandidateUpdate,
+  moveCandidate: moveFromParent
 }) => {
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
@@ -548,6 +550,7 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
         onClose={() => setIsScheduleModalOpen(false)}
         candidateId={candidate.id}
         candidateName={candidate.name}
+        jobId={candidate.jobId?.toString()}
         onSuccess={async () => {
           await new Promise(r => setTimeout(r, 300));
           refresh();
@@ -577,6 +580,7 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
         onSuccess={() => {
           onCandidateUpdate?.();
         }}
+        onMove={moveFromParent}
       />
     </>
   );
