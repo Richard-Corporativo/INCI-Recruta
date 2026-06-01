@@ -57,6 +57,12 @@ const JobDetailPublic: React.FC = () => {
     }, [id, slug]);
 
     useEffect(() => {
+        if (job?.id) {
+            analyticsService.trackJobClick(job.id, job.title);
+        }
+    }, [job?.id]);
+
+    useEffect(() => {
         const checkApplication = async () => {
             if (!user?.id || !id) {
                 setHasApplied(false);
