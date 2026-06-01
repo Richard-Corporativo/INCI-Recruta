@@ -1,5 +1,5 @@
 import { supabase } from '@src/lib/supabase';
-import { Company, Job, Role, Candidate, AuditLog } from '@src/types';
+import { Company, Job, Role, Candidate, AuditLog, PaginatedResult } from '@src/types';
 
 type CompanyLookup = { id: string; name: string | null; slug?: string | null };
 
@@ -199,15 +199,18 @@ export interface AuditLogWithCompany extends AuditLog {
 
 // ── Cross-tenant queries ──────────────────────────────────────────────────────
 
-export async function getAllJobsCrossTenant(): Promise<JobWithCompany[]> {
-    const { data, error } = await supabase
+export async function getAllJobsCrossTenant(
+    { page = 1, pageSize = 50 }: { page?: number; pageSize?: number } = {}
+): Promise<PaginatedResult<JobWithCompany>> {
+    const offset = (page - 1) * pageSize;
+    const { data, error, count } = await supabase
         .from('jobs')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
-        .limit(500);
+        .range(offset, offset + pageSize - 1);
 
     if (error) throw error;
-    if (!data || data.length === 0) return [];
+    if (!data || data.length === 0) return { data: [], total: count ?? 0, page, pageSize };
 
     const companyIds = [...new Set(data.map((j: any) => j.company_id).filter(Boolean))];
     const { data: companies } = await supabase
@@ -217,26 +220,34 @@ export async function getAllJobsCrossTenant(): Promise<JobWithCompany[]> {
 
     const companyMap = new Map(((companies ?? []) as CompanyLookup[]).map(c => [c.id, c]));
 
-    return data.map((j: any) => {
-        const company = companyMap.get(j.company_id);
-        return {
-            ...j,
-            candidates_count: j.candidates_count ?? 0,
-            company_name: company?.name ?? '—',
-            company_slug: company?.slug ?? '',
-        };
-    });
+    return {
+        data: data.map((j: any) => {
+            const company = companyMap.get(j.company_id);
+            return {
+                ...j,
+                candidates_count: j.candidates_count ?? 0,
+                company_name: company?.name ?? '—',
+                company_slug: company?.slug ?? '',
+            };
+        }),
+        total: count ?? 0,
+        page,
+        pageSize,
+    };
 }
 
-export async function getAllRolesCrossTenant(): Promise<RoleWithCompany[]> {
-    const { data, error } = await supabase
+export async function getAllRolesCrossTenant(
+    { page = 1, pageSize = 50 }: { page?: number; pageSize?: number } = {}
+): Promise<PaginatedResult<RoleWithCompany>> {
+    const offset = (page - 1) * pageSize;
+    const { data, error, count } = await supabase
         .from('roles')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('updated_at', { ascending: false })
-        .limit(500);
+        .range(offset, offset + pageSize - 1);
 
     if (error) throw error;
-    if (!data || data.length === 0) return [];
+    if (!data || data.length === 0) return { data: [], total: count ?? 0, page, pageSize };
 
     const companyIds = [...new Set(data.map((r: any) => r.company_id).filter(Boolean))];
     const { data: companies } = await supabase
@@ -246,22 +257,30 @@ export async function getAllRolesCrossTenant(): Promise<RoleWithCompany[]> {
 
     const companyMap = new Map(((companies ?? []) as CompanyLookup[]).map(c => [c.id, c]));
 
-    return data.map((r: any) => ({
-        ...r,
-        open_positions: r.open_positions ?? 0,
-        company_name: companyMap.get(r.company_id)?.name ?? '—',
-    }));
+    return {
+        data: data.map((r: any) => ({
+            ...r,
+            open_positions: r.open_positions ?? 0,
+            company_name: companyMap.get(r.company_id)?.name ?? '—',
+        })),
+        total: count ?? 0,
+        page,
+        pageSize,
+    };
 }
 
-export async function getAllCandidatesCrossTenant(): Promise<CandidateWithCompany[]> {
-    const { data, error } = await supabase
+export async function getAllCandidatesCrossTenant(
+    { page = 1, pageSize = 50 }: { page?: number; pageSize?: number } = {}
+): Promise<PaginatedResult<CandidateWithCompany>> {
+    const offset = (page - 1) * pageSize;
+    const { data, error, count } = await supabase
         .from('candidates')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
-        .limit(500);
+        .range(offset, offset + pageSize - 1);
 
     if (error) throw error;
-    if (!data || data.length === 0) return [];
+    if (!data || data.length === 0) return { data: [], total: count ?? 0, page, pageSize };
 
     const companyIds = [...new Set(data.map((c: any) => c.company_id).filter(Boolean))];
     const { data: companies } = await supabase
@@ -271,21 +290,29 @@ export async function getAllCandidatesCrossTenant(): Promise<CandidateWithCompan
 
     const companyMap = new Map(((companies ?? []) as CompanyLookup[]).map(c => [c.id, c]));
 
-    return data.map((c: any) => ({
-        ...c,
-        company_name: companyMap.get(c.company_id)?.name ?? '—',
-    }));
+    return {
+        data: data.map((c: any) => ({
+            ...c,
+            company_name: companyMap.get(c.company_id)?.name ?? '—',
+        })),
+        total: count ?? 0,
+        page,
+        pageSize,
+    };
 }
 
-export async function getAllAuditLogsCrossTenant(): Promise<AuditLogWithCompany[]> {
-    const { data, error } = await supabase
+export async function getAllAuditLogsCrossTenant(
+    { page = 1, pageSize = 50 }: { page?: number; pageSize?: number } = {}
+): Promise<PaginatedResult<AuditLogWithCompany>> {
+    const offset = (page - 1) * pageSize;
+    const { data, error, count } = await supabase
         .from('audit_logs')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('timestamp', { ascending: false })
-        .limit(500);
+        .range(offset, offset + pageSize - 1);
 
     if (error) throw error;
-    if (!data || data.length === 0) return [];
+    if (!data || data.length === 0) return { data: [], total: count ?? 0, page, pageSize };
 
     const companyIds = [...new Set(data.map((l: any) => l.company_id).filter(Boolean))];
     const { data: companies } = await supabase
@@ -295,8 +322,13 @@ export async function getAllAuditLogsCrossTenant(): Promise<AuditLogWithCompany[
 
     const companyMap = new Map(((companies ?? []) as CompanyLookup[]).map(c => [c.id, c]));
 
-    return data.map((l: any) => ({
-        ...l,
-        company_name: companyMap.get(l.company_id)?.name ?? '—',
-    }));
+    return {
+        data: data.map((l: any) => ({
+            ...l,
+            company_name: companyMap.get(l.company_id)?.name ?? '—',
+        })),
+        total: count ?? 0,
+        page,
+        pageSize,
+    };
 }
