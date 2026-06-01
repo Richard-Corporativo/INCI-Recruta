@@ -8,7 +8,7 @@
 // @action login — autentica usuário
 // @action logout — encerra sessão
 // @rule Força re-fetch se user.id muda, cleanup no unmount
-// @rule Fallback para metadata se DB indisponível (timeout 4s)
+// @rule Nega acesso se DB indisponível (timeout 4s) — role vem exclusivamente do banco
 // @calls supabase.ts — cliente Supabase
 // @references types/index.ts — User
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -152,41 +152,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
 
             if (profileData) {
+                // SEGURANÇA: role deve vir exclusivamente do banco — nunca de user_metadata
+                // Se role for nulo no banco, o usuário está com dados inconsistentes
+                if (!profileData.role) {
+                    console.warn('[AuthContext] Usuário sem role no banco — retornando null para negar acesso:', userId);
+                    return null;
+                }
                 return {
                     ...profileData,
-                    // Garante que name e role nunca ficam nulos — usa metadata como fallback
                     name: profileData.name || metadata?.full_name || metadata?.name || 'Usuário',
-                    role: profileData.role || (metadata?.role as User['role']) || 'candidate',
+                    role: profileData.role,
                     terms_accepted: profileData.terms_accepted ?? metadata?.terms_accepted,
                     terms_accepted_at: profileData.terms_accepted_at ?? metadata?.terms_accepted_at
                 } as User;
             }
 
-            // 2. Fallback Imediato: Auth Metadata
-            console.warn('[AuthContext] Usando metadados de Auth como fallback...');
-
-            const fallbackUser: User = {
-                id: userId,
-                name: metadata?.full_name || metadata?.name || 'Usuário',
-                full_name: metadata?.full_name,
-                company_name: metadata?.company_name,
-                email: metadata?.email || '',
-                // Usa o role do metadata (definido no signup) como fallback — nunca 'candidate' fixo
-                role: (metadata?.role as User['role']) || 'candidate',
-                status: metadata?.status || 'pending_approval',
-                lastAccess: new Date().toISOString(),
-                terms_accepted: metadata?.terms_accepted || false,
-                terms_accepted_at: metadata?.terms_accepted_at
-            };
-
-            console.log('[AuthContext] Fallback construído:', fallbackUser.name, `[${fallbackUser.role}]`);
-
-            const fallbackCompanyId = metadata?.company_id ?? null;
-            if (fallbackCompanyId) {
-                primeTenantCache(userId, fallbackCompanyId);
-            }
-
-            return fallbackUser;
+            // 2. Banco inacessível (timeout/erro) — negar acesso, não usar metadata como fallback
+            // SEGURANÇA: user_metadata pode ser manipulado pelo usuário via API do Supabase Auth
+            console.warn('[AuthContext] DB inacessível para userId:', userId, '— retornando null para negar acesso.');
+            return null;
 
         } catch (e: any) {
             console.error('[AuthContext] Erro crítico no fetchProfile:', e.message);

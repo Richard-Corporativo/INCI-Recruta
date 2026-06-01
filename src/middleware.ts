@@ -86,24 +86,38 @@ export async function middleware(request: NextRequest) {
 
         const dbFailed = dbError || dbUser === null;
 
-        // Fallback: usa metadata do Auth apenas se banco falhou
-        // SEGURANÇA: se banco falhou e rota é super-admin, rejeita acesso
-        if (dbFailed && pathname.startsWith('/super-admin')) {
-            const loginUrl = new URL('/login', request.url);
-            loginUrl.searchParams.set('type', 'super-admin');
-            loginUrl.searchParams.set('next', pathname);
-            return NextResponse.redirect(loginUrl);
+        // SEGURANÇA: se banco falhou ou usuário não tem registro, negar acesso a rotas protegidas
+        // Não usar user_metadata como fallback — evita privilege escalation
+        if (dbFailed) {
+            const isProtectedRoute =
+                pathname.startsWith('/admin') ||
+                pathname.startsWith('/super-admin') ||
+                pathname.startsWith('/candidate') ||
+                pathname.startsWith('/perfil') ||
+                /^\/vagas\/[^/]+\/[^/]+\/candidatar$/.test(pathname);
+
+            if (isProtectedRoute) {
+                console.warn('[Middleware] DB falhou ou usuário sem registro — negando acesso:', {
+                    pathname,
+                    userId: user.id,
+                    errorCode: (dbError as any)?.code ?? 'no_record',
+                });
+                const loginUrl = new URL('/login', request.url);
+                loginUrl.searchParams.set('error', 'session_error');
+                loginUrl.searchParams.set('next', pathname);
+                if (pathname.startsWith('/admin')) {
+                    loginUrl.searchParams.set('type', 'company');
+                } else if (pathname.startsWith('/super-admin')) {
+                    loginUrl.searchParams.set('type', 'super-admin');
+                }
+                return NextResponse.redirect(loginUrl);
+            }
+
+            // Rota pública — permite acesso sem role
+            return supabaseResponse;
         }
 
-        if (dbFailed && dbError) {
-            console.warn('[Middleware] Banco falhou, usando metadata como fallback:', {
-                pathname,
-                userId: user.id,
-                errorCode: (dbError as any)?.code ?? 'unknown',
-            });
-        }
-
-        const role = dbUser?.role || user.user_metadata?.role || 'candidate';
+        const role = dbUser.role;
         const status = dbUser?.status ?? 'active';
         const isSuperAdmin = role === 'super_admin';
         const isCompanyUser = COMPANY_ROLES.includes(role);
