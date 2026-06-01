@@ -30,16 +30,21 @@ export interface JobFunnelStats {
 
 class AnalyticsService {
   private sessionId: string;
+  private static readonly SESSION_EXPIRY_MS = 30 * 60 * 1000; // 30 minutos
 
   constructor() {
-    // Tenta recuperar session_id do localStorage ou gera um novo
     if (typeof window !== 'undefined') {
       const storedId = localStorage.getItem('inci_analytics_session_id');
-      if (storedId) {
+      const storedTs = localStorage.getItem('inci_analytics_session_ts');
+      const now = Date.now();
+      const isExpired = !storedTs || (now - Number(storedTs)) > AnalyticsService.SESSION_EXPIRY_MS;
+
+      if (storedId && !isExpired) {
         this.sessionId = storedId;
       } else {
         this.sessionId = crypto.randomUUID();
         localStorage.setItem('inci_analytics_session_id', this.sessionId);
+        localStorage.setItem('inci_analytics_session_ts', String(now));
       }
     } else {
       this.sessionId = 'server-side';
@@ -85,6 +90,10 @@ class AnalyticsService {
           hint: error.hint,
           code: error.code
         });
+      }
+
+      if (!error && typeof window !== 'undefined') {
+        localStorage.setItem('inci_analytics_session_ts', String(Date.now()));
       }
     } catch (err) {
       console.error('Analytics error:', err);
