@@ -5,17 +5,23 @@ import { Icon } from '@iconify/react';
 import { useToast } from '@src/components/ui/Toast';
 import { getAllRolesCrossTenant, RoleWithCompany } from '@src/services/super-admin.service';
 
+const PAGE_SIZE = 50;
+
 export default function SuperAdminRoles() {
     const { error: toastError } = useToast();
     const [roles, setRoles] = useState<RoleWithCompany[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
 
-    const load = useCallback(async () => {
+    const load = useCallback(async (p: number) => {
         setIsLoading(true);
         try {
-            setRoles(await getAllRolesCrossTenant());
+            const result = await getAllRolesCrossTenant({ page: p, pageSize: PAGE_SIZE });
+            setRoles(result.data);
+            setTotal(result.total);
         } catch {
             toastError('Erro ao carregar cargos.');
         } finally {
@@ -23,7 +29,7 @@ export default function SuperAdminRoles() {
         }
     }, [toastError]);
 
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => { load(page); }, [load, page]);
 
     const filtered = roles.filter(r => {
         const matchSearch = !search ||
@@ -37,6 +43,8 @@ export default function SuperAdminRoles() {
         return matchSearch && matchStatus;
     });
 
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+
     return (
         <div className="space-y-6">
             <div>
@@ -44,7 +52,6 @@ export default function SuperAdminRoles() {
                 <p className="text-sm text-muted-foreground mt-1">Todos os cargos cadastrados em todas as empresas.</p>
             </div>
 
-            {/* Filters */}
             <div className="flex gap-3 flex-wrap items-center">
                 <div className="relative flex-1 min-w-[280px]">
                     <Icon icon="material-symbols:search-rounded" className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/50" />
@@ -64,13 +71,12 @@ export default function SuperAdminRoles() {
                             }`}>{s.label}</button>
                     ))}
                 </div>
-                <button onClick={load} className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors duration-200">
+                <button onClick={() => load(page)} className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors duration-200">
                     <Icon icon="material-symbols:refresh-rounded" className="size-4" />
                     Atualizar
                 </button>
             </div>
 
-            {/* Table */}
             <div className="bg-card border border-border rounded-2xl overflow-hidden">
                 {isLoading ? (
                     <div className="divide-y divide-border">
@@ -126,11 +132,31 @@ export default function SuperAdminRoles() {
                     </div>
                 )}
                 {!isLoading && (
-                    <div className="px-5 py-3 border-t border-border bg-accent/20">
+                    <div className="px-5 py-3 border-t border-border bg-accent/20 flex items-center justify-between">
                         <p className="text-[10px] text-muted-foreground font-medium">
-                            {filtered.length} cargo{filtered.length !== 1 ? 's' : ''} exibido{filtered.length !== 1 ? 's' : ''}
-                            {filtered.length !== roles.length ? ` (de ${roles.length})` : ''}
+                            {filtered.length} cargo{filtered.length !== 1 ? 's' : ''} nesta página · {total} no total
                         </p>
+                        {totalPages > 1 && (
+                            <div className="flex gap-2 items-center">
+                                <button
+                                    disabled={page <= 1}
+                                    onClick={() => setPage(p => p - 1)}
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-border text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+                                >
+                                    <Icon icon="material-symbols:chevron-left-rounded" className="size-3.5" />
+                                    Anterior
+                                </button>
+                                <span className="flex items-center px-2 text-[10px] text-muted-foreground font-medium">{page}/{totalPages}</span>
+                                <button
+                                    disabled={page >= totalPages}
+                                    onClick={() => setPage(p => p + 1)}
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-border text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+                                >
+                                    Próxima
+                                    <Icon icon="material-symbols:chevron-right-rounded" className="size-3.5" />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

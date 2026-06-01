@@ -5,17 +5,23 @@ import { Icon } from '@iconify/react';
 import { useToast } from '@src/components/ui/Toast';
 import { getAllAuditLogsCrossTenant, AuditLogWithCompany } from '@src/services/super-admin.service';
 
+const PAGE_SIZE = 100;
+
 export default function SuperAdminAudit() {
     const { error: toastError } = useToast();
     const [logs, setLogs] = useState<AuditLogWithCompany[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [actionFilter, setActionFilter] = useState('all');
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
 
-    const load = useCallback(async () => {
+    const load = useCallback(async (p: number) => {
         setIsLoading(true);
         try {
-            setLogs(await getAllAuditLogsCrossTenant());
+            const result = await getAllAuditLogsCrossTenant({ page: p, pageSize: PAGE_SIZE });
+            setLogs(result.data);
+            setTotal(result.total);
         } catch {
             toastError('Erro ao carregar logs de auditoria.');
         } finally {
@@ -23,7 +29,7 @@ export default function SuperAdminAudit() {
         }
     }, [toastError]);
 
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => { load(page); }, [load, page]);
 
     const filtered = logs.filter(log => {
         const matchSearch = !search ||
@@ -36,6 +42,7 @@ export default function SuperAdminAudit() {
     });
 
     const uniqueActions = [...new Set(logs.map(l => l.action))].slice(0, 5);
+    const totalPages = Math.ceil(total / PAGE_SIZE);
 
     const handleExport = () => {
         const headers = ['Data', 'Hora', 'Empresa', 'Usuário', 'Ação', 'Detalhes', 'Recurso'];
@@ -58,7 +65,7 @@ export default function SuperAdminAudit() {
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
-        link.setAttribute('download', `auditoria-global-${new Date().toISOString().split('T')[0]}.csv`);
+        link.setAttribute('download', `auditoria-global-p${page}-${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -84,11 +91,10 @@ export default function SuperAdminAudit() {
                 <button onClick={handleExport}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-xs font-semibold text-foreground hover:bg-accent transition-all duration-200">
                     <Icon icon="material-symbols:download-rounded" className="size-4" />
-                    Exportar CSV
+                    Exportar página
                 </button>
             </div>
 
-            {/* Filters */}
             <div className="flex gap-3 flex-wrap items-center">
                 <div className="relative flex-1 min-w-[280px]">
                     <Icon icon="material-symbols:search-rounded" className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/50" />
@@ -112,13 +118,12 @@ export default function SuperAdminAudit() {
                         </button>
                     ))}
                 </div>
-                <button onClick={load} className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors duration-200">
+                <button onClick={() => load(page)} className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors duration-200">
                     <Icon icon="material-symbols:refresh-rounded" className="size-4" />
                     Atualizar
                 </button>
             </div>
 
-            {/* Table */}
             <div className="bg-card border border-border rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -175,8 +180,30 @@ export default function SuperAdminAudit() {
                 </div>
                 {!isLoading && (
                     <div className="px-5 py-3 border-t border-border bg-accent/20 flex justify-between items-center">
-                        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Auditoria Global Ativa</p>
-                        <p className="text-[10px] text-muted-foreground font-medium">{filtered.length} registros exibidos</p>
+                        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">
+                            {filtered.length} registros · {total} no total
+                        </p>
+                        {totalPages > 1 && (
+                            <div className="flex gap-2 items-center">
+                                <button
+                                    disabled={page <= 1}
+                                    onClick={() => setPage(p => p - 1)}
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-border text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+                                >
+                                    <Icon icon="material-symbols:chevron-left-rounded" className="size-3.5" />
+                                    Anterior
+                                </button>
+                                <span className="text-[10px] text-muted-foreground font-medium">{page}/{totalPages}</span>
+                                <button
+                                    disabled={page >= totalPages}
+                                    onClick={() => setPage(p => p + 1)}
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-border text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+                                >
+                                    Próxima
+                                    <Icon icon="material-symbols:chevron-right-rounded" className="size-3.5" />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

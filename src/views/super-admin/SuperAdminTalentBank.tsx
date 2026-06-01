@@ -5,6 +5,8 @@ import { Icon } from '@iconify/react';
 import { useToast } from '@src/components/ui/Toast';
 import { getAllCandidatesCrossTenant, CandidateWithCompany } from '@src/services/super-admin.service';
 
+const PAGE_SIZE = 50;
+
 const STATUS_MAP: Record<string, string> = {
     received: 'Inscrição', screening: 'Triagem', technical: 'Entrevista Téc.',
     hr_interview: 'Entrevista RH', manager_interview: 'Entrevista Gest.',
@@ -16,11 +18,15 @@ export default function SuperAdminTalentBank() {
     const [candidates, setCandidates] = useState<CandidateWithCompany[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
 
-    const load = useCallback(async () => {
+    const load = useCallback(async (p: number) => {
         setIsLoading(true);
         try {
-            setCandidates(await getAllCandidatesCrossTenant());
+            const result = await getAllCandidatesCrossTenant({ page: p, pageSize: PAGE_SIZE });
+            setCandidates(result.data);
+            setTotal(result.total);
         } catch {
             toastError('Erro ao carregar candidatos.');
         } finally {
@@ -28,7 +34,7 @@ export default function SuperAdminTalentBank() {
         }
     }, [toastError]);
 
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => { load(page); }, [load, page]);
 
     const filtered = candidates.filter(c =>
         !search ||
@@ -37,6 +43,8 @@ export default function SuperAdminTalentBank() {
         (c.role || '').toLowerCase().includes(search.toLowerCase()) ||
         (c.company_name || '').toLowerCase().includes(search.toLowerCase())
     );
+
+    const totalPages = Math.ceil(total / PAGE_SIZE);
 
     return (
         <div className="space-y-6">
@@ -56,7 +64,7 @@ export default function SuperAdminTalentBank() {
                         className="w-full h-9 pl-9 pr-4 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground/40 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all duration-200"
                     />
                 </div>
-                <button onClick={load} className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors duration-200">
+                <button onClick={() => load(page)} className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors duration-200">
                     <Icon icon="material-symbols:refresh-rounded" className="size-4" />
                     Atualizar
                 </button>
@@ -76,8 +84,7 @@ export default function SuperAdminTalentBank() {
             ) : (
                 <>
                     <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">
-                        {filtered.length} candidato{filtered.length !== 1 ? 's' : ''}
-                        {filtered.length !== candidates.length ? ` (de ${candidates.length})` : ''}
+                        {filtered.length} candidato{filtered.length !== 1 ? 's' : ''} nesta página · {total} no total
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {filtered.map(c => (
@@ -129,6 +136,32 @@ export default function SuperAdminTalentBank() {
                         ))}
                     </div>
                 </>
+            )}
+
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-2">
+                    <p className="text-[10px] text-muted-foreground font-medium">
+                        Página {page} de {totalPages}
+                    </p>
+                    <div className="flex gap-2">
+                        <button
+                            disabled={page <= 1}
+                            onClick={() => setPage(p => p - 1)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+                        >
+                            <Icon icon="material-symbols:chevron-left-rounded" className="size-4" />
+                            Anterior
+                        </button>
+                        <button
+                            disabled={page >= totalPages}
+                            onClick={() => setPage(p => p + 1)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-border text-foreground hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200"
+                        >
+                            Próxima
+                            <Icon icon="material-symbols:chevron-right-rounded" className="size-4" />
+                        </button>
+                    </div>
+                </div>
             )}
         </div>
     );
