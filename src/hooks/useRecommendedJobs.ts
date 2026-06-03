@@ -55,12 +55,11 @@ export const useRecommendedJobs = ({
                     return;
                 }
 
-                // Cenário 2: autenticado mas perfil insuficiente → fallback recentes
+                // Cenário 2: perfil insuficiente → sem recomendações (bloco fica oculto)
                 if (!hasEnoughProfile) {
-                    const recent = await RecommendationService.getRecentJobs(null, limit);
                     if (!cancelled) {
-                        setRecommendations(recent);
-                        setIsFallback(true);
+                        setRecommendations([]);
+                        setIsFallback(false);
                     }
                     return;
                 }

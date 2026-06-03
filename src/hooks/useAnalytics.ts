@@ -25,17 +25,20 @@ export function useCompanyJobAnalytics() {
   useEffect(() => {
     fetchStats();
 
-    let channel: ReturnType<typeof supabase.channel>;
+    let cancelled = false;
+    const channelRef = { current: null as ReturnType<typeof supabase.channel> | null };
+
     supabase.from('company_members')
       .select('company_id')
       .eq('status', 'active')
       .maybeSingle()
       .then(({ data: member }) => {
+        if (cancelled) return;
         const companyFilter = member?.company_id
           ? `company_id=eq.${member.company_id}`
           : undefined;
 
-        channel = supabase
+        channelRef.current = supabase
           .channel('company-job-analytics')
           .on(
             'postgres_changes',
@@ -61,8 +64,9 @@ export function useCompanyJobAnalytics() {
       });
 
     return () => {
+      cancelled = true;
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      if (channel) supabase.removeChannel(channel);
+      if (channelRef.current) supabase.removeChannel(channelRef.current);
     };
   }, [fetchStats, debouncedFetch]);
 

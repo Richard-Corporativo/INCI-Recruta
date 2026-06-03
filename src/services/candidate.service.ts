@@ -10,7 +10,9 @@
 import { supabase } from '@src/lib/supabase';
 import { Candidate, CandidateFeedbackInput, CandidateSearchFilters, KanbanColumnId } from '@src/types';
 import { AuditService } from '@src/services/audit.service';
+import { NotificationService } from '@src/services/notification.service';
 import { getCurrentCompanyId } from '@src/lib/tenant';
+import { COLUMNS_CONFIG } from '@src/constants';
 
 /** Resolve company_id de uma vaga (para candidaturas e logs vinculados). */
 async function getCompanyIdFromJob(jobId: string | number | null | undefined): Promise<string | null> {
@@ -86,7 +88,8 @@ export const CandidateService = {
         const { data, error } = await supabase
             .from('candidates')
             .select('*, feedbacks(*)')
-            .order('applied_at', { ascending: false });
+            .order('applied_at', { ascending: false })
+            .range(0, 199);
 
         if (error) {
             console.error('Error fetching candidates:', error);
@@ -104,7 +107,7 @@ export const CandidateService = {
             .order('applied_at', { ascending: false });
 
         if (error) {
-            console.error('Error fetching applicants:', error);
+            console.error('Error fetching applicants:', error.message, { code: error.code, details: error.details, hint: error.hint });
             return [];
         }
 
@@ -112,41 +115,14 @@ export const CandidateService = {
     },
 
     async getCandidatesByJob(jobId: string): Promise<Candidate[]> {
-        const { data, error } = await supabase
-            .from('candidates')
-            .select('*, feedbacks(*)')
-            .eq('job_id', jobId)
-            .order('applied_at', { ascending: false });
+        const { data, error } = await supabase.rpc('get_candidates_by_job', { p_job_id: jobId });
 
         if (error) {
-            console.error(`Error fetching candidates for job ${jobId}:`, error);
+            console.error(`Error fetching candidates for job ${jobId}:`, error.message, { code: error.code, details: error.details, hint: error.hint });
             return [];
         }
 
-        const rows = data || [];
-        const userIds = [...new Set(rows.map((r: any) => r.user_id).filter(Boolean))];
-
-        if (userIds.length > 0) {
-            const { data: profiles } = await supabase
-                .from('candidates')
-                .select('user_id, summary, skills, experience, education')
-                .in('user_id', userIds)
-                .is('job_id', null);
-
-            if (profiles && profiles.length > 0) {
-                const profileMap = new Map(profiles.map((p: any) => [p.user_id, p]));
-                rows.forEach((row: any) => {
-                    const profile = profileMap.get(row.user_id) as any;
-                    if (!profile) return;
-                    if (!row.summary) row.summary = profile.summary;
-                    if (!row.skills) row.skills = profile.skills;
-                    if (!row.experience) row.experience = profile.experience;
-                    if (!row.education) row.education = profile.education;
-                });
-            }
-        }
-
-        return rows.map(mapDbToCandidate);
+        return (data || []).map(mapDbToCandidate);
     },
 
     async getJobForecast(jobId: string) {
@@ -187,8 +163,10 @@ export const CandidateService = {
         if (file.size > 2 * 1024 * 1024) {
             throw new Error('Tamanho da imagem excede 2MB');
         }
-        if (!file.type.startsWith('image/')) {
-            throw new Error('Apenas arquivos de imagem são permitidos');
+        const allowedImageExts = ['jpg', 'jpeg', 'png', 'webp'];
+        const imgExt = file.name.split('.').pop()?.toLowerCase();
+        if (!imgExt || !allowedImageExts.includes(imgExt) || !file.type.startsWith('image/')) {
+            throw new Error('Apenas imagens JPG, PNG ou WebP são permitidas');
         }
 
         try {
@@ -290,7 +268,8 @@ export const CandidateService = {
         if (file.size > 5 * 1024 * 1024) {
             throw new Error('Tamanho do arquivo excede 5MB');
         }
-        if (file.type !== 'application/pdf') {
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        if (ext !== 'pdf' || file.type !== 'application/pdf') {
             throw new Error('Apenas arquivos PDF são permitidos');
         }
 
@@ -376,10 +355,27 @@ export const CandidateService = {
     },
 
     async deleteResume(candidateId: string): Promise<boolean> {
+        const { data: resumeData } = await supabase
+            .from('candidate_resumes')
+            .select('file_path')
+            .eq('candidate_id', candidateId)
+            .maybeSingle();
+
+        if (resumeData?.file_path) {
+            const { error: storageError } = await supabase.storage
+                .from('resumes')
+                .remove([resumeData.file_path]);
+
+            if (storageError) {
+                console.warn('[CandidateService] Erro ao remover arquivo do storage:', storageError.message);
+            }
+        }
+
         const { error } = await supabase
             .from('candidate_resumes')
             .delete()
             .eq('candidate_id', candidateId);
+
         return !error;
     },
 
@@ -451,8 +447,11 @@ export const CandidateService = {
             .single();
 
         if (error) {
-            if (error.code === '23505' && dbPayload.user_id && dbPayload.job_id) {
-                throw new Error('Você já se candidatou a esta vaga.');
+            if (error.code === '23505' && dbPayload.user_id) {
+                if (dbPayload.job_id) {
+                    throw new Error('Você já se candidatou a esta vaga.');
+                }
+                throw new Error('Você já está no banco de talentos desta empresa.');
             }
 
             console.error('[CandidateService] Error adding candidate:', error.code, error.hint);
@@ -541,7 +540,7 @@ export const CandidateService = {
 
         const { data: currentCandidate } = await supabase
             .from('candidates')
-            .select('column_id, job_id')
+            .select('column_id, job_id, user_id')
             .eq('id', id)
             .single();
 
@@ -554,16 +553,22 @@ export const CandidateService = {
             }
         }
 
-        const { data, error } = await supabase
+        const { data: rows, error } = await supabase
             .from('candidates')
             .update(dbPayload)
             .eq('id', id)
-            .select()
-            .single();
+            .select();
 
         if (error) {
-            console.error(`Error updating candidate ${id}:`, error);
+            console.error(`Error updating candidate ${id}:`, error?.message ?? error);
             throw error;
+        }
+
+        const data = rows?.[0] ?? null;
+        if (!data) {
+            const msg = `Update retornou 0 linhas para candidato ${id} — verifique RLS ou sessão`;
+            console.error(msg);
+            throw new Error(msg);
         }
 
         const updatedCandidate = mapDbToCandidate(data);
@@ -590,6 +595,26 @@ export const CandidateService = {
             }
         }
 
+        if (isStageChanging && updates.columnId !== 'rejected' && currentCandidate?.user_id) {
+            try {
+                const companyId = await getCurrentCompanyId();
+                if (companyId) {
+                    const stageLabel = COLUMNS_CONFIG.find(c => c.id === updates.columnId)?.title ?? updates.columnId;
+                    await NotificationService.create({
+                        user_id: currentCandidate.user_id,
+                        candidate_id: id,
+                        job_id: currentCandidate.job_id ?? null,
+                        company_id: companyId,
+                        type: 'stage_changed',
+                        title: 'Atualização no Processo',
+                        message: `Você avançou para a etapa: ${stageLabel}`,
+                    });
+                }
+            } catch (e) {
+                console.warn('[CandidateService] Erro ao criar notificação de etapa:', e);
+            }
+        }
+
         return updatedCandidate;
     },
 
@@ -611,6 +636,10 @@ export const CandidateService = {
                 }]);
             
             if (error) {
+                if (error.code === '23505') {
+                    console.warn('[CandidateService] recordStageEntry: entrada aberta já existe para esta etapa — ignorando.', { candidateId, stageId });
+                    return;
+                }
                 console.error('[CandidateService] Erro ao inserir no histórico:', error.message);
             }
         } catch (e) {
@@ -620,38 +649,28 @@ export const CandidateService = {
 
     async recordStageTransition(candidateId: string, oldStage: string, newStage: string) {
         try {
-            const now = new Date();
             const companyId = await getCompanyIdFromCandidate(candidateId);
-
-            const query = supabase
-                .from('candidate_stage_history')
-                .select('*')
-                .eq('candidate_id', candidateId)
-                .eq('stage_id', oldStage)
-                .is('exit_time', null)
-                .order('entry_time', { ascending: false })
-                .limit(1);
-
-            if (companyId) query.eq('company_id', companyId);
-
-            const { data: lastStage } = await query.maybeSingle();
-
-            if (lastStage) {
-                const entryTime = new Date(lastStage.entry_time);
-                const durationSeconds = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
-
-                await supabase
-                    .from('candidate_stage_history')
-                    .update({
-                        exit_time: now.toISOString(),
-                        duration_seconds: durationSeconds
-                    })
-                    .eq('id', lastStage.id);
+            if (!companyId) {
+                console.warn('[CandidateService] Sem company_id para recordStageTransition — operação ignorada.');
+                return;
             }
 
-            await CandidateService.recordStageEntry(candidateId, newStage);
+            const { error } = await supabase.rpc('transition_candidate_stage', {
+                p_candidate_id: candidateId,
+                p_old_stage_id: oldStage,
+                p_new_stage_id: newStage,
+                p_company_id:   companyId,
+            });
+
+            if (error) {
+                if (error.code === '23505') {
+                    console.warn('[CandidateService] Transição de etapa já registrada por chamada concorrente — ignorando.', { candidateId, oldStage, newStage });
+                    return;
+                }
+                console.error('[CandidateService] Erro em transition_candidate_stage:', error.message, error.code);
+            }
         } catch (e) {
-            console.error('[CandidateService] Erro em recordStageTransition:', e);
+            console.error('[CandidateService] Exceção em recordStageTransition:', e);
         }
     },
 

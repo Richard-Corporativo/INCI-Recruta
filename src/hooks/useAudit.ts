@@ -1,14 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@src/lib/supabase';
 import { auditService, AuditLog as ServiceLog } from '@src/services/audit.service';
 import { AuditLog } from '@src/types';
+import { useAuth } from '@src/context/AuthContext';
 
-export const useAudit = () => {
-    const [logs, setLogs] = useState<AuditLog[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    const mapLog = (log: ServiceLog): AuditLog => ({
+function mapLog(log: ServiceLog): AuditLog {
+    return {
         id: log.id,
         user_id: log.user_id,
         user_name: log.user?.name || 'Sistema',
@@ -23,31 +22,39 @@ export const useAudit = () => {
         old_value: log.details?.old,
         new_value: log.details?.new,
         user: log.user
-    });
+    };
+}
+
+export const useAudit = () => {
+    const { company } = useAuth();
+    const [logs, setLogs] = useState<AuditLog[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     const loadLogs = useCallback(async () => {
         setIsLoading(true);
         const data = await auditService.getLogs();
         setLogs(data.map(mapLog));
         setIsLoading(false);
+        return data;
     }, []);
 
     useEffect(() => {
-        loadLogs();
-        
-        // Setup real-time subscription
+        let cancelled = false;
+        // Subscription criada ANTES do fetch — elimina race window e usa companyId confiável do contexto
         const subscription = auditService.subscribeToLogs((newLog) => {
-            setLogs(prev => [mapLog(newLog), ...prev].slice(0, 100)); // Keep last 100
-        });
+            if (!cancelled) setLogs(prev => [mapLog(newLog), ...prev].slice(0, 100));
+        }, company?.id);
+
+        loadLogs();
 
         return () => {
-            subscription.unsubscribe();
+            cancelled = true;
+            supabase.removeChannel(subscription);
         };
-    }, [loadLogs]);
+    }, [loadLogs, company?.id]);
 
     const addLog = useCallback(async (params: any) => {
         await auditService.log(params);
-        // List will be updated via real-time subscription
     }, []);
 
     return { logs, addLog, isLoading, refresh: loadLogs };

@@ -5,15 +5,29 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const CORS_HEADERS = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const ALLOWED_ORIGINS = [
+    Deno.env.get("SITE_URL"),
+    "https://recruta.incibrasil.com.br",
+].filter(Boolean) as string[];
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+    const allowed = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] ?? "";
+    return {
+        "Access-Control-Allow-Origin": allowed,
+        "Access-Control-Allow-Methods": "POST",
+        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    };
+}
 
 Deno.serve(async (req: Request) => {
+    const origin = req.headers.get("origin");
+    const corsHeaders = getCorsHeaders(origin);
+
     if (req.method === "OPTIONS") {
-        return new Response("ok", { headers: CORS_HEADERS });
+        if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+            return new Response("Forbidden", { status: 403 });
+        }
+        return new Response("ok", { headers: corsHeaders });
     }
 
     try {
@@ -21,7 +35,7 @@ Deno.serve(async (req: Request) => {
         const authHeader = req.headers.get("Authorization");
         if (!authHeader?.startsWith("Bearer ")) {
             return new Response(JSON.stringify({ error: "Unauthorized" }), {
-                status: 401, headers: { ...CORS_HEADERS, "Content-Type": "application/json" }
+                status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
             });
         }
 
@@ -32,7 +46,7 @@ Deno.serve(async (req: Request) => {
         const { data: { user: callerAuth }, error: authError } = await serviceClient.auth.getUser(callerToken);
         if (authError || !callerAuth) {
             return new Response(JSON.stringify({ error: "Invalid token" }), {
-                status: 401, headers: { ...CORS_HEADERS, "Content-Type": "application/json" }
+                status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
             });
         }
 
@@ -47,7 +61,7 @@ Deno.serve(async (req: Request) => {
         const allowedRoles = ["owner", "admin"];
         if (!callerMember || !allowedRoles.includes(callerMember.role)) {
             return new Response(JSON.stringify({ error: "Forbidden: insufficient role" }), {
-                status: 403, headers: { ...CORS_HEADERS, "Content-Type": "application/json" }
+                status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
             });
         }
 
@@ -59,7 +73,7 @@ Deno.serve(async (req: Request) => {
 
         if (!id) {
             return new Response(JSON.stringify({ error: "Missing required field: id" }), {
-                status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" }
+                status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" }
             });
         }
 
@@ -73,7 +87,7 @@ Deno.serve(async (req: Request) => {
 
         if (!targetUser) {
             return new Response(JSON.stringify({ error: "User not found or access denied" }), {
-                status: 403, headers: { ...CORS_HEADERS, "Content-Type": "application/json" }
+                status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
             });
         }
 
@@ -90,7 +104,7 @@ Deno.serve(async (req: Request) => {
 
         if (updateError) {
             return new Response(JSON.stringify({ error: updateError.message }), {
-                status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" }
+                status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
             });
         }
 
@@ -104,13 +118,13 @@ Deno.serve(async (req: Request) => {
         }
 
         return new Response(JSON.stringify(updated), {
-            status: 200, headers: { ...CORS_HEADERS, "Content-Type": "application/json" }
+            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
 
     } catch (err: any) {
         console.error("[update-user-admin] Unexpected error:", err);
         return new Response(JSON.stringify({ error: "Internal server error" }), {
-            status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" }
+            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
     }
 });

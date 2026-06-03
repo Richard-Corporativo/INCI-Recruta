@@ -199,9 +199,23 @@ export interface AuditLogWithCompany extends AuditLog {
 
 // ── Cross-tenant queries ──────────────────────────────────────────────────────
 
+async function assertSuperAdmin(): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Não autenticado');
+    const { data: profile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+    if (profile?.role !== 'super_admin') {
+        throw new Error('Acesso negado: requer super_admin');
+    }
+}
+
 export async function getAllJobsCrossTenant(
     { page = 1, pageSize = 50 }: { page?: number; pageSize?: number } = {}
 ): Promise<PaginatedResult<JobWithCompany>> {
+    await assertSuperAdmin();
     const offset = (page - 1) * pageSize;
     const { data, error, count } = await supabase
         .from('jobs')
@@ -239,6 +253,7 @@ export async function getAllJobsCrossTenant(
 export async function getAllRolesCrossTenant(
     { page = 1, pageSize = 50 }: { page?: number; pageSize?: number } = {}
 ): Promise<PaginatedResult<RoleWithCompany>> {
+    await assertSuperAdmin();
     const offset = (page - 1) * pageSize;
     const { data, error, count } = await supabase
         .from('roles')
@@ -272,6 +287,7 @@ export async function getAllRolesCrossTenant(
 export async function getAllCandidatesCrossTenant(
     { page = 1, pageSize = 50 }: { page?: number; pageSize?: number } = {}
 ): Promise<PaginatedResult<CandidateWithCompany>> {
+    await assertSuperAdmin();
     const offset = (page - 1) * pageSize;
     const { data, error, count } = await supabase
         .from('candidates')
@@ -304,6 +320,7 @@ export async function getAllCandidatesCrossTenant(
 export async function getAllAuditLogsCrossTenant(
     { page = 1, pageSize = 50 }: { page?: number; pageSize?: number } = {}
 ): Promise<PaginatedResult<AuditLogWithCompany>> {
+    await assertSuperAdmin();
     const offset = (page - 1) * pageSize;
     const { data, error, count } = await supabase
         .from('audit_logs')

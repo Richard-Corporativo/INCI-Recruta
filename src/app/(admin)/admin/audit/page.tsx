@@ -1,22 +1,31 @@
 'use client';
 import { Icon } from "@iconify/react";
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Breadcrumbs from '@src/components/shared/Breadcrumbs';
 import { useAudit } from '@src/hooks/useAudit';
 import { useJobs } from '@src/hooks/useJobs';
+import { useAuth } from '@src/context/AuthContext';
+import { auditService } from '@src/services/audit.service';
 import AuditJobTimelineModal from '@src/components/admin/AuditJobTimelineModal';
 import { Skeleton } from '@src/components/atoms/Skeleton/Skeleton';
-import { auditService } from '@src/services/audit.service';
 import { useToast } from '@src/components/ui/Toast';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-
 const AuditPage: React.FC = () => {
   const { logs, isLoading, refresh } = useAudit();
   const { jobs } = useJobs();
-  const { success, error: showError } = useToast();
+  const { company } = useAuth();
+  const { error: showError } = useToast();
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [candidateCounts, setCandidateCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!company?.id) return;
+    auditService.getCandidateCountsByJob()
+      .then(counts => setCandidateCounts(counts))
+      .catch(() => showError('Erro ao carregar contagem de candidatos.'));
+  }, [company?.id, showError]);
 
   // Agrupamento de logs por Vaga
   const groupedLogs = useMemo(() => {
@@ -26,8 +35,6 @@ const AuditPage: React.FC = () => {
         title: 'Sistema & Geral',
         logs: [],
         lastActivity: null,
-        candidateCount: 0,
-        uniqueCandidates: new Set<string>()
       }
     };
 
@@ -40,17 +47,10 @@ const AuditPage: React.FC = () => {
           title: job?.title || 'Recurso Desconhecido',
           logs: [],
           lastActivity: null,
-          candidateCount: 0,
-          uniqueCandidates: new Set<string>()
         };
       }
 
       groups[jobId].logs.push(log);
-      
-      // Contagem apenas se for um log relacionado a candidato
-      if (log.category === 'candidate_movement' && log.entity_id) {
-        groups[jobId].uniqueCandidates.add(log.entity_id);
-      }
 
       if (!groups[jobId].lastActivity || new Date(log.timestamp) > new Date(groups[jobId].lastActivity)) {
         groups[jobId].lastActivity = log.timestamp;
@@ -60,17 +60,19 @@ const AuditPage: React.FC = () => {
     return Object.values(groups)
       .map(group => ({
         ...group,
-        candidateCount: group.uniqueCandidates.size
+        candidateCount: group.id === 'system' ? 0 : (candidateCounts[group.id] ?? 0),
       }))
-      .filter(g => g.id !== 'system' || g.logs.length > 0) // Sempre mostra vagas se tiver logs, sistema só se tiver logs
+      .filter(g => g.id !== 'system' || g.logs.length > 0)
       .sort((a, b) => {
+        if (a.id === 'system') return -1;
+        if (b.id === 'system') return 1;
         if (!a.lastActivity) return 1;
         if (!b.lastActivity) return -1;
         return new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime();
       });
-  }, [logs, jobs]);
+  }, [logs, jobs, candidateCounts]);
 
-  const filteredGroups = groupedLogs.filter(group => 
+  const filteredGroups = groupedLogs.filter(group =>
     group.title.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -81,10 +83,10 @@ const AuditPage: React.FC = () => {
         const date = new Date(log.timestamp);
         const job = jobs.find(j => j.id === log.job_id);
         return [
-          date.toLocaleDateString('pt-BR'), 
+          date.toLocaleDateString('pt-BR'),
           date.toLocaleTimeString('pt-BR'),
-          `"${log.user_name}"`, 
-          `"${log.action}"`, 
+          `"${log.user_name}"`,
+          `"${log.action}"`,
           `"${log.details?.replace(/"/g, '""') || ''}"`,
           `"${job?.title || 'Geral'}"`
         ].join(',');
@@ -128,12 +130,12 @@ const AuditPage: React.FC = () => {
       <div className="flex gap-3 items-center">
         <div className="relative flex-1">
           <Icon icon="material-symbols:search" className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
-          <input 
-            type="text" 
-            placeholder="Buscar por nome da vaga ou recurso..." 
-            value={search} 
+          <input
+            type="text"
+            placeholder="Buscar por nome da vaga ou recurso..."
+            value={search}
             onChange={e => setSearch(e.target.value)}
-            className="h-12 pl-12 pr-4 rounded-2xl bg-card border border-border text-sm font-semibold text-foreground outline-none focus:ring-2 focus:ring-primary/20 w-full shadow-sm" 
+            className="h-12 pl-12 pr-4 rounded-2xl bg-card border border-border text-sm font-semibold text-foreground outline-none focus:ring-2 focus:ring-primary/20 w-full shadow-sm"
           />
         </div>
       </div>
@@ -148,17 +150,22 @@ const AuditPage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredGroups.map((group) => (
-            <button 
+            <div
               key={group.id}
+              role="button"
+              tabIndex={0}
               onClick={() => setSelectedJobId(group.id)}
-              className="group bg-card border border-border rounded-2xl p-6 text-left hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5 transition-all relative overflow-hidden"
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setSelectedJobId(group.id); }}
+              className="group bg-card border border-border rounded-2xl relative overflow-hidden transition-all hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5 text-left p-6 cursor-pointer"
+              aria-label={`Ver auditoria: ${group.title}`}
             >
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
                 <Icon icon="material-symbols:history-rounded" className="size-20" />
               </div>
 
               <div className="flex flex-col h-full justify-between gap-4">
-                <div>
+                <div className="pr-6">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       {group.id === 'system' ? 'Geral' : 'Vaga'}
@@ -182,7 +189,7 @@ const AuditPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       )}

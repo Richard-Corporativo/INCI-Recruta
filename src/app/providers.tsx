@@ -13,29 +13,17 @@ import { AuthProvider } from '@src/context/AuthContext';
 import { QuickViewProvider } from '@src/context/QuickViewContext';
 import { ToastProvider } from '@src/components/ui/Toast';
 import { Suspense } from 'react';
-import { Icon } from '@iconify/react';
-
-function ProvidersFallback() {
-    return (
-        <div className="flex h-screen w-full items-center justify-center bg-background">
-            <div className="flex flex-col items-center gap-3">
-                <Icon icon="svg-spinners:ring-resize" className="size-10 text-primary" />
-                <p className="text-sm text-muted-foreground">Carregando aplicação...</p>
-            </div>
-        </div>
-    );
-}
 
 export default function Providers({ children }: { children: React.ReactNode }) {
     return (
-        <AuthProvider>
-            <ToastProvider>
-                <QuickViewProvider>
-                    <Suspense fallback={<ProvidersFallback />}>
+        <Suspense fallback={<div className="min-h-screen bg-background" />}>
+            <AuthProvider>
+                <ToastProvider>
+                    <QuickViewProvider>
                         {children}
-                    </Suspense>
-                </QuickViewProvider>
-            </ToastProvider>
-        </AuthProvider>
+                    </QuickViewProvider>
+                </ToastProvider>
+            </AuthProvider>
+        </Suspense>
     );
 }

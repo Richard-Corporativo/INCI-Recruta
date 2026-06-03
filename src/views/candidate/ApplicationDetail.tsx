@@ -298,10 +298,10 @@ const ApplicationDetail: React.FC = () => {
                                             <span className="truncate max-w-[220px]">{interview.location}</span>
                                         </span>
                                     )}
-                                    {interview.interviewer_names && (
+                                    {(interview.interviewer_name || interview.interviewer_names) && (
                                         <span className="flex items-center gap-1.5">
                                             <Icon icon="material-symbols:group" className="size-4" />
-                                            {interview.interviewer_names}
+                                            {interview.interviewer_name || interview.interviewer_names}
                                         </span>
                                     )}
                                 </div>

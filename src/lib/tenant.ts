@@ -65,10 +65,8 @@ export async function getCurrentCompanyId(): Promise<string | null> {
                 companyId = anyMember?.company_id ?? null;
             }
 
-            // Se o DB retornou null, tenta JWT como última defesa
-            if (!companyId && user.user_metadata?.company_id) {
-                companyId = user.user_metadata.company_id as string;
-            }
+            // Sem fallback para user_metadata: metadados podem ser forjados pelo cliente
+            // via supabase.auth.updateUser(), permitindo cross-tenant access. Falha fechado.
 
             if (isBrowser) {
                 clientCachedUserId = user.id;
@@ -76,9 +74,10 @@ export async function getCurrentCompanyId(): Promise<string | null> {
             }
             return companyId;
         } catch (e: any) {
+            // Falha fechado: não usa user_metadata como fallback pois pode ser forjado
+            // pelo cliente. Em caso de indisponibilidade do DB, os call sites tratam null.
             console.warn('[tenant] getCurrentCompanyId timeout ou erro:', e.message);
-            const jwtCompanyId = (user.user_metadata?.company_id as string) ?? null;
-            return jwtCompanyId;
+            return null;
         }
     })();
 

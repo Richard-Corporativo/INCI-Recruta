@@ -4,7 +4,7 @@
 // > Minhas candidaturas — Abas por status: Todas, Inscritas, Entrevistas, Finalizadas, Arquivadas
 // @calls useCandidateData, useNavigate
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from '@src/lib/router-compat';
 import { useCandidateData } from '@src/hooks/useCandidateData';
 import { useNotificationsContext } from '@src/context/NotificationsContext';
@@ -42,9 +42,21 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 
 const MyApplications: React.FC = () => {
     const navigate = useNavigate();
-    const { myApplications, jobs, isLoading } = useCandidateData();
+    const { myApplications, jobs, isLoading, refreshData } = useCandidateData();
     const [activeTab, setActiveTab] = useState<Tab>('todas');
     const { notifications } = useNotificationsContext();
+    const prevNotifCount = useRef(notifications.length);
+
+    useEffect(() => {
+        const REFRESH_TYPES = ['stage_changed', 'interview_scheduled', 'interview_rescheduled', 'interview_cancelled'];
+        if (notifications.length > prevNotifCount.current) {
+            const newest = notifications.slice(0, notifications.length - prevNotifCount.current);
+            if (newest.some(n => REFRESH_TYPES.includes(n.type))) {
+                refreshData();
+            }
+        }
+        prevNotifCount.current = notifications.length;
+    }, [notifications, refreshData]);
 
     const counts = useMemo(() => {
         const c: Record<Tab, number> = { todas: 0, inscrita: 0, entrevista: 0, finalizada: 0, arquivada: 0 };

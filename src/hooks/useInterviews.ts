@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@src/lib/supabase';
 import { InterviewService } from '@src/services/interview.service';
 import { Interview } from '@src/types';
 
@@ -27,24 +28,31 @@ export const useInterviews = (candidateId?: string) => {
 
     useEffect(() => {
         loadInterviews();
-    }, [loadInterviews]);
+        if (!candidateId) return;
+
+        const channel = supabase
+            .channel(`interviews:${candidateId}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'interviews',
+                filter: `candidate_id=eq.${candidateId}`,
+            }, () => loadInterviews())
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [loadInterviews, candidateId]);
 
     const addInterview = async (data: Omit<Interview, 'id' | 'company_id' | 'created_at' | 'updated_at'>) => {
-        const result = await InterviewService.addInterview(data);
-        if (result) await loadInterviews();
-        return result;
+        return await InterviewService.addInterview(data);
     };
 
     const updateInterview = async (id: string, updates: Partial<Interview>) => {
-        const result = await InterviewService.updateInterview(id, updates);
-        if (result) await loadInterviews();
-        return result;
+        return await InterviewService.updateInterview(id, updates);
     };
 
     const deleteInterview = async (id: string) => {
-        const result = await InterviewService.deleteInterview(id);
-        if (result) await loadInterviews();
-        return result;
+        return await InterviewService.deleteInterview(id);
     };
 
     return {

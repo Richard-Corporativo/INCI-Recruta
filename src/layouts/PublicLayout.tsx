@@ -14,6 +14,9 @@ import { useAuth } from '@src/context/AuthContext';
 import { Icon } from "@iconify/react";
 import TermsModal from '@src/components/public/TermsModal';
 import PrivacyPortalModal from '@src/components/public/PrivacyPortalModal';
+import { NotificationsProvider } from '@src/context/NotificationsContext';
+import { NotificationBell } from '@src/components/candidate/NotificationBell';
+import { PublicNotificationBell } from '@src/components/public/PublicNotificationBell';
 
 const PublicLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
     const { isAuthenticated, user, logout } = useAuth();
@@ -59,6 +62,7 @@ const PublicLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
     }
 
     return (
+        <NotificationsProvider>
         <div className="bg-background text-foreground font-sans overflow-x-hidden min-h-screen flex flex-col antialiased" suppressHydrationWarning>
             {/* Tactical Navigation Console - Balha 10.0 Dual Portal */}
             <header className="h-20 bg-background border-b border-border sticky top-0 z-50">
@@ -88,7 +92,7 @@ const PublicLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
                                 <>
                                     {isAuthenticated && user ? (
                                         <div className="flex items-center gap-4">
-                                            {/* Tactical Dashboard Router - Detecta role e direciona para o portal correto */}
+                                                            {user.role === 'candidate' ? <NotificationBell /> : <PublicNotificationBell />}
                                             {user.role === 'candidate' ? (
                                                 <Link to="/candidate/dashboard">
                                                     <button className="h-11 px-6 bg-gradient-to-r from-[#3857EF] to-[#1E3A8A] text-white text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2">
@@ -112,7 +116,8 @@ const PublicLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
                                             </button>
                                         </div>
                                     ) : (
-                                        <div className="flex items-center">
+                                        <div className="flex items-center gap-2">
+                                            <PublicNotificationBell />
                                             <div className="flex items-center px-6">
                                                 <div className="flex items-center gap-6">
                                                     <Link to="/login" className="h-11 px-5 rounded-lg bg-gradient-to-r from-[#3857EF] to-[#1E3A8A] text-white text-[11px] font-bold uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center">
@@ -242,6 +247,7 @@ const PublicLayout: React.FC<{ children?: React.ReactNode }> = ({ children }) =>
                 onClose={() => setIsPrivacyOpen(false)} 
             />
         </div>
+        </NotificationsProvider>
     );
 };
 

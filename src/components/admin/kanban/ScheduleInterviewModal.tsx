@@ -6,6 +6,7 @@ import { InterviewService } from '@src/services/interview.service';
 import type { Interview } from '@src/types';
 import BaseModal from '@src/components/ui/BaseModal';
 import { useToast } from '@src/components/ui/Toast';
+import CustomSelect from '@src/components/ui/CustomSelect';
 
 interface ScheduleInterviewModalProps {
   isOpen: boolean;
@@ -98,27 +99,19 @@ const ScheduleInterviewModal: React.FC<ScheduleInterviewModalProps> = ({ isOpen,
             <div className="grid grid-cols-2 gap-6">
               <div className="col-span-1">
                 <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Tipo de Entrevista</label>
-                <select
-                  className="w-full h-11 px-4 rounded-2xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all hover:border-ring"
+                <CustomSelect
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                >
-                  <option>Entrevista RH</option>
-                  <option>Entrevista Técnica</option>
-                  <option>Entrevista Gestor</option>
-                  <option>Apresentação de Case</option>
-                </select>
+                  onChange={(type) => setFormData({ ...formData, type })}
+                  options={['Entrevista RH', 'Entrevista Técnica', 'Entrevista Gestor', 'Apresentação de Case']}
+                />
               </div>
               <div className="col-span-1">
                 <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Status Inicial</label>
-                <select
-                  className="w-full h-11 px-4 rounded-2xl border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-all hover:border-ring"
+                <CustomSelect
                   value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                >
-                  <option>Agendada</option>
-                  <option>Realizada</option>
-                </select>
+                  onChange={(status) => setFormData({ ...formData, status })}
+                  options={['Agendada', 'Realizada']}
+                />
               </div>
             </div>
 

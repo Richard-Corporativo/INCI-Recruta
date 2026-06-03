@@ -432,6 +432,14 @@ export interface CandidateNotification {
   created_at: string;
 }
 
+export interface PublicJobNotification {
+  id: string;
+  job_id: string;
+  company_id: string;
+  title: string;
+  created_at: string;
+}
+
 export interface PaginatedResult<T> {
   data: T[];
   total: number;

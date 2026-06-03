@@ -275,7 +275,16 @@ const JobsPage: React.FC = () => {
             <ConfirmationModal
                 isOpen={!!jobToDelete}
                 onClose={() => setJobToDelete(null)}
-                onConfirm={() => { if (jobToDelete) { deleteJob(jobToDelete); setJobToDelete(null); } }}
+                onConfirm={async () => {
+                    if (!jobToDelete) return;
+                    try {
+                        await deleteJob(jobToDelete);
+                        showToast('Vaga excluída com sucesso.', 'success');
+                    } catch (err: any) {
+                        showToast(err?.message ?? 'Erro ao excluir vaga.', 'error');
+                    }
+                    setJobToDelete(null);
+                }}
                 title="Excluir Vaga"
                 message="Tem certeza que deseja excluir esta vaga? Todos os dados associados serão removidos permanentemente."
                 confirmLabel="Excluir Vaga"

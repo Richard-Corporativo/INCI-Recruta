@@ -2,11 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@src/lib/supabase';
 import { CandidateService } from '@src/services/candidate.service';
 import { Job, Candidate, Interview } from '@src/types';
-
 import { useAuth } from '@src/context/AuthContext';
 
 export const useCandidateData = () => {
-    const { refreshProfile } = useAuth();
+    const { refreshProfile, user } = useAuth();
     const [currentCandidate, setCurrentCandidate] = useState<Candidate | null>(null);
     const [jobs, setJobs] = useState<Job[]>([]);
     const [myApplications, setMyApplications] = useState<Candidate[]>([]);
@@ -52,25 +51,28 @@ export const useCandidateData = () => {
                 return;
             }
 
-            // 2. Perfil base e candidaturas são registros diferentes.
-            const { data: baseProfile, error: baseProfileError } = await supabase
-                .from('candidates')
-                .select('*')
-                .eq('user_id', session.user.id)
-                .is('job_id', null)
-                .order('applied_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
+            // 2. Perfil base e candidaturas são independentes — rodam em paralelo.
+            const [
+                { data: baseProfile, error: baseProfileError },
+                { data: applicationRows, error: applicationsError },
+            ] = await Promise.all([
+                supabase
+                    .from('candidates')
+                    .select('*')
+                    .eq('user_id', session.user.id)
+                    .is('job_id', null)
+                    .order('applied_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle(),
+                supabase
+                    .from('candidates')
+                    .select('*')
+                    .eq('user_id', session.user.id)
+                    .not('job_id', 'is', null)
+                    .order('applied_at', { ascending: false }),
+            ]);
 
             if (baseProfileError) throw baseProfileError;
-
-            const { data: applicationRows, error: applicationsError } = await supabase
-                .from('candidates')
-                .select('*')
-                .eq('user_id', session.user.id)
-                .not('job_id', 'is', null)
-                .order('applied_at', { ascending: false });
-
             if (applicationsError) throw applicationsError;
 
             // Buscar entrevistas para todas as candidaturas deste usuário
@@ -186,8 +188,28 @@ export const useCandidateData = () => {
 
 
     useEffect(() => {
+        if (!user?.id) return;
+
         refreshData();
-    }, [refreshData]);
+
+        const channelName = `candidate-data:${user.id}`;
+
+        // Remove canal existente para evitar erro "cannot add callbacks after subscribe()"
+        const existing = supabase.getChannels().find(c => c.topic === `realtime:${channelName}`);
+        if (existing) supabase.removeChannel(existing);
+
+        const channel = supabase
+            .channel(channelName)
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'candidates',
+                filter: `user_id=eq.${user.id}`,
+            }, () => refreshData())
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [user?.id, refreshData]);
 
     const updateProfile = async (data: Partial<Candidate>) => {
         const { data: { session } } = await supabase.auth.getSession();

@@ -1,7 +1,7 @@
 import { supabase } from '@src/lib/supabase';
 import { getCurrentCompanyId } from '@src/lib/tenant';
 
-export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | 'MOVE';
+export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | 'MOVE' | 'RETROCESSO_ETAPA' | 'AVANCO_ETAPA';
 export type ResourceType = 'JOB' | 'CANDIDATE' | 'ROLE' | 'USER' | 'SETTINGS';
 
 export interface AuditLog {
@@ -23,8 +23,22 @@ export interface AuditLog {
 }
 
 export class AuditService {
+  private userCache = new Map<string, { id: string; name: string; email: string; role: string }>();
+  private subscriptionCounter = 0;
+
   /**
-   * Log a standard action
+   * Registra uma ação de auditoria.
+   *
+   * INCIDENTE 2026-05-07 → 2026-05-28: ausência de INSERT policy no RLS da tabela
+   * audit_logs fazia com que inserts de usuários não-admin fossem silenciosamente
+   * bloqueados (erro capturado apenas em console.error). Apenas 26 logs de admins
+   * foram preservados nesse período. Corrigido por:
+   *   - 20260528_fix_audit_logs_rls_policies.sql (audit_logs_insert_authenticated)
+   *   - 20260529_audit_logs_rls_cleanup_and_safeguard.sql (remove policies conflitantes)
+   * Operações de recruiters/managers no período não são recuperáveis.
+   *
+   * Para verificar integridade das policies:
+   *   SELECT * FROM verify_audit_logs_rls_policies();
    */
   async log(params: {
     action: AuditAction;
@@ -114,7 +128,7 @@ export class AuditService {
     }
   }
 
-  async getLogs(limit = 50) {
+  async getLogs(limit = 200) {
     const { data, error } = await supabase
       .from('audit_logs')
       .select('*')
@@ -126,21 +140,18 @@ export class AuditService {
       return [];
     }
 
-    if (!data || data.length === 0) return [];
+    const logs = (data ?? []) as AuditLog[];
+    const userIds = [...new Set(logs.map(l => l.user_id).filter(Boolean))];
 
-    // Fetch users separately to avoid join errors
-    const userIds = Array.from(new Set(data.map(log => log.user_id).filter(Boolean)));
+    if (userIds.length === 0) return logs;
+
     const { data: users } = await supabase
       .from('users')
       .select('id, name, email, role')
       .in('id', userIds);
 
-    const userMap = new Map(users?.map(u => [u.id, u]));
-    
-    return data.map(log => ({
-      ...log,
-      user: userMap.get(log.user_id)
-    })) as AuditLog[];
+    const userMap = Object.fromEntries((users ?? []).map(u => [u.id, u]));
+    return logs.map(l => ({ ...l, user: userMap[l.user_id] ?? null }));
   }
 
   async cleanup(days = 90) {
@@ -152,24 +163,28 @@ export class AuditService {
     return data as number;
   }
 
-  subscribeToLogs(callback: (log: AuditLog) => void) {
-    const channelName = `audit_logs_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  subscribeToLogs(callback: (log: AuditLog) => void, companyId?: string) {
+    const channelName = `audit_logs_${companyId ?? 'global'}_${++this.subscriptionCounter}`;
     return supabase
       .channel(channelName)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'audit_logs' },
+        { event: 'INSERT', schema: 'public', table: 'audit_logs', ...(companyId ? { filter: `company_id=eq.${companyId}` } : {}) },
         async (payload) => {
-          const { data: userProfile } = await supabase
-            .from('users')
-            .select('id, name, email, role')
-            .eq('id', payload.new.user_id)
-            .single();
-            
-          callback({
-            ...payload.new,
-            user: userProfile
-          } as unknown as AuditLog);
+          const userId = payload.new.user_id as string;
+          let userProfile = this.userCache.get(userId) ?? null;
+          if (!userProfile) {
+            const { data } = await supabase
+              .from('users')
+              .select('id, name, email, role')
+              .eq('id', userId)
+              .single();
+            if (data) {
+              this.userCache.set(userId, data);
+              userProfile = data;
+            }
+          }
+          callback({ ...payload.new, user: userProfile } as unknown as AuditLog);
         }
       )
       .subscribe();
@@ -190,6 +205,8 @@ export class AuditService {
       'candidate_created': 'Candidatura recebida no sistema',
       'candidate_deleted': 'Candidatura removida',
       'user_management': 'Gerenciou usuários da equipe',
+      'RETROCESSO_ETAPA': 'Retornou candidato para etapa anterior',
+      'AVANCO_ETAPA': 'Avançou candidato para próxima etapa',
     };
 
     return map[category || ''] || map[action] || action;
@@ -270,6 +287,20 @@ export class AuditService {
     } catch {
       return 'Informações atualizadas';
     }
+  }
+
+  async getCandidateCountsByJob(): Promise<Record<string, number>> {
+    const companyId = await getCurrentCompanyId();
+    if (!companyId) return {};
+
+    const { data } = await supabase
+      .from('candidates')
+      .select('job_id')
+      .eq('company_id', companyId)
+      .not('job_id', 'is', null);
+    const counts: Record<string, number> = {};
+    data?.forEach(c => { if (c.job_id) counts[c.job_id] = (counts[c.job_id] || 0) + 1; });
+    return counts;
   }
 }
 

@@ -7,13 +7,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from '@src/lib/router-compat';
 import { useCandidateData } from '@src/hooks/useCandidateData';
-import { useRecommendedJobs } from '@src/hooks/useRecommendedJobs';
-import { useAuth } from '@src/context/AuthContext';
 import { Skeleton } from '@src/components/atoms/Skeleton/Skeleton';
 import { Icon } from "@iconify/react";
-import RecommendedJobsBlock from '@src/components/candidate/RecommendedJobsBlock';
 import { CandidateService } from '@src/services/candidate.service';
-import { JobService } from '@src/services/job.service';
 import { useToast } from '@src/components/ui/Toast';
 import { formatDate } from '@src/lib/formatters';
 
@@ -120,17 +116,11 @@ const ProfileCompletenessModal: React.FC<ProfileModalProps> = ({ completeness, m
 
 const CandidateDashboard: React.FC = () => {
     const { currentCandidate, isLoading, completeness } = useCandidateData();
-    const { isAuthenticated } = useAuth();
     const { error } = useToast();
     const navigate = useNavigate();
     const [formData, setFormData] = useState<any>(null);
     const [showSummary, setShowSummary] = useState(false);
     const [showCompletenessModal, setShowCompletenessModal] = useState(false);
-
-    const { recommendations, isLoading: isLoadingRecs } = useRecommendedJobs({
-        candidate: currentCandidate,
-        limit: 3,
-    });
 
     const handleDownloadResume = async () => {
         if (!currentCandidate?.id) return;
@@ -406,17 +396,6 @@ const CandidateDashboard: React.FC = () => {
                     )}
                 </div>
             </div>
-
-            {/* Vagas recomendadas */}
-            <RecommendedJobsBlock
-                recommendations={recommendations}
-                isLoading={isLoadingRecs}
-                isAuthenticated={isAuthenticated}
-                onJobClick={async (jobId) => {
-                    const slug = await JobService.getCompanySlugForJob(jobId);
-                    navigate(slug ? `/vagas/${slug}/${jobId}` : '/vagas');
-                }}
-            />
 
             {/* Horizontal scroll: Ações rápidas */}
             <div className="space-y-4">

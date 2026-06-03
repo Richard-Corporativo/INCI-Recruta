@@ -6,6 +6,7 @@
 import { supabase } from '@src/lib/supabase';
 import { Interview } from '@src/types';
 import { AuditService } from '@src/services/audit.service';
+import { NotificationService } from '@src/services/notification.service';
 import { getCurrentCompanyId } from '@src/lib/tenant';
 
 export const InterviewService = {
@@ -23,7 +24,8 @@ export const InterviewService = {
                 users!interviewer_id(name)
             `)
             .eq('company_id', companyId)
-            .order('starts_at', { ascending: true });
+            .order('starts_at', { ascending: false })
+            .limit(200);
 
         if (error) {
             console.error('[InterviewService] Error fetching interviews:', error.message, error.code);
@@ -40,10 +42,11 @@ export const InterviewService = {
 
     /** Busca entrevistas de um candidato específico */
     async getInterviewsByCandidate(candidateId: string): Promise<Interview[]> {
+        // Candidatos não têm company_id (não são membros de company_members).
+        // O RLS já garante que cada usuário vê apenas suas próprias entrevistas.
         const companyId = await getCurrentCompanyId();
-        if (!companyId) return [];
 
-        const { data, error } = await supabase
+        let query = supabase
             .from('interviews')
             .select(`
                 *,
@@ -51,8 +54,13 @@ export const InterviewService = {
                 users!interviewer_id(name)
             `)
             .eq('candidate_id', candidateId)
-            .eq('company_id', companyId)
             .order('starts_at', { ascending: true });
+
+        if (companyId) {
+            query = query.eq('company_id', companyId);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             console.error('[InterviewService] Error fetching candidate interviews:', error.message, error.code);
@@ -126,6 +134,29 @@ export const InterviewService = {
             newInterview.job_id?.toString()
         );
 
+        try {
+            const { data: candidateRow } = await supabase
+                .from('candidates')
+                .select('user_id')
+                .eq('id', newInterview.candidate_id)
+                .single();
+
+            if (candidateRow?.user_id) {
+                await NotificationService.create({
+                    user_id: candidateRow.user_id,
+                    candidate_id: newInterview.candidate_id,
+                    job_id: newInterview.job_id?.toString() ?? null,
+                    company_id: companyId,
+                    type: 'interview_scheduled',
+                    title: 'Entrevista Agendada',
+                    message: `Sua ${newInterview.type ?? 'entrevista'} foi agendada para ${dateStr} às ${timeStr}${locationStr}`,
+                    reference_id: newInterview.id,
+                });
+            }
+        } catch (e) {
+            console.warn('[InterviewService] Erro ao criar notificação de agendamento:', e);
+        }
+
         return newInterview;
     },
 
@@ -147,7 +178,47 @@ export const InterviewService = {
             throw error;
         }
 
-        return data as Interview;
+        const updatedInterview = data as Interview;
+
+        const notifiableStatus = updates.status === 'cancelled' || updates.status === 'rescheduled';
+        if (notifiableStatus) {
+            try {
+                const { data: candidateRow } = await supabase
+                    .from('candidates')
+                    .select('user_id')
+                    .eq('id', updatedInterview.candidate_id)
+                    .single();
+
+                if (candidateRow?.user_id) {
+                    const isRescheduled = updates.status === 'rescheduled';
+                    const notifDateStr = new Intl.DateTimeFormat('pt-BR', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        timeZone: 'America/Sao_Paulo'
+                    }).format(new Date(updatedInterview.starts_at));
+                    const notifTimeStr = new Intl.DateTimeFormat('pt-BR', {
+                        hour: '2-digit', minute: '2-digit', hour12: false,
+                        timeZone: 'America/Sao_Paulo'
+                    }).format(new Date(updatedInterview.starts_at));
+
+                    await NotificationService.create({
+                        user_id: candidateRow.user_id,
+                        candidate_id: updatedInterview.candidate_id,
+                        job_id: updatedInterview.job_id?.toString() ?? null,
+                        company_id: companyId,
+                        type: isRescheduled ? 'interview_rescheduled' : 'interview_cancelled',
+                        title: isRescheduled ? 'Entrevista Reagendada' : 'Entrevista Cancelada',
+                        message: isRescheduled
+                            ? `Sua ${updatedInterview.type ?? 'entrevista'} foi reagendada para ${notifDateStr} às ${notifTimeStr}`
+                            : `Sua ${updatedInterview.type ?? 'entrevista'} foi cancelada`,
+                        reference_id: updatedInterview.id,
+                    });
+                }
+            } catch (e) {
+                console.warn('[InterviewService] Erro ao criar notificação de status:', e);
+            }
+        }
+
+        return updatedInterview;
     },
 
     /** Remove uma entrevista */
@@ -155,15 +226,44 @@ export const InterviewService = {
         const companyId = await getCurrentCompanyId();
         if (!companyId) return false;
 
-        const { error } = await supabase
+        const { data: deleted, error } = await supabase
             .from('interviews')
             .delete()
             .eq('id', id)
-            .eq('company_id', companyId);
+            .eq('company_id', companyId)
+            .select('candidate_id, job_id, type, starts_at');
 
         if (error) {
             console.error('[InterviewService] Error deleting interview:', error.message, error.code);
             return false;
+        }
+
+        const interview = deleted?.[0];
+        if (!interview) return true;
+
+        if (interview.candidate_id) {
+            try {
+                const { data: candidateRow } = await supabase
+                    .from('candidates')
+                    .select('user_id')
+                    .eq('id', interview.candidate_id)
+                    .single();
+
+                if (candidateRow?.user_id) {
+                    await NotificationService.create({
+                        user_id: candidateRow.user_id,
+                        candidate_id: interview.candidate_id,
+                        job_id: interview.job_id?.toString() ?? null,
+                        company_id: companyId,
+                        type: 'interview_cancelled',
+                        title: 'Entrevista Cancelada',
+                        message: `Sua ${interview.type ?? 'entrevista'} foi cancelada.`,
+                        reference_id: id,
+                    });
+                }
+            } catch (e) {
+                console.warn('[InterviewService] Erro ao criar notificação de cancelamento:', e);
+            }
         }
 
         return true;

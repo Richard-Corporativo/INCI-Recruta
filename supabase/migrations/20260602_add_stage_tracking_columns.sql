@@ -1,0 +1,3 @@
+ALTER TABLE public.candidates
+  ADD COLUMN IF NOT EXISTS current_stage_entry TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS hired_at TIMESTAMPTZ;

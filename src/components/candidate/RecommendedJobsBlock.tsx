@@ -146,19 +146,21 @@ const RecommendedJobsBlock: React.FC<RecommendedJobsBlockProps> = ({
 
     return (
         <section className="space-y-3">
-            {/* Renderização discreta sem headers ou alertas chamativos */}
             {isLoading ? (
                 <RecommendationSkeleton />
             ) : recommendations.length > 0 && (
-                <div className="space-y-3">
-                    {recommendations.map((job) => (
-                        <RecommendedJobCard
-                            key={job.job_id}
-                            job={job}
-                            onClick={onJobClick}
-                        />
-                    ))}
-                </div>
+                <>
+                    <h2 className="text-sm font-semibold text-foreground">Vagas recomendadas para você</h2>
+                    <div className="space-y-3">
+                        {recommendations.map((job) => (
+                            <RecommendedJobCard
+                                key={job.job_id}
+                                job={job}
+                                onClick={onJobClick}
+                            />
+                        ))}
+                    </div>
+                </>
             )}
         </section>
     );

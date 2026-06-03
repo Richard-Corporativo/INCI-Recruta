@@ -87,6 +87,10 @@ const CandidateWizard: React.FC = () => {
 
             // 1. Upload de Currículo
             if (resumeFile) {
+                const ext = resumeFile.name.split('.').pop()?.toLowerCase();
+                if (ext !== 'pdf' || resumeFile.type !== 'application/pdf') {
+                    throw new Error('Apenas arquivos PDF são permitidos para currículo.');
+                }
                 console.log('[CandidateWizard] Fazendo upload do currículo:', resumeFile.name);
                 const fileExt = resumeFile.name.split('.').pop();
                 const fileName = `${Date.now()}.${fileExt}`;
@@ -104,11 +108,15 @@ const CandidateWizard: React.FC = () => {
                     throw uploadError;
                 }
 
-                const { data: { publicUrl: url } } = supabase.storage
+                const { data: signedData, error: signedError } = await supabase.storage
                     .from('resumes')
-                    .getPublicUrl(filePath);
+                    .createSignedUrl(filePath, 3600);
 
-                publicUrl = url;
+                if (signedError || !signedData?.signedUrl) {
+                    throw new Error('Falha ao gerar URL segura para o currículo.');
+                }
+
+                publicUrl = signedData.signedUrl;
                 fileNameOriginal = resumeFile.name;
                 console.log('[CandidateWizard] Upload concluído:', publicUrl);
             }

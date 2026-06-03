@@ -238,25 +238,12 @@ export const JobService = {
             revision: (currentJob?.revision ?? 0) + 1
         });
 
-        let { data, error } = await supabase
+        const { data, error } = await supabase
             .from('jobs')
             .update(updatesWithRevision)
             .eq('id', id)
             .select()
             .single();
-
-        if (error?.code === 'PGRST204' && error.message.includes("'revision'")) {
-            const { revision: _revision, ...updatesWithoutRevision } = updatesWithRevision;
-            const retry = await supabase
-                .from('jobs')
-                .update(updatesWithoutRevision)
-                .eq('id', id)
-                .select()
-                .single();
-
-            data = retry.data;
-            error = retry.error;
-        }
 
         if (error) {
             console.error(`Error updating job ${id}:`, error);
@@ -278,10 +265,7 @@ export const JobService = {
             .delete()
             .eq('id', id);
 
-        if (error) {
-            console.error(`Error deleting job ${id}:`, error);
-            return false;
-        }
+        if (error) throw error;
 
         await AuditService.logChange('JOB', id, `Vaga excluída`, { id }, null, 'job_management', id);
         return true;
@@ -353,25 +337,12 @@ export const JobService = {
             revision: (currentJob.revision ?? 0) + 1
         });
 
-        let { data: updatedJob, error } = await supabase
+        const { data: updatedJob, error } = await supabase
             .from('jobs')
             .update(updatesWithRevision)
             .eq('id', jobId)
             .select()
             .single();
-
-        if (error?.code === 'PGRST204' && error.message.includes("'revision'")) {
-            const { revision: _revision, ...updatesWithoutRevision } = updatesWithRevision;
-            const retry = await supabase
-                .from('jobs')
-                .update(updatesWithoutRevision)
-                .eq('id', jobId)
-                .select()
-                .single();
-
-            updatedJob = retry.data;
-            error = retry.error;
-        }
 
         if (error) {
             console.error(`Error transitioning job ${jobId}:`, error);

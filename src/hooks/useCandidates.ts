@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { CandidateService } from '@src/services/candidate.service';
 import { Candidate, CandidateFeedbackInput, CandidateSearchFilters, KanbanColumnId } from '@src/types';
 
@@ -19,31 +19,14 @@ export const useCandidates = (jobId?: string | number) => {
             } else {
                 data = await CandidateService.getCandidatesApplicants();
             }
-            // No talent bank (sem jobId), avatares são carregados lazily no drawer.
-            // No kanban (com jobId), carregamos aqui pois há poucos candidatos por vaga.
-            if (jobId) {
-                const withAvatars = await Promise.all((data || []).map(async (c) => {
-                    if (c.has_avatar) {
-                        try {
-                            const avatarUrl = await Promise.race([
-                                CandidateService.getAvatarUrl(c.id),
-                                new Promise<null>(res => setTimeout(() => res(null), 3000))
-                            ]);
-                            if (avatarUrl) return { ...c, avatar: avatarUrl };
-                        } catch {
-                            // falha silenciosa — avatar não crítico
-                        }
-                    }
-                    return c;
-                }));
-                setCandidates(withAvatars);
-            } else {
-                setCandidates(data || []);
-            }
+            setCandidates(data || []);
         } finally {
             setIsLoading(false);
         }
     }, [jobId]);
+
+    const candidatesRef = useRef(candidates);
+    useEffect(() => { candidatesRef.current = candidates; }, [candidates]);
 
     const loadMetadata = useCallback(async () => {
         const [skills, locations] = await Promise.all([
@@ -65,23 +48,41 @@ export const useCandidates = (jobId?: string | number) => {
     }, [loadCandidates]);
 
     const moveCandidate = useCallback(async (candidateId: string, targetColumnId: string) => {
+        const previous = candidatesRef.current;
         setCandidates(prev => prev.map(c =>
             String(c.id) === String(candidateId) ? { ...c, columnId: targetColumnId as KanbanColumnId } : c
         ));
-        await CandidateService.updateCandidate(candidateId, { columnId: targetColumnId as KanbanColumnId });
-        await loadCandidates();
-    }, [loadCandidates]);
+        try {
+            await CandidateService.updateCandidate(candidateId, { columnId: targetColumnId as KanbanColumnId });
+        } catch (e) {
+            setCandidates(previous);
+            throw e;
+        }
+    }, []);
 
     const updateCandidate = useCallback(async (id: string, data: Partial<Candidate>) => {
-        await CandidateService.updateCandidate(id, data);
-        await loadCandidates();
-    }, [loadCandidates]);
+        const previous = candidatesRef.current;
+        setCandidates(prev => prev.map(c =>
+            String(c.id) === String(id) ? { ...c, ...data } : c
+        ));
+        try {
+            await CandidateService.updateCandidate(id, data);
+        } catch (e) {
+            setCandidates(previous);
+            throw e;
+        }
+    }, []);
 
     const deleteCandidate = useCallback(async (id: string) => {
+        const previous = candidatesRef.current;
         setCandidates(prev => prev.filter(c => String(c.id) !== String(id)));
-        await CandidateService.deleteCandidate(id);
-        await loadCandidates();
-    }, [loadCandidates]);
+        try {
+            await CandidateService.deleteCandidate(id);
+        } catch (e) {
+            setCandidates(previous);
+            throw e;
+        }
+    }, []);
 
     const addFeedback = useCallback(async (candidateId: string, feedback: CandidateFeedbackInput) => {
         await CandidateService.addFeedback(candidateId, feedback);

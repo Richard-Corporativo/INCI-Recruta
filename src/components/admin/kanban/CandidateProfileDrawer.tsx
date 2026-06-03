@@ -14,19 +14,22 @@ import { CandidateService } from '@src/services/candidate.service';
 import { Icon } from "@iconify/react";
 import { formatDate, formatDateTime } from '@src/lib/formatters';
 import { auditService } from '@src/services/audit.service';
+import { useToast } from '@src/components/ui/Toast';
 
 interface CandidateProfileDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   candidateId?: string;
+  jobId?: string;
   onCandidateUpdate?: () => void;
-  moveCandidate?: (candidateId: string, stageId: string) => Promise<void>;
+  moveCandidate?: (candidateId: string, stageId: string, note?: string) => Promise<void>;
 }
 
 const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
   isOpen,
   onClose,
   candidateId,
+  jobId,
   onCandidateUpdate,
   moveCandidate: moveFromParent
 }) => {
@@ -37,8 +40,9 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
+  const { error: toastError } = useToast();
   const { logs } = useAudit();
-  const { candidates, deleteCandidate, moveCandidate, refresh } = useCandidates();
+  const { candidates, deleteCandidate, moveCandidate, refresh } = useCandidates(jobId);
   const { jobs } = useJobs();
   const { users } = useUsers();
 
@@ -58,11 +62,14 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
 
   const currentStepIndex = COLUMNS_CONFIG.findIndex(c => c.id === candidate.columnId);
 
-  const handleDelete = () => {
-    if (candidateId) {
-      deleteCandidate(candidateId);
+  const handleDelete = async () => {
+    if (!candidateId) return;
+    try {
+      await deleteCandidate(candidateId);
       setIsDeleteModalOpen(false);
       onClose();
+    } catch {
+      toastError('Erro ao excluir candidato. Tente novamente.');
     }
   };
 
@@ -515,12 +522,14 @@ const CandidateProfileDrawer: React.FC<CandidateProfileDrawerProps> = ({
                 <Icon icon="material-symbols:calendar-today" className="text-[18px]" aria-hidden="true" />
                 Agendar
               </button>
-              <button
-                onClick={() => setIsMoveModalOpen(true)}
-                className="h-10 px-6 rounded-2xl border border-border bg-background hover:bg-accent font-semibold text-sm transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                Mover Etapa
-              </button>
+              {moveFromParent && (
+                <button
+                  onClick={() => setIsMoveModalOpen(true)}
+                  className="h-10 px-6 rounded-2xl border border-border bg-background hover:bg-accent font-semibold text-sm transition-all duration-200 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  Mover Etapa
+                </button>
+              )}
               {currentStepIndex === COLUMNS_CONFIG.length - 2 && (
                 <button
                   className="h-10 px-8 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm transition-all duration-200  hover: active:scale-95 flex items-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"

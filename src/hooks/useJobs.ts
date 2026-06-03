@@ -37,9 +37,8 @@ export const useJobs = () => {
     }, [loadJobs]);
 
     const deleteJob = useCallback(async (id: string | number) => {
-        setJobs(prev => prev.filter(j => String(j.id) !== String(id)));
         await JobService.deleteJob(String(id));
-        await loadJobs(); // Refresh to ensure consistency
+        await loadJobs();
     }, [loadJobs]);
 
     const transitionJobStatus = useCallback(async (id: string | number, nextStatus: Job['workflow_status'], user: User) => {

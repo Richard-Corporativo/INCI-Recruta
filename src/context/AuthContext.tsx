@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const loadCompany = useCallback(async (userId: string, metadata?: any): Promise<Company | null> => {
         try {
             const timeout = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('TIMEOUT_LOAD_COMPANY')), 5000)
+                setTimeout(() => reject(new Error('TIMEOUT_LOAD_COMPANY')), 3000)
             );
 
             let member: any;
@@ -203,8 +203,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
 
                 if (session?.user && mounted) {
-                    const profile = await fetchProfile(session.user.id, session.user.user_metadata);
-                    const comp = await loadCompany(session.user.id, session.user.user_metadata);
+                    const [profile, comp] = await Promise.all([
+                        fetchProfile(session.user.id, session.user.user_metadata),
+                        loadCompany(session.user.id, session.user.user_metadata),
+                    ]);
                     primeTenantCache(session.user.id, comp?.id ?? null);
                     if (mounted) {
                         setUser(profile);
@@ -237,8 +239,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
 
                 console.log('[AuthContext] Buscando perfil para sessão ativa...');
-                const profile = await fetchProfile(session.user.id, session.user.user_metadata);
-                const comp = await loadCompany(session.user.id);
+                const [profile, comp] = await Promise.all([
+                    fetchProfile(session.user.id, session.user.user_metadata),
+                    loadCompany(session.user.id),
+                ]);
                 primeTenantCache(session.user.id, comp?.id ?? null);
                 if (mounted) {
                     setUser(profile);
@@ -268,8 +272,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (error) throw error;
 
             if (data.user) {
-                const profile = await fetchProfile(data.user.id, data.user.user_metadata);
-                const comp = await loadCompany(data.user.id, data.user.user_metadata);
+                const [profile, comp] = await Promise.all([
+                    fetchProfile(data.user.id, data.user.user_metadata),
+                    loadCompany(data.user.id, data.user.user_metadata),
+                ]);
                 primeTenantCache(data.user.id, comp?.id ?? null);
                 setUser(profile);
                 setCompany(comp);
@@ -295,8 +301,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const refreshProfile = useCallback(async () => {
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (authUser) {
-            const profile = await fetchProfile(authUser.id, authUser.user_metadata);
-            const comp = await loadCompany(authUser.id, authUser.user_metadata);
+            const [profile, comp] = await Promise.all([
+                fetchProfile(authUser.id, authUser.user_metadata),
+                loadCompany(authUser.id, authUser.user_metadata),
+            ]);
             primeTenantCache(authUser.id, comp?.id ?? null);
             setUser(profile);
             setCompany(comp);

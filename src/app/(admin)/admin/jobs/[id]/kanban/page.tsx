@@ -189,7 +189,9 @@ export default function KanbanPage() {
           isOpen={isDrawerOpen}
           onClose={() => setIsDrawerOpen(false)}
           candidateId={selectedCandidate?.id}
+          jobId={Array.isArray(id) ? id[0] : id as string}
           onCandidateUpdate={refresh}
+          moveCandidate={moveCandidate}
         />
 
         <ScheduleInterviewModal
@@ -215,13 +217,12 @@ export default function KanbanPage() {
 
               await moveCandidate(feedbackCandidate.id, targetStage);
               await addLog({
-                action: targetIndex < sourceIndex ? 'Retorno de Etapa' : 'Avanço de Etapa',
+                action: targetIndex < sourceIndex ? 'RETROCESSO_ETAPA' : 'AVANCO_ETAPA',
+                resource_type: 'CANDIDATE',
+                resource_id: feedbackCandidate.id,
+                job_id: id,
                 details: `Candidato ${feedbackCandidate.name} movido para ${COLUMNS_CONFIG.find(c => c.id === targetStage)?.title} (Entrevista agendada)`,
-                entity_type: 'candidate',
-                entity_id: feedbackCandidate.id,
                 category: 'candidate_movement',
-                user_name: user?.name || user?.email || 'Gestor',
-                affected_user_name: feedbackCandidate.name
               });
             }
             refresh();
@@ -255,13 +256,12 @@ export default function KanbanPage() {
 
               await moveCandidate(feedbackCandidate.id, targetStage);
               await addLog({
-                action: targetIndex < sourceIndex ? 'Retorno de Etapa' : 'Avanço de Etapa',
+                action: 'MOVE',
+                resource_type: 'CANDIDATE',
+                resource_id: feedbackCandidate.id,
+                job_id: id,
                 details: `Candidato ${feedbackCandidate.name} movido de ${COLUMNS_CONFIG.find(c => c.id === movingSourceCol)?.title} para ${COLUMNS_CONFIG.find(c => c.id === targetStage)?.title}`,
-                entity_type: 'candidate',
-                entity_id: feedbackCandidate.id,
                 category: 'candidate_movement',
-                user_name: user?.name || user?.email || 'Gestor',
-                affected_user_name: feedbackCandidate.name
               });
             }
             refresh();
